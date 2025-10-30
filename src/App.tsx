@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Dashboard from "./pages/Dashboard";
 import Admin from "./pages/Admin";
 import Users from "./pages/Users";
+import Rooms from "./pages/Rooms";
 import Auth from "./pages/Auth";
 import PublicCalendar from "./pages/PublicCalendar";
 import NotFound from "./pages/NotFound";
@@ -66,6 +67,14 @@ const App = () => (
               element={
                 <ProtectedRoute adminOnly>
                   <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/rooms"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Rooms />
                 </ProtectedRoute>
               }
             />

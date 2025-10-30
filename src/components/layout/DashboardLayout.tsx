@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Calendar, LogOut, Users, Settings } from "lucide-react";
+import { Calendar, LogOut, Users, Settings, DoorOpen } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 interface DashboardLayoutProps {
@@ -17,7 +17,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     ...(isAdmin
       ? [
           { name: "Admin Panel", href: "/admin", icon: Settings },
-          { name: "Users & Rooms", href: "/users", icon: Users },
+          { name: "Users", href: "/users", icon: Users },
+          { name: "Rooms", href: "/rooms", icon: DoorOpen },
         ]
       : []),
   ];
