@@ -1,0 +1,237 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import DashboardLayout from "@/components/layout/DashboardLayout";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, X, Eye } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import EventDialog from "@/components/calendar/EventDialog";
+import { formatDistance } from "date-fns";
+
+const Admin = () => {
+  const { toast } = useToast();
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+
+  const { data: pendingEvents, refetch: refetchPending } = useQuery({
+    queryKey: ["pending-events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          *,
+          rooms(name, color)
+        `)
+        .eq("status", "pending_review")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data?.map(event => ({
+        ...event,
+        room: event.rooms
+      })) || [];
+    },
+  });
+
+  const { data: approvedEvents, refetch: refetchApproved } = useQuery({
+    queryKey: ["approved-events"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("events")
+        .select(`
+          *,
+          rooms(name, color)
+        `)
+        .eq("status", "approved")
+        .order("starts_at", { ascending: true });
+
+      if (error) throw error;
+      return data?.map(event => ({
+        ...event,
+        room: event.rooms
+      })) || [];
+    },
+  });
+
+  const handleStatusChange = async (eventId: string, status: "approved" | "rejected" | "published") => {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ status, reviewer_id: (await supabase.auth.getUser()).data.user?.id })
+        .eq("id", eventId);
+
+      if (error) throw error;
+
+      toast({ title: `Event ${status}` });
+      refetchPending();
+      refetchApproved();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewEvent = (eventId: string) => {
+    setSelectedEventId(eventId);
+    setIsEventDialogOpen(true);
+  };
+
+  const statusColors: Record<string, string> = {
+    draft: "bg-gray-500",
+    pending_review: "bg-amber-500",
+    approved: "bg-green-500",
+    rejected: "bg-red-500",
+    published: "bg-blue-500",
+  };
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Admin Panel</h1>
+          <p className="text-muted-foreground mt-1">Review and manage event submissions</p>
+        </div>
+
+        <Tabs defaultValue="pending" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="pending">
+              Pending Review ({pendingEvents?.length || 0})
+            </TabsTrigger>
+            <TabsTrigger value="approved">
+              Approved ({approvedEvents?.length || 0})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pending" className="space-y-4">
+            {pendingEvents && pendingEvents.length === 0 ? (
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-muted-foreground">No events pending review</p>
+                </CardContent>
+              </Card>
+            ) : (
+              pendingEvents?.map((event) => (
+                <Card key={event.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl">{event.title}</CardTitle>
+                        <CardDescription className="mt-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className={statusColors[event.status]}>
+                              {event.status.replace("_", " ")}
+                            </Badge>
+                            <span className="text-sm">
+                              {event.room?.name} • {new Date(event.starts_at).toLocaleString()}
+                            </span>
+                          </div>
+                          {event.description && (
+                            <p className="mt-2 text-sm">{event.description}</p>
+                          )}
+                          <p className="text-xs mt-1">
+                            Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
+                          </p>
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleStatusChange(event.id, "approved")}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Approve
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleStatusChange(event.id, "rejected")}
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Reject
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+
+          <TabsContent value="approved" className="space-y-4">
+            {approvedEvents && approvedEvents.length === 0 ? (
+              <Card>
+                <CardContent className="py-8">
+                  <p className="text-center text-muted-foreground">No approved events</p>
+                </CardContent>
+              </Card>
+            ) : (
+              approvedEvents?.map((event) => (
+                <Card key={event.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-xl">{event.title}</CardTitle>
+                        <CardDescription className="mt-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="secondary" className={statusColors[event.status]}>
+                              {event.status.replace("_", " ")}
+                            </Badge>
+                            <span className="text-sm">
+                              {event.room?.name} • {new Date(event.starts_at).toLocaleString()}
+                            </span>
+                          </div>
+                          {event.description && (
+                            <p className="mt-2 text-sm">{event.description}</p>
+                          )}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleStatusChange(event.id, "published")}
+                      >
+                        Publish Event
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </TabsContent>
+        </Tabs>
+
+        <EventDialog
+          open={isEventDialogOpen}
+          onOpenChange={setIsEventDialogOpen}
+          eventId={selectedEventId}
+          onSuccess={() => {
+            refetchPending();
+            refetchApproved();
+            setIsEventDialogOpen(false);
+          }}
+        />
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default Admin;

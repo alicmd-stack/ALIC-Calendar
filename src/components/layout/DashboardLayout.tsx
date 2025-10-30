@@ -17,7 +17,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     ...(isAdmin
       ? [
           { name: "Admin Panel", href: "/admin", icon: Settings },
-          { name: "Users", href: "/users", icon: Users },
+          { name: "Users & Rooms", href: "/users", icon: Users },
         ]
       : []),
   ];
