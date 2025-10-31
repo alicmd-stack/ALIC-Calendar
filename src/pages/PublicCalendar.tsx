@@ -105,12 +105,16 @@ const PublicCalendar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-                <Church className="h-8 w-8" />
+              <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
+                <img
+                  src="/alic-logo.png"
+                  alt="ALIC Logo"
+                  className="h-16 w-16 object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold">Addis Lidet Church</h1>
-                <p className="text-blue-100 mt-1">Maryland, USA</p>
+                <h1 className="text-3xl md:text-4xl font-bold">Addis Lidet International Church</h1>
+                <p className="text-blue-100 mt-1">Silver Spring, Maryland</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -319,12 +323,19 @@ const PublicCalendar = () => {
       <footer className="bg-slate-900 text-white mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <img
+                src="/alic-logo.png"
+                alt="ALIC Logo"
+                className="h-12 w-12 object-contain"
+              />
+            </div>
             <p className="text-sm text-slate-400">
-              © 2025 Addis Lidet Ethiopian Medhanie Alem Church. All rights reserved.
+              © 2025 Addis Lidet International Church (ALIC). All rights reserved.
             </p>
             <div className="mt-4 flex items-center justify-center gap-4">
               <a
-                href="https://addislidetchurch.org"
+                href="https://alicethiopia.org"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-slate-400 hover:text-white transition-colors"
@@ -333,7 +344,7 @@ const PublicCalendar = () => {
               </a>
               <span className="text-slate-600">•</span>
               <a
-                href="mailto:info@addislidetchurch.org"
+                href="mailto:info@alicethiopia.org"
                 className="text-sm text-slate-400 hover:text-white transition-colors"
               >
                 Contact
