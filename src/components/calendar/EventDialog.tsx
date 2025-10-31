@@ -221,20 +221,18 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
           description: shouldAutoSubmit ? "Your changes have been sent to admins for approval" : undefined
         });
       } else {
-        // For new events, contributors auto-submit for review, admins can create as draft
-        const status = isAdmin ? 'draft' : 'pending_review';
-
+        // For new events, all users create events with pending_review status
         const { error } = await supabase.from("events").insert([{
           ...eventData,
           created_by: user!.id,
-          status: status,
+          status: 'pending_review' as const,
         }]);
 
         if (error) throw error;
 
         toast({
-          title: isAdmin ? "Event created successfully" : "Event created and submitted for review",
-          description: isAdmin ? undefined : "Your event has been sent to admins for approval"
+          title: "Event created and submitted for review",
+          description: "Your event has been sent to admins for approval"
         });
       }
 
