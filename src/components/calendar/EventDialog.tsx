@@ -289,7 +289,7 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
     setLoading(true);
     try {
       const updateData: any = { status: newStatus };
-      
+
       if (newStatus === "approved" || newStatus === "rejected") {
         updateData.reviewer_id = user!.id;
       }
@@ -302,6 +302,37 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
       if (error) throw error;
 
       toast({ title: `Event ${newStatus}` });
+      onSuccess();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!eventId) return;
+
+    // Confirm deletion
+    if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", eventId);
+
+      if (error) throw error;
+
+      toast({ title: "Event deleted successfully" });
+      onOpenChange(false);
       onSuccess();
     } catch (error) {
       toast({
@@ -446,6 +477,16 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
                   : (!isAdmin ? "Create & Submit for Review" : "Create")
                 }
               </Button>
+              {eventId && event && event.created_by === user?.id && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDelete}
+                  disabled={loading}
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           )}
 
