@@ -11,16 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Shield, UserCog, Building2, Pencil, Trash2 } from "lucide-react";
+import { UserPlus, Shield, UserCog, Pencil, Trash2 } from "lucide-react";
 
 const Users = () => {
   const { toast } = useToast();
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
-  const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", role: "contributor" });
   const [editingUser, setEditingUser] = useState<{ id: string; email: string; full_name: string; phone_number?: string; ministry_name?: string; role: string } | null>(null);
-  const [newRoom, setNewRoom] = useState({ name: "", description: "", color: "#6366f1" });
 
   const { data: users, refetch: refetchUsers, error: usersError } = useQuery({
     queryKey: ["users-with-roles"],
@@ -59,18 +57,6 @@ const Users = () => {
     },
   });
 
-  const { data: rooms, refetch: refetchRooms } = useQuery({
-    queryKey: ["all-rooms"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("*")
-        .order("name");
-
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,56 +198,16 @@ const Users = () => {
     setIsEditUserOpen(true);
   };
 
-  const handleAddRoom = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const { error } = await supabase.from("rooms").insert([newRoom]);
-
-      if (error) throw error;
-
-      toast({ title: "Room created successfully" });
-      setIsAddRoomOpen(false);
-      setNewRoom({ name: "", description: "", color: "#6366f1" });
-      refetchRooms();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const toggleRoomStatus = async (roomId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("rooms")
-        .update({ is_active: !currentStatus })
-        .eq("id", roomId);
-
-      if (error) throw error;
-
-      toast({ title: `Room ${!currentStatus ? "activated" : "deactivated"}` });
-      refetchRooms();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">User & Room Management</h1>
-          <p className="text-muted-foreground mt-1">Manage users, roles, and rooms</p>
+          <h1 className="text-3xl font-bold">User Management</h1>
+          <p className="text-muted-foreground mt-1">Manage users and roles</p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+        <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5" />
@@ -454,101 +400,6 @@ const Users = () => {
               )}
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Rooms ({rooms?.length || 0})
-              </CardTitle>
-              <Dialog open={isAddRoomOpen} onOpenChange={setIsAddRoomOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Room
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New Room</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleAddRoom} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="room_name">Room Name *</Label>
-                      <Input
-                        id="room_name"
-                        value={newRoom.name}
-                        onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="room_description">Description</Label>
-                      <Input
-                        id="room_description"
-                        value={newRoom.description || ""}
-                        onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="room_color">Color *</Label>
-                      <Input
-                        id="room_color"
-                        type="color"
-                        value={newRoom.color}
-                        onChange={(e) => setNewRoom({ ...newRoom, color: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full">Create Room</Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rooms?.map((room) => (
-                    <TableRow key={room.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-4 h-4 rounded"
-                            style={{ backgroundColor: room.color || "#6366f1" }}
-                          />
-                          {room.name}
-                        </div>
-                      </TableCell>
-                      <TableCell>{room.description || "-"}</TableCell>
-                      <TableCell>
-                        <Badge variant={room.is_active ? "default" : "secondary"}>
-                          {room.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => toggleRoomStatus(room.id, room.is_active)}
-                        >
-                          {room.is_active ? "Deactivate" : "Activate"}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </DashboardLayout>
   );
