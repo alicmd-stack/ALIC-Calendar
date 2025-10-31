@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import EventCalendar from "@/components/calendar/EventCalendar";
-import { Calendar, Church, MapPin, Phone, Mail, Globe, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Church, MapPin, Phone, Mail, Globe, Download, ChevronLeft, ChevronRight, LogIn } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +125,14 @@ const PublicCalendar = () => {
               >
                 <Download className="h-4 w-4" />
                 Export Calendar
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => window.location.href = '/'}
+                className="gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
               </Button>
             </div>
           </div>
