@@ -46,10 +46,13 @@ const Users = () => {
       }
 
       // Manually join the data
-      const usersWithRoles = profiles?.map(profile => ({
-        ...profile,
-        user_roles: roles?.filter(role => role.user_id === profile.id) || []
-      })) || [];
+      const usersWithRoles = profiles?.map(profile => {
+        const userRoles = roles?.filter(role => role.user_id === profile.id) || [];
+        return {
+          ...profile,
+          user_roles: userRoles.map(r => ({ role: r.role }))
+        };
+      }) || [];
 
       console.log("Fetched users:", usersWithRoles);
       return usersWithRoles;
