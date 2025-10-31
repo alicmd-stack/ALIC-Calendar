@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, Eye } from "lucide-react";
+import { Check, X, Eye, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EventDialog from "@/components/calendar/EventDialog";
 import { formatDistance } from "date-fns";
@@ -29,10 +29,25 @@ const Admin = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data?.map(event => ({
-        ...event,
-        room: event.rooms
-      })) || [];
+
+      // Fetch creator profiles separately
+      const eventsWithCreators = await Promise.all(
+        (data || []).map(async (event) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", event.created_by)
+            .single();
+
+          return {
+            ...event,
+            room: event.rooms,
+            creator: profile || null,
+          };
+        })
+      );
+
+      return eventsWithCreators;
     },
   });
 
@@ -49,10 +64,25 @@ const Admin = () => {
         .order("starts_at", { ascending: true });
 
       if (error) throw error;
-      return data?.map(event => ({
-        ...event,
-        room: event.rooms
-      })) || [];
+
+      // Fetch creator profiles separately
+      const eventsWithCreators = await Promise.all(
+        (data || []).map(async (event) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", event.created_by)
+            .single();
+
+          return {
+            ...event,
+            room: event.rooms,
+            creator: profile || null,
+          };
+        })
+      );
+
+      return eventsWithCreators;
     },
   });
 
@@ -134,9 +164,17 @@ const Admin = () => {
                           {event.description && (
                             <p className="mt-2 text-sm">{event.description}</p>
                           )}
-                          <p className="text-xs mt-1">
-                            Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
-                          </p>
+                          <div className="flex items-center gap-4 mt-2 text-xs">
+                            {event.creator && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <User className="h-3 w-3" />
+                                <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                              </div>
+                            )}
+                            <span className="text-muted-foreground">
+                              Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
+                            </span>
+                          </div>
                         </CardDescription>
                       </div>
                     </div>
@@ -195,6 +233,12 @@ const Admin = () => {
                           </div>
                           {event.description && (
                             <p className="mt-2 text-sm">{event.description}</p>
+                          )}
+                          {event.creator && (
+                            <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                            </div>
                           )}
                         </CardDescription>
                       </div>

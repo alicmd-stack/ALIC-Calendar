@@ -50,6 +50,21 @@ const DateBasedCalendar = ({
   const isToday = (date: Date) => isSameDay(date, today);
   const isPast = (date: Date) => isBefore(endOfDay(date), startOfDay(today));
 
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      draft: "bg-gray-500",
+      pending_review: "bg-amber-500",
+      approved: "bg-green-500",
+      rejected: "bg-red-500",
+      published: "bg-blue-500",
+    };
+    return colors[status] || "bg-gray-500";
+  };
+
+  const getStatusLabel = (status: string) => {
+    return status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
   return (
     <div className="space-y-4">
       {/* Calendar Grid */}
@@ -133,18 +148,34 @@ const DateBasedCalendar = ({
                             {format(parseISO(event.starts_at), "h:mm a")}
                           </span>
                         </div>
-                        {event.room && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {event.room && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] h-auto py-0.5 px-1.5 font-normal"
+                              style={{
+                                borderColor: event.room.color,
+                                backgroundColor: `${event.room.color}15`,
+                                color: event.room.color,
+                              }}
+                            >
+                              {event.room.name}
+                            </Badge>
+                          )}
                           <Badge
-                            variant="outline"
-                            className="text-[10px] h-auto py-0.5 px-1.5 font-normal"
-                            style={{
-                              borderColor: event.room.color,
-                              backgroundColor: `${event.room.color}15`,
-                              color: event.room.color,
-                            }}
+                            variant="secondary"
+                            className={cn(
+                              "text-[10px] h-auto py-0.5 px-1.5 font-normal text-white",
+                              getStatusColor(event.status)
+                            )}
                           >
-                            {event.room.name}
+                            {getStatusLabel(event.status)}
                           </Badge>
+                        </div>
+                        {event.creator && (
+                          <div className="text-[10px] text-muted-foreground mt-1.5">
+                            By: {event.creator.full_name}
+                          </div>
                         )}
                       </div>
                     ))

@@ -31,13 +31,25 @@ const Dashboard = () => {
         .order("starts_at", { ascending: true });
 
       if (error) throw error;
-      return (
-        data?.map((event) => ({
-          ...event,
-          room: event.rooms,
-          creator: { full_name: "User" },
-        })) || []
+
+      // Fetch creator profiles separately
+      const eventsWithCreators = await Promise.all(
+        (data || []).map(async (event) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", event.created_by)
+            .single();
+
+          return {
+            ...event,
+            room: event.rooms,
+            creator: profile || null,
+          };
+        })
       );
+
+      return eventsWithCreators;
     },
   });
 
