@@ -96,6 +96,7 @@ export type Database = {
       }
       rooms: {
         Row: {
+          allow_overlap: boolean
           color: string | null
           created_at: string
           description: string | null
@@ -105,6 +106,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_overlap?: boolean
           color?: string | null
           created_at?: string
           description?: string | null
@@ -114,6 +116,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_overlap?: boolean
           color?: string | null
           created_at?: string
           description?: string | null

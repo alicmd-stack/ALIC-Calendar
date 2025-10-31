@@ -46,6 +46,7 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
   });
 
   const [validationError, setValidationError] = useState<string>("");
+  const [roomConflict, setRoomConflict] = useState<{hasConflict: boolean, conflictingEvent?: any}>({hasConflict: false});
 
   const { data: event } = useQuery({
     queryKey: ["event", eventId],
@@ -106,6 +107,45 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
     setValidationError("");
   }, [event, initialDate]);
 
+  // Check for room conflicts
+  const checkRoomConflict = async () => {
+    if (!formData.room_id || !formData.starts_at || !formData.ends_at) {
+      setRoomConflict({hasConflict: false});
+      return;
+    }
+
+    try {
+      // First, check if the selected room allows overlapping bookings
+      const selectedRoom = rooms?.find(r => r.id === formData.room_id);
+      if (selectedRoom?.allow_overlap) {
+        // Allow multiple bookings for rooms that permit overlaps
+        setRoomConflict({hasConflict: false});
+        return;
+      }
+
+      // Check for conflicting events in the same room (all statuses except rejected)
+      const { data: conflictingEvents, error } = await supabase
+        .from("events")
+        .select("id, title, starts_at, ends_at, status")
+        .eq("room_id", formData.room_id)
+        .neq("status", "rejected")
+        .or(`and(starts_at.lt.${formData.ends_at},ends_at.gt.${formData.starts_at})`);
+
+      if (error) throw error;
+
+      // Filter out the current event if editing
+      const conflicts = conflictingEvents?.filter(e => e.id !== eventId) || [];
+
+      if (conflicts.length > 0) {
+        setRoomConflict({hasConflict: true, conflictingEvent: conflicts[0]});
+      } else {
+        setRoomConflict({hasConflict: false});
+      }
+    } catch (error) {
+      console.error("Error checking room conflicts:", error);
+    }
+  };
+
   // Validate dates when they change
   useEffect(() => {
     if (formData.starts_at && formData.ends_at) {
@@ -119,6 +159,12 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
       }
     }
   }, [formData.starts_at, formData.ends_at]);
+
+  // Check for room conflicts when relevant fields change
+  useEffect(() => {
+    checkRoomConflict();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.room_id, formData.starts_at, formData.ends_at, eventId, rooms]);
 
   const handleStartTimeChange = (value: string) => {
     setFormData({ ...formData, starts_at: value });
@@ -262,6 +308,15 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
             </Alert>
           )}
 
+          {roomConflict.hasConflict && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This room is already booked for "{roomConflict.conflictingEvent?.title}" during this time. Please choose a different time or room.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!isAdmin && !eventId && (
             <Alert>
               <Info className="h-4 w-4" />
@@ -358,7 +413,7 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
 
           {canEdit && (
             <div className="flex gap-2">
-              <Button type="submit" disabled={loading || !!validationError}>
+              <Button type="submit" disabled={loading || !!validationError || roomConflict.hasConflict}>
                 {eventId
                   ? (!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review')
                       ? "Update & Submit for Review"
