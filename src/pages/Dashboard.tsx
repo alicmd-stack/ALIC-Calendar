@@ -4,14 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import EventCalendar from "@/components/calendar/EventCalendar";
+import DateBasedCalendar from "@/components/calendar/DateBasedCalendar";
 import EventDialog from "@/components/calendar/EventDialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { addWeeks, subWeeks } from "date-fns";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [currentWeek, setCurrentWeek] = useState(new Date());
 
   const { data: events, refetch } = useQuery({
     queryKey: ["events"],
@@ -37,19 +40,6 @@ const Dashboard = () => {
     },
   });
 
-  const { data: rooms } = useQuery({
-    queryKey: ["rooms"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      return data;
-    },
-  });
 
   const handleEventClick = (eventId: string) => {
     setSelectedEventId(eventId);
@@ -71,17 +61,40 @@ const Dashboard = () => {
               Manage and schedule events across multiple rooms
             </p>
           </div>
-          <Button onClick={handleCreateEvent} size="lg" className="gap-2">
-            <Plus className="h-5 w-5" />
-            Create Event
-          </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentWeek(new Date())}
+              >
+                Today
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button onClick={handleCreateEvent} size="lg" className="gap-2">
+              <Plus className="h-5 w-5" />
+              Create Event
+            </Button>
+          </div>
         </div>
 
-        <EventCalendar
+        <DateBasedCalendar
           events={events || []}
-          rooms={rooms || []}
+          currentWeek={currentWeek}
           onEventClick={handleEventClick}
-          onCreateEvent={handleCreateEvent}
         />
 
         <EventDialog
