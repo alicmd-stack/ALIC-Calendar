@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import EventCalendar from "@/components/calendar/EventCalendar";
 import {
@@ -39,6 +40,7 @@ import {
 } from "date-fns";
 
 const PublicCalendar = () => {
+  const navigate = useNavigate();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
@@ -163,7 +165,7 @@ const PublicCalendar = () => {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => (window.location.href = "/")}
+                onClick={() => navigate("/auth")}
                 className="gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30"
               >
                 <LogIn className="h-4 w-4" />
