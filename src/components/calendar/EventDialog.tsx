@@ -156,23 +156,40 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
       };
 
       if (eventId) {
+        // For updates, if user is not admin and event is draft/pending, auto-submit for review
+        const shouldAutoSubmit = !isAdmin && event && (event.status === 'draft' || event.status === 'pending_review');
+
+        const updatePayload = shouldAutoSubmit
+          ? { ...eventData, status: 'pending_review' }
+          : eventData;
+
         const { error } = await supabase
           .from("events")
-          .update(eventData)
+          .update(updatePayload)
           .eq("id", eventId);
 
         if (error) throw error;
 
-        toast({ title: "Event updated successfully" });
+        toast({
+          title: shouldAutoSubmit ? "Event updated and submitted for review" : "Event updated successfully",
+          description: shouldAutoSubmit ? "Your changes have been sent to admins for approval" : undefined
+        });
       } else {
+        // For new events, contributors auto-submit for review, admins can create as draft
+        const status = isAdmin ? 'draft' : 'pending_review';
+
         const { error } = await supabase.from("events").insert([{
           ...eventData,
           created_by: user!.id,
+          status: status,
         }]);
 
         if (error) throw error;
 
-        toast({ title: "Event created successfully" });
+        toast({
+          title: isAdmin ? "Event created successfully" : "Event created and submitted for review",
+          description: isAdmin ? undefined : "Your event has been sent to admins for approval"
+        });
       }
 
       onSuccess();
@@ -241,6 +258,24 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 {validationError}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!isAdmin && !eventId && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Your event will be automatically submitted for admin review after creation.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review') && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Any changes will be automatically submitted for admin review.
               </AlertDescription>
             </Alert>
           )}
@@ -324,18 +359,13 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess }: Ev
           {canEdit && (
             <div className="flex gap-2">
               <Button type="submit" disabled={loading || !!validationError}>
-                {eventId ? "Update" : "Create"}
+                {eventId
+                  ? (!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review')
+                      ? "Update & Submit for Review"
+                      : "Update")
+                  : (!isAdmin ? "Create & Submit for Review" : "Create")
+                }
               </Button>
-              {event && event.status === "draft" && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => handleStatusChange("pending_review")}
-                  disabled={loading || !!validationError}
-                >
-                  Submit for Review
-                </Button>
-              )}
             </div>
           )}
 
