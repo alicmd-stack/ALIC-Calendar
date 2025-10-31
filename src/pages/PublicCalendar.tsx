@@ -392,8 +392,7 @@ const PublicCalendar = () => {
               />
             </div>
             <p className="text-sm text-slate-400">
-              © 2025 Addis Lidet International Church (ALIC). All rights
-              reserved.
+              © 2025 Addis Lidet International Church. All rights reserved.
             </p>
             <div className="mt-4 flex items-center justify-center gap-4">
               <a
