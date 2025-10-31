@@ -11,27 +11,48 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { UserPlus, Shield, UserCog, Building2 } from "lucide-react";
+import { UserPlus, Shield, UserCog, Building2, Pencil, Trash2 } from "lucide-react";
 
 const Users = () => {
   const { toast } = useToast();
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isAddRoomOpen, setIsAddRoomOpen] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", role: "contributor" });
+  const [editingUser, setEditingUser] = useState<{ id: string; email: string; full_name: string; phone_number?: string; ministry_name?: string; role: string } | null>(null);
   const [newRoom, setNewRoom] = useState({ name: "", description: "", color: "#6366f1" });
 
-  const { data: users, refetch: refetchUsers } = useQuery({
+  const { data: users, refetch: refetchUsers, error: usersError } = useQuery({
     queryKey: ["users-with-roles"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get all profiles
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select(`
-          *,
-          user_roles(role)
-        `);
+        .select("*");
 
-      if (error) throw error;
-      return data;
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+
+      // Then, get all user roles
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      if (rolesError) {
+        console.error("Error fetching roles:", rolesError);
+        throw rolesError;
+      }
+
+      // Manually join the data
+      const usersWithRoles = profiles?.map(profile => ({
+        ...profile,
+        user_roles: roles?.filter(role => role.user_id === profile.id) || []
+      })) || [];
+
+      console.log("Fetched users:", usersWithRoles);
+      return usersWithRoles;
     },
   });
 
@@ -84,6 +105,108 @@ const Users = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          full_name: editingUser.full_name,
+          phone_number: editingUser.phone_number,
+          ministry_name: editingUser.ministry_name,
+        })
+        .eq("id", editingUser.id);
+
+      if (profileError) throw profileError;
+
+      // Update role
+      const { data: currentRole } = await supabase
+        .from("user_roles")
+        .select("*")
+        .eq("user_id", editingUser.id)
+        .single();
+
+      if (editingUser.role === "admin" && !currentRole) {
+        // Add admin role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert([{ user_id: editingUser.id, role: "admin" }]);
+        if (roleError) throw roleError;
+      } else if (editingUser.role === "contributor" && currentRole) {
+        // Remove admin role
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", editingUser.id);
+        if (roleError) throw roleError;
+      }
+
+      toast({ title: "User updated successfully" });
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      refetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete user roles first
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+
+      // Delete profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+
+      if (profileError) throw profileError;
+
+      // Note: Deleting auth user requires admin privileges via a Supabase function
+      // For now, we'll just remove the profile and role
+
+      toast({ title: "User deleted successfully" });
+      refetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openEditDialog = (user: {
+    id: string;
+    email: string;
+    full_name: string;
+    phone_number: string | null;
+    ministry_name: string | null;
+    user_roles?: Array<{ role: string }> | null;
+  }) => {
+    setEditingUser({
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      phone_number: user.phone_number || "",
+      ministry_name: user.ministry_name || "",
+      role: user.user_roles && user.user_roles.length > 0 ? "admin" : "contributor",
+    });
+    setIsEditUserOpen(true);
   };
 
   const handleAddRoom = async (e: React.FormEvent) => {
@@ -202,35 +325,130 @@ const Users = () => {
                   </form>
                 </DialogContent>
               </Dialog>
+
+              {/* Edit User Dialog */}
+              <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Edit User</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleEditUser} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_full_name">Full Name *</Label>
+                      <Input
+                        id="edit_full_name"
+                        value={editingUser?.full_name || ""}
+                        onChange={(e) => setEditingUser(editingUser ? { ...editingUser, full_name: e.target.value } : null)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_email">Email (Read-only)</Label>
+                      <Input
+                        id="edit_email"
+                        type="email"
+                        value={editingUser?.email || ""}
+                        disabled
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_phone">Phone Number</Label>
+                      <Input
+                        id="edit_phone"
+                        value={editingUser?.phone_number || ""}
+                        onChange={(e) => setEditingUser(editingUser ? { ...editingUser, phone_number: e.target.value } : null)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_ministry">Ministry Name</Label>
+                      <Input
+                        id="edit_ministry"
+                        value={editingUser?.ministry_name || ""}
+                        onChange={(e) => setEditingUser(editingUser ? { ...editingUser, ministry_name: e.target.value } : null)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_role">Role *</Label>
+                      <Select
+                        value={editingUser?.role || "contributor"}
+                        onValueChange={(value) => setEditingUser(editingUser ? { ...editingUser, role: value } : null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="contributor">Contributor</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" className="w-full">Update User</Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users?.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.full_name}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        {user.user_roles && user.user_roles.length > 0 ? (
-                          <Badge variant="default">
-                            <Shield className="h-3 w-3 mr-1" />
-                            Admin
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary">Contributor</Badge>
-                        )}
-                      </TableCell>
+              {usersError && (
+                <div className="text-sm text-destructive mb-4">
+                  Error loading users: {usersError instanceof Error ? usersError.message : "Unknown error"}
+                </div>
+              )}
+              {!users || users.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {usersError ? "Failed to load users." : "No users found. Add users using the 'Add User' button above."}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Ministry</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.full_name}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.phone_number || "-"}</TableCell>
+                        <TableCell>{user.ministry_name || "-"}</TableCell>
+                        <TableCell>
+                          {user.user_roles && user.user_roles.length > 0 ? (
+                            <Badge variant="default">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Contributor</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditDialog(user)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteUser(user.id, user.full_name)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
 

@@ -73,6 +73,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          ministry_name: string | null
           phone_number: string | null
           updated_at: string
         }
@@ -81,6 +82,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          ministry_name?: string | null
           phone_number?: string | null
           updated_at?: string
         }
@@ -89,6 +91,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          ministry_name?: string | null
           phone_number?: string | null
           updated_at?: string
         }
@@ -146,7 +149,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
