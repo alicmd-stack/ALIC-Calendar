@@ -58,8 +58,29 @@ const DateBasedCalendar = ({
     ).sort((a, b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime());
   };
 
+  // Calculate the time range for displaying events
+  const getTimeRange = (dayEvents: Event[]) => {
+    if (dayEvents.length === 0) {
+      return { startHour: 8, endHour: 18 }; // Default business hours
+    }
+
+    const eventTimes = dayEvents.flatMap((event) => [
+      parseISO(event.starts_at).getHours(),
+      parseISO(event.ends_at).getHours(),
+    ]);
+
+    const earliestHour = Math.min(...eventTimes);
+    const latestHour = Math.max(...eventTimes);
+
+    // Add 1 hour padding before and after
+    return {
+      startHour: Math.max(0, earliestHour - 1),
+      endHour: Math.min(23, latestHour + 2), // +2 to show the end hour line
+    };
+  };
+
   // Calculate positions for events in a time-grid layout
-  const calculateEventPositions = (dayEvents: Event[], day: Date): PositionedEvent[] => {
+  const calculateEventPositions = (dayEvents: Event[], day: Date, startHour: number): PositionedEvent[] => {
     if (dayEvents.length === 0) return [];
 
     const dayStart = startOfDay(day);
@@ -73,9 +94,12 @@ const DateBasedCalendar = ({
       const minutesFromStart = differenceInMinutes(eventStart, dayStart);
       const duration = differenceInMinutes(eventEnd, eventStart);
 
+      // Adjust position relative to the start hour
+      const adjustedTop = (minutesFromStart - startHour * 60) * PIXELS_PER_MINUTE;
+
       return {
         ...event,
-        top: minutesFromStart * PIXELS_PER_MINUTE,
+        top: adjustedTop,
         height: Math.max(duration * PIXELS_PER_MINUTE, 40), // Minimum 40px height
         start: eventStart,
         end: eventEnd,
@@ -251,76 +275,87 @@ const DateBasedCalendar = ({
                 {/* Events List - Time Grid Layout */}
                 <div className="relative min-h-[200px] max-h-[600px] overflow-y-auto">
                   {dayEvents.length > 0 ? (
-                    <div className="relative" style={{ height: `${24 * 60}px` }}>
-                      {/* Hour markers */}
-                      {Array.from({ length: 24 }, (_, hour) => (
-                        <div
-                          key={hour}
-                          className="absolute left-0 right-0 border-t border-border/30"
-                          style={{ top: `${hour * 60}px` }}
-                        >
-                          <span className="text-[10px] text-muted-foreground/60 pl-1">
-                            {format(new Date().setHours(hour, 0), "ha")}
-                          </span>
-                        </div>
-                      ))}
+                    (() => {
+                      const { startHour, endHour } = getTimeRange(dayEvents);
+                      const hours = Array.from(
+                        { length: endHour - startHour + 1 },
+                        (_, i) => startHour + i
+                      );
+                      const gridHeight = hours.length * 60;
 
-                      {/* Events positioned in time grid */}
-                      {calculateEventPositions(dayEvents, day).map((event) => {
-                        const widthPercentage = 100 / event.totalColumns;
-                        const leftPercentage = widthPercentage * event.column;
-
-                        return (
-                          <div
-                            key={event.id}
-                            onClick={() => onEventClick(event.id)}
-                            className="absolute p-2 rounded-md bg-background border-l-2 cursor-pointer hover:bg-accent/50 transition-colors shadow-sm overflow-hidden"
-                            style={{
-                              top: `${event.top}px`,
-                              height: `${event.height}px`,
-                              left: `${leftPercentage}%`,
-                              width: `calc(${widthPercentage}% - 4px)`,
-                              borderLeftColor: event.room?.color || "#888",
-                              minHeight: "40px",
-                            }}
-                          >
-                            <div className="font-medium text-xs mb-0.5 line-clamp-1 text-foreground">
-                              {event.title}
-                            </div>
-                            <div className="flex items-center gap-1 text-[9px] text-muted-foreground mb-0.5">
-                              <Clock className="h-2.5 w-2.5" />
-                              <span>
-                                {format(parseISO(event.starts_at), "h:mm a")}
+                      return (
+                        <div className="relative" style={{ height: `${gridHeight}px` }}>
+                          {/* Hour markers */}
+                          {hours.map((hour, index) => (
+                            <div
+                              key={hour}
+                              className="absolute left-0 right-0 border-t border-border/30"
+                              style={{ top: `${index * 60}px` }}
+                            >
+                              <span className="text-[10px] text-muted-foreground/60 pl-1">
+                                {format(new Date().setHours(hour, 0), "ha")}
                               </span>
                             </div>
-                            {event.room && (
-                              <Badge
-                                variant="outline"
-                                className="text-[9px] h-auto py-0 px-1 font-normal"
+                          ))}
+
+                          {/* Events positioned in time grid */}
+                          {calculateEventPositions(dayEvents, day, startHour).map((event) => {
+                            const widthPercentage = 100 / event.totalColumns;
+                            const leftPercentage = widthPercentage * event.column;
+
+                            return (
+                              <div
+                                key={event.id}
+                                onClick={() => onEventClick(event.id)}
+                                className="absolute p-2 rounded-md bg-background border-l-2 cursor-pointer hover:bg-accent/50 transition-colors shadow-sm overflow-hidden"
                                 style={{
-                                  borderColor: event.room.color,
-                                  backgroundColor: `${event.room.color}15`,
-                                  color: event.room.color,
+                                  top: `${event.top}px`,
+                                  height: `${event.height}px`,
+                                  left: `${leftPercentage}%`,
+                                  width: `calc(${widthPercentage}% - 4px)`,
+                                  borderLeftColor: event.room?.color || "#888",
+                                  minHeight: "40px",
                                 }}
                               >
-                                {event.room.name}
-                              </Badge>
-                            )}
-                            {!hideStatus && event.height > 60 && (
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  "text-[9px] h-auto py-0 px-1 font-normal text-white mt-0.5",
-                                  getStatusColor(event.status)
+                                <div className="font-medium text-xs mb-0.5 line-clamp-1 text-foreground">
+                                  {event.title}
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] text-muted-foreground mb-0.5">
+                                  <Clock className="h-2.5 w-2.5" />
+                                  <span>
+                                    {format(parseISO(event.starts_at), "h:mm a")}
+                                  </span>
+                                </div>
+                                {event.room && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[9px] h-auto py-0 px-1 font-normal"
+                                    style={{
+                                      borderColor: event.room.color,
+                                      backgroundColor: `${event.room.color}15`,
+                                      color: event.room.color,
+                                    }}
+                                  >
+                                    {event.room.name}
+                                  </Badge>
                                 )}
-                              >
-                                {getStatusLabel(event.status)}
-                              </Badge>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                                {!hideStatus && event.height > 60 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className={cn(
+                                      "text-[9px] h-auto py-0 px-1 font-normal text-white mt-0.5",
+                                      getStatusColor(event.status)
+                                    )}
+                                  >
+                                    {getStatusLabel(event.status)}
+                                  </Badge>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()
                   ) : (
                     <div
                       className={cn(
