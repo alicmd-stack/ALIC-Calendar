@@ -171,8 +171,10 @@ const Dashboard = () => {
             currentUserId={user?.id}
             view={calendarView}
             selectedDate={dayViewDate}
-            startHour={9}
-            endHour={21}
+            startHour={0}
+            endHour={23}
+            scrollToHour={9}
+            visibleHours={10}
           />
         </div>
 

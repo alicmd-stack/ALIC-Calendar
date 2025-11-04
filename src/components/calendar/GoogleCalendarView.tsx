@@ -24,7 +24,7 @@ import {
 } from "date-fns";
 import { Clock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 
 interface Event {
   id: string;
@@ -45,8 +45,10 @@ interface GoogleCalendarViewProps {
   onTimeSlotClick?: (date: Date, hour: number) => void;
   hideStatus?: boolean;
   currentUserId?: string;
-  startHour?: number; // Default: 9am
-  endHour?: number; // Default: 9pm (21)
+  startHour?: number; // Default: 0 (midnight) - start of displayed hours
+  endHour?: number; // Default: 23 (11pm) - end of displayed hours
+  scrollToHour?: number; // Default: 9 - hour to scroll to on mount
+  visibleHours?: number; // Number of hours visible in viewport (controls height)
   view?: "week" | "day" | "month";
   selectedDate?: Date; // For day view
   readOnly?: boolean; // Hide add event controls
@@ -69,12 +71,15 @@ const GoogleCalendarView = ({
   onTimeSlotClick,
   hideStatus = false,
   currentUserId,
-  startHour = 9,
-  endHour = 21,
+  startHour = 0,
+  endHour = 23,
+  scrollToHour = 9,
+  visibleHours = 10,
   view = "week",
   selectedDate,
   readOnly = false,
 }: GoogleCalendarViewProps) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekDays = view === "day" && selectedDate
     ? [selectedDate]
@@ -219,16 +224,25 @@ const GoogleCalendarView = ({
     }
   };
 
+  // Scroll to the specified hour on mount or when scrollToHour changes
+  useEffect(() => {
+    if (scrollContainerRef.current && view !== "month") {
+      const scrollPosition = (scrollToHour - startHour) * HOUR_HEIGHT;
+      scrollContainerRef.current.scrollTop = scrollPosition;
+    }
+  }, [scrollToHour, startHour, view]);
+
   if (view === "week" || view === "day") {
+    const containerHeight = visibleHours * HOUR_HEIGHT;
+
     return (
       <div className="space-y-2">
         {/* Time Grid */}
-        <div className="border rounded-lg bg-background overflow-x-auto">
-          <div className="relative">
-            {/* Grid structure */}
-            <div className="grid" style={{ gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "800px" : "400px" }}>
-              {/* Header Row */}
-              <div className="sticky top-0 z-20 bg-background border-b border-r"></div>
+        <div className="border rounded-lg bg-background overflow-hidden">
+          {/* Sticky Header Row */}
+          <div className="sticky top-0 z-30 bg-background border-b">
+            <div className="grid overflow-x-auto" style={{ gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "800px" : "400px" }}>
+              <div className="bg-background border-r"></div>
               {weekDays.map((day) => {
                 const isCurrentDay = isToday(day);
                 const isPastDay = isPast(day);
@@ -237,7 +251,7 @@ const GoogleCalendarView = ({
                   <div
                     key={day.toString()}
                     className={cn(
-                      "sticky top-0 z-20 bg-background border-b text-center py-3 px-2",
+                      "bg-background text-center py-3 px-2",
                       isCurrentDay && "bg-blue-50 dark:bg-blue-950"
                     )}
                   >
@@ -271,6 +285,16 @@ const GoogleCalendarView = ({
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Scrollable Time Slots Container */}
+          <div
+            ref={scrollContainerRef}
+            className="overflow-y-auto overflow-x-auto"
+            style={{ height: `${containerHeight}px` }}
+          >
+            <div className="grid relative" style={{ gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "800px" : "400px" }}>
 
               {/* Time Slots */}
               {hours.map((hour) => (
@@ -278,14 +302,14 @@ const GoogleCalendarView = ({
                   {/* Hour Label */}
                   <div
                     key={`label-${hour}`}
-                    className="border-r border-b py-2 px-2 text-xs text-muted-foreground text-right"
+                    className="border-r border-b py-2 px-2 text-xs text-muted-foreground text-right bg-background"
                     style={{ height: `${HOUR_HEIGHT}px` }}
                   >
                     {format(setHours(new Date(), hour), "h a")}
                   </div>
 
                   {/* Day Columns */}
-                  {weekDays.map((day, dayIndex) => {
+                  {weekDays.map((day) => {
                     const isCurrentDay = isToday(day);
                     const isPastDay = isPast(day);
 

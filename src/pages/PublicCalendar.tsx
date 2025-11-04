@@ -331,8 +331,10 @@ const PublicCalendar = () => {
                 hideStatus={true}
                 view={calendarView}
                 selectedDate={selectedDate}
-                startHour={9}
-                endHour={21}
+                startHour={0}
+                endHour={23}
+                scrollToHour={9}
+                visibleHours={5}
                 readOnly={true}
               />
             )}
