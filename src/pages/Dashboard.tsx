@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import DateBasedCalendar from "@/components/calendar/DateBasedCalendar";
+import GoogleCalendarView from "@/components/calendar/GoogleCalendarView";
+import CalendarViewSwitcher, { CalendarView } from "@/components/calendar/CalendarViewSwitcher";
+import EventSidebar from "@/components/calendar/EventSidebar";
 import EventDialog from "@/components/calendar/EventDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { addWeeks, subWeeks } from "date-fns";
+import { addWeeks, subWeeks, addDays, format } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const Dashboard = () => {
@@ -16,6 +18,8 @@ const Dashboard = () => {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [calendarView, setCalendarView] = useState<CalendarView>("week");
+  const [dayViewDate, setDayViewDate] = useState(new Date());
 
   const { data: events, refetch } = useQuery({
     queryKey: ["events"],
@@ -82,43 +86,92 @@ const Dashboard = () => {
               Manage and schedule events across multiple rooms
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentWeek(new Date())}
-              >
-                Today
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+          <Button onClick={handleCreateEvent} size="lg" className="gap-2">
+            <Plus className="h-5 w-5" />
+            Create Event
+          </Button>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <CalendarViewSwitcher
+            currentView={calendarView}
+            onViewChange={(view) => {
+              setCalendarView(view);
+              if (view === "day") {
+                setDayViewDate(currentWeek);
+              }
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (calendarView === "day") {
+                  setDayViewDate(addDays(dayViewDate, -1));
+                } else {
+                  setCurrentWeek(subWeeks(currentWeek, 1));
+                }
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="px-4 py-2 bg-muted rounded-lg min-w-[200px] text-center">
+              <span className="font-medium text-sm">
+                {calendarView === "day"
+                  ? format(dayViewDate, "EEEE, MMM d, yyyy")
+                  : format(currentWeek, "MMM d, yyyy")}
+              </span>
             </div>
-            <Button onClick={handleCreateEvent} size="lg" className="gap-2">
-              <Plus className="h-5 w-5" />
-              Create Event
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                if (calendarView === "day") {
+                  setDayViewDate(addDays(dayViewDate, 1));
+                } else {
+                  setCurrentWeek(addWeeks(currentWeek, 1));
+                }
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const today = new Date();
+                setCurrentWeek(today);
+                setDayViewDate(today);
+              }}
+            >
+              Today
             </Button>
           </div>
         </div>
 
-        <DateBasedCalendar
-          events={events || []}
-          currentWeek={currentWeek}
-          onEventClick={handleEventClick}
-          onDateClick={handleDateClick}
-          currentUserId={user?.id}
-        />
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+          <div>
+            <GoogleCalendarView
+              events={events || []}
+              currentWeek={currentWeek}
+              onEventClick={handleEventClick}
+              onDateClick={handleDateClick}
+              currentUserId={user?.id}
+              view={calendarView}
+              selectedDate={dayViewDate}
+              startHour={9}
+              endHour={21}
+            />
+          </div>
+
+          <div className="hidden lg:block">
+            <EventSidebar
+              events={events || []}
+              onEventClick={handleEventClick}
+              currentUserId={user?.id}
+            />
+          </div>
+        </div>
 
         <EventDialog
           open={isEventDialogOpen}

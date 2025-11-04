@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import DateBasedCalendar from "@/components/calendar/DateBasedCalendar";
+import GoogleCalendarView from "@/components/calendar/GoogleCalendarView";
+import CalendarViewSwitcher, { CalendarView } from "@/components/calendar/CalendarViewSwitcher";
 import {
   Calendar,
   Church,
@@ -37,12 +38,15 @@ import {
   subWeeks,
   startOfWeek,
   endOfWeek,
+  addDays,
 } from "date-fns";
 
 const PublicCalendar = () => {
   const navigate = useNavigate();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [calendarView, setCalendarView] = useState<CalendarView>("week");
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
 
@@ -232,33 +236,64 @@ const PublicCalendar = () => {
                   View all published events and activities
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="px-4 py-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-                  <span className="font-medium text-sm">
-                    {format(weekStart, "MMM d")} -{" "}
-                    {format(weekEnd, "MMM d, yyyy")}
-                  </span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <CalendarViewSwitcher
+                  currentView={calendarView}
+                  onViewChange={(view) => {
+                    setCalendarView(view);
+                    if (view === "day") {
+                      setSelectedDate(currentWeek);
+                    }
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (calendarView === "day") {
+                        setSelectedDate(addDays(selectedDate, -1));
+                      } else {
+                        setCurrentWeek(subWeeks(currentWeek, 1));
+                      }
+                    }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <div className="px-4 py-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+                    <span className="font-medium text-sm">
+                      {calendarView === "day"
+                        ? format(selectedDate, "EEEE, MMM d, yyyy")
+                        : `${format(weekStart, "MMM d")} - ${format(
+                            weekEnd,
+                            "MMM d, yyyy"
+                          )}`}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      if (calendarView === "day") {
+                        setSelectedDate(addDays(selectedDate, 1));
+                      } else {
+                        setCurrentWeek(addWeeks(currentWeek, 1));
+                      }
+                    }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const today = new Date();
+                      setCurrentWeek(today);
+                      setSelectedDate(today);
+                    }}
+                  >
+                    Today
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentWeek(new Date())}
-                >
-                  Today
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -271,11 +306,15 @@ const PublicCalendar = () => {
                 </p>
               </div>
             ) : (
-              <DateBasedCalendar
+              <GoogleCalendarView
                 events={events || []}
                 currentWeek={currentWeek}
                 onEventClick={handleEventClick}
                 hideStatus={true}
+                view={calendarView}
+                selectedDate={selectedDate}
+                startHour={9}
+                endHour={21}
               />
             )}
           </CardContent>
