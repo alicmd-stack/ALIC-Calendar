@@ -82,8 +82,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const requestPasswordReset = async (email: string) => {
     try {
+      // Always redirect to production site for password resets
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `https://addislidet.info/reset-password`,
       });
       return { error };
     } catch (error) {
