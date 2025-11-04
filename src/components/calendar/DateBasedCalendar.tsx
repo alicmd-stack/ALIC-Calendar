@@ -10,6 +10,7 @@ import {
   startOfDay,
   endOfDay,
   isBefore,
+  areIntervalsOverlapping,
 } from "date-fns";
 import { Clock, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,47 @@ const DateBasedCalendar = ({
     return events.filter((event) =>
       isSameDay(parseISO(event.starts_at), day)
     ).sort((a, b) => parseISO(a.starts_at).getTime() - parseISO(b.starts_at).getTime());
+  };
+
+  // Group overlapping events into rows with columns
+  const groupOverlappingEvents = (dayEvents: Event[]) => {
+    if (dayEvents.length === 0) return [];
+
+    const rows: Event[][] = [];
+
+    dayEvents.forEach((event) => {
+      const eventStart = parseISO(event.starts_at);
+      const eventEnd = parseISO(event.ends_at);
+
+      // Find all rows where this event overlaps with at least one event
+      let addedToRow = false;
+
+      for (const row of rows) {
+        const overlaps = row.some((rowEvent) => {
+          const rowStart = parseISO(rowEvent.starts_at);
+          const rowEnd = parseISO(rowEvent.ends_at);
+
+          return areIntervalsOverlapping(
+            { start: eventStart, end: eventEnd },
+            { start: rowStart, end: rowEnd },
+            { inclusive: true }
+          );
+        });
+
+        if (overlaps) {
+          row.push(event);
+          addedToRow = true;
+          break;
+        }
+      }
+
+      // If event doesn't overlap with any row, create a new row
+      if (!addedToRow) {
+        rows.push([event]);
+      }
+    });
+
+    return rows;
   };
 
   const isToday = (date: Date) => isSameDay(date, today);
@@ -132,58 +174,72 @@ const DateBasedCalendar = ({
                   )}
                 </div>
 
-                {/* Events List */}
+                {/* Events List - Column-based layout for overlapping events */}
                 <div className="space-y-2 min-h-[200px] max-h-[400px] overflow-y-auto">
                   {dayEvents.length > 0 ? (
-                    dayEvents.map((event) => (
+                    groupOverlappingEvents(dayEvents).map((row, rowIndex) => (
                       <div
-                        key={event.id}
-                        onClick={() => onEventClick(event.id)}
-                        className="p-2.5 rounded-md bg-background border cursor-pointer hover:bg-accent/50 transition-colors group"
+                        key={`row-${rowIndex}`}
+                        className={cn(
+                          "grid gap-2",
+                          row.length === 1 ? "grid-cols-1" :
+                          row.length === 2 ? "grid-cols-2" :
+                          row.length === 3 ? "grid-cols-3" :
+                          row.length === 4 ? "grid-cols-4" :
+                          "grid-cols-2"
+                        )}
                       >
-                        <div className="font-medium text-sm mb-1.5 line-clamp-2 text-foreground">
-                          {event.title}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1.5">
-                          <Clock className="h-3 w-3" />
-                          <span>
-                            {format(parseISO(event.starts_at), "h:mm a")} - {format(parseISO(event.ends_at), "h:mm a")}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {event.room && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] h-auto py-0.5 px-1.5 font-normal"
-                              style={{
-                                borderColor: event.room.color,
-                                backgroundColor: `${event.room.color}15`,
-                                color: event.room.color,
-                              }}
-                            >
-                              {event.room.name}
-                            </Badge>
-                          )}
-                          {!hideStatus && (
-                            <Badge
-                              variant="secondary"
-                              className={cn(
-                                "text-[10px] h-auto py-0.5 px-1.5 font-normal text-white",
-                                getStatusColor(event.status)
+                        {row.map((event) => (
+                          <div
+                            key={event.id}
+                            onClick={() => onEventClick(event.id)}
+                            className="p-2.5 rounded-md bg-background border cursor-pointer hover:bg-accent/50 transition-colors group"
+                          >
+                            <div className="font-medium text-sm mb-1.5 line-clamp-2 text-foreground">
+                              {event.title}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1.5">
+                              <Clock className="h-3 w-3" />
+                              <span>
+                                {format(parseISO(event.starts_at), "h:mm a")} - {format(parseISO(event.ends_at), "h:mm a")}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {event.room && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] h-auto py-0.5 px-1.5 font-normal"
+                                  style={{
+                                    borderColor: event.room.color,
+                                    backgroundColor: `${event.room.color}15`,
+                                    color: event.room.color,
+                                  }}
+                                >
+                                  {event.room.name}
+                                </Badge>
                               )}
-                            >
-                              {getStatusLabel(event.status)}
-                            </Badge>
-                          )}
-                        </div>
-                        {event.creator && (
-                          <div className="text-[10px] text-muted-foreground mt-1.5">
-                            {!hideStatus && <div>By: {event.creator.full_name}</div>}
-                            {event.creator.ministry_name && (
-                              <div className={cn("text-[9px]", !hideStatus && "mt-0.5")}>{event.creator.ministry_name}</div>
+                              {!hideStatus && (
+                                <Badge
+                                  variant="secondary"
+                                  className={cn(
+                                    "text-[10px] h-auto py-0.5 px-1.5 font-normal text-white",
+                                    getStatusColor(event.status)
+                                  )}
+                                >
+                                  {getStatusLabel(event.status)}
+                                </Badge>
+                              )}
+                            </div>
+                            {event.creator && (
+                              <div className="text-[10px] text-muted-foreground mt-1.5">
+                                {!hideStatus && <div>By: {event.creator.full_name}</div>}
+                                {event.creator.ministry_name && (
+                                  <div className={cn("text-[9px]", !hideStatus && "mt-0.5")}>{event.creator.ministry_name}</div>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
+                        ))}
                       </div>
                     ))
                   ) : (
