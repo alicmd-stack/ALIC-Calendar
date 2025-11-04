@@ -10,6 +10,8 @@ import Admin from "./pages/Admin";
 import Users from "./pages/Users";
 import Rooms from "./pages/Rooms";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import PublicCalendar from "./pages/PublicCalendar";
 import NotFound from "./pages/NotFound";
 
@@ -49,6 +51,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/public" replace />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/public" element={<PublicCalendar />} />
             <Route
               path="/dashboard"

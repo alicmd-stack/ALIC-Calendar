@@ -314,6 +314,17 @@ const Auth = () => {
                     </div>
                   </div>
 
+                  <div className="flex items-center justify-end">
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-sm text-primary px-0"
+                      onClick={() => navigate("/forgot-password")}
+                    >
+                      Forgot password?
+                    </Button>
+                  </div>
+
                   <LoadingButton
                     type="submit"
                     className="w-full h-12 bg-gradient-primary hover:opacity-90 text-primary-foreground font-medium"
