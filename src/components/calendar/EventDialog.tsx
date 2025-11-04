@@ -112,10 +112,16 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
     } else {
       // Set default start time based on initialDate or now
       const baseDate = initialDate || new Date();
-      // Set time to 9 AM if using initialDate, otherwise use current time
-      const startDate = initialDate
-        ? new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 9, 0)
-        : baseDate;
+      // If initialDate is provided, use its time if it has one (not midnight), otherwise default to 9 AM
+      let startDate: Date;
+      if (initialDate) {
+        const hasTime = baseDate.getHours() !== 0 || baseDate.getMinutes() !== 0;
+        startDate = hasTime
+          ? baseDate
+          : new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate(), 9, 0);
+      } else {
+        startDate = baseDate;
+      }
       const oneHourLater = new Date(startDate.getTime() + 60 * 60 * 1000);
 
       setFormData({
