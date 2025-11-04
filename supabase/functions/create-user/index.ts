@@ -62,9 +62,9 @@ Deno.serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
-      .single();
+      .eq("role", "admin");
 
-    if (!userRoles || userRoles.role !== "admin") {
+    if (!userRoles || userRoles.length === 0) {
       return new Response(
         JSON.stringify({ error: "Insufficient permissions" }),
         {
