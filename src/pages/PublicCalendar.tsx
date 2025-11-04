@@ -323,6 +323,7 @@ const PublicCalendar = () => {
                 selectedDate={selectedDate}
                 startHour={9}
                 endHour={21}
+                readOnly={true}
               />
             )}
           </CardContent>

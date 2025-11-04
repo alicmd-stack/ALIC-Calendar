@@ -49,6 +49,7 @@ interface GoogleCalendarViewProps {
   endHour?: number; // Default: 9pm (21)
   view?: "week" | "day" | "month";
   selectedDate?: Date; // For day view
+  readOnly?: boolean; // Hide add event controls
 }
 
 interface PositionedEvent extends Event {
@@ -72,6 +73,7 @@ const GoogleCalendarView = ({
   endHour = 21,
   view = "week",
   selectedDate,
+  readOnly = false,
 }: GoogleCalendarViewProps) => {
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekDays = view === "day" && selectedDate
@@ -299,7 +301,7 @@ const GoogleCalendarView = ({
                         onClick={() => handleTimeSlotClick(day, hour)}
                       >
                         {/* Hover overlay for adding events */}
-                        {!isPastDay && (
+                        {!isPastDay && !readOnly && (
                           <div className="absolute inset-0 opacity-0 group-hover/timeslot:opacity-100 bg-blue-100/20 dark:bg-blue-900/20 cursor-pointer transition-opacity flex items-center justify-center z-0">
                             <Plus className="h-4 w-4 text-blue-600" />
                           </div>
@@ -447,7 +449,7 @@ const GoogleCalendarView = ({
                       </div>
 
                       {/* Add event button on hover */}
-                      {onDateClick && !isPastDay && (
+                      {onDateClick && !isPastDay && !readOnly && (
                         <Button
                           variant="ghost"
                           size="sm"
