@@ -82,16 +82,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const requestPasswordReset = async (email: string) => {
     try {
-      // Use current origin for redirect URL
-      const redirectUrl = window.location.origin.includes('localhost')
-        ? `${window.location.origin}/reset-password`
-        : `https://addislidet.info/reset-password`;
+      // Construct the redirect URL based on the current environment
+      // This will work for localhost (with any port), production domain, or preview deployments
+      const redirectUrl = `${window.location.origin}/reset-password`;
+      
+      console.log('Password reset redirect URL:', redirectUrl);
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
       });
       return { error };
     } catch (error) {
+      console.error('Password reset error:', error);
       return { error: error as Error };
     }
   };
