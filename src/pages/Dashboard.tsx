@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import GoogleCalendarView from "@/components/calendar/GoogleCalendarView";
 import CalendarViewSwitcher, { CalendarView } from "@/components/calendar/CalendarViewSwitcher";
-import EventSidebar from "@/components/calendar/EventSidebar";
 import EventDialog from "@/components/calendar/EventDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { addWeeks, subWeeks, addDays, addMonths, subMonths, format } from "date-fns";
@@ -155,28 +154,18 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
-          <div>
-            <GoogleCalendarView
-              events={events || []}
-              currentWeek={currentWeek}
-              onEventClick={handleEventClick}
-              onDateClick={handleDateClick}
-              currentUserId={user?.id}
-              view={calendarView}
-              selectedDate={dayViewDate}
-              startHour={9}
-              endHour={21}
-            />
-          </div>
-
-          <div className="hidden lg:block">
-            <EventSidebar
-              events={events || []}
-              onEventClick={handleEventClick}
-              currentUserId={user?.id}
-            />
-          </div>
+        <div>
+          <GoogleCalendarView
+            events={events || []}
+            currentWeek={currentWeek}
+            onEventClick={handleEventClick}
+            onDateClick={handleDateClick}
+            currentUserId={user?.id}
+            view={calendarView}
+            selectedDate={dayViewDate}
+            startHour={9}
+            endHour={21}
+          />
         </div>
 
         <EventDialog
@@ -187,6 +176,11 @@ const Dashboard = () => {
           onSuccess={() => {
             refetch();
             setIsEventDialogOpen(false);
+          }}
+          allEvents={events || []}
+          onEventSelect={(eventId) => {
+            setSelectedEventId(eventId);
+            setSelectedDate(null);
           }}
         />
       </div>
