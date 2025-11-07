@@ -42,9 +42,11 @@ import {
   addMonths,
   subMonths,
 } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 const PublicCalendar = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [calendarView, setCalendarView] = useState<CalendarView>("week");
@@ -93,45 +95,98 @@ const PublicCalendar = () => {
     }
   };
 
+  // Helper function to escape special characters in iCalendar format
+  const escapeICalText = (text: string): string => {
+    if (!text) return "";
+    return text
+      .replace(/\\/g, "\\\\")  // Backslash
+      .replace(/;/g, "\\;")    // Semicolon
+      .replace(/,/g, "\\,")    // Comma
+      .replace(/\n/g, "\\n")   // Newline
+      .replace(/\r/g, "");     // Remove carriage return
+  };
+
   const exportToICS = () => {
-    if (!events || events.length === 0) return;
+    try {
+      if (!events || events.length === 0) {
+        toast({
+          title: "No events to export",
+          description: "There are no events available for export.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    let icsContent = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//ALIC MD//Events Calendar//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "X-WR-CALNAME:ALIC MD Events",
-      "X-WR-TIMEZONE:America/New_York",
-    ];
+      let icsContent = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//ALIC MD//Events Calendar//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:ALIC MD Events",
+        "X-WR-TIMEZONE:America/New_York",
+        // Add VTIMEZONE component for proper timezone handling
+        "BEGIN:VTIMEZONE",
+        "TZID:America/New_York",
+        "BEGIN:DAYLIGHT",
+        "TZOFFSETFROM:-0500",
+        "TZOFFSETTO:-0400",
+        "TZNAME:EDT",
+        "DTSTART:19700308T020000",
+        "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU",
+        "END:DAYLIGHT",
+        "BEGIN:STANDARD",
+        "TZOFFSETFROM:-0400",
+        "TZOFFSETTO:-0500",
+        "TZNAME:EST",
+        "DTSTART:19701101T020000",
+        "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU",
+        "END:STANDARD",
+        "END:VTIMEZONE",
+      ];
 
-    events.forEach((event: any) => {
-      const start = parseISO(event.starts_at);
-      const end = parseISO(event.ends_at);
+      events.forEach((event: any) => {
+        const start = parseISO(event.starts_at);
+        const end = parseISO(event.ends_at);
 
-      icsContent.push(
-        "BEGIN:VEVENT",
-        `UID:${event.id}@addislidetchurch.org`,
-        `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}`,
-        `DTSTART:${format(start, "yyyyMMdd'T'HHmmss")}`,
-        `DTEND:${format(end, "yyyyMMdd'T'HHmmss")}`,
-        `SUMMARY:${event.title}`,
-        `DESCRIPTION:${event.description || ""}`,
-        `LOCATION:${event.room?.name || ""}`,
-        "END:VEVENT"
-      );
-    });
+        icsContent.push(
+          "BEGIN:VEVENT",
+          `UID:${event.id}@addislidetchurch.org`,
+          `DTSTAMP:${format(new Date(), "yyyyMMdd'T'HHmmss'Z'")}`,
+          `DTSTART;TZID=America/New_York:${format(start, "yyyyMMdd'T'HHmmss")}`,
+          `DTEND;TZID=America/New_York:${format(end, "yyyyMMdd'T'HHmmss")}`,
+          `SUMMARY:${escapeICalText(event.title)}`,
+          `DESCRIPTION:${escapeICalText(event.description || "")}`,
+          `LOCATION:${escapeICalText(event.room?.name || "")}`,
+          "STATUS:CONFIRMED",
+          "END:VEVENT"
+        );
+      });
 
-    icsContent.push("END:VCALENDAR");
+      icsContent.push("END:VCALENDAR");
 
-    const blob = new Blob([icsContent.join("\r\n")], { type: "text/calendar" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `alic-md-events-${format(currentWeek, "yyyy-MM-dd")}.ics`;
-    link.click();
-    URL.revokeObjectURL(url);
+      const blob = new Blob([icsContent.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `alic-md-events-${format(currentWeek, "yyyy-MM-dd")}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Calendar exported successfully",
+        description: `Exported ${events.length} event${events.length !== 1 ? 's' : ''} to iCalendar format.`,
+      });
+    } catch (error) {
+      console.error("Error exporting calendar:", error);
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "An error occurred while exporting the calendar.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
