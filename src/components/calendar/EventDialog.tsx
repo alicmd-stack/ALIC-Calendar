@@ -165,8 +165,7 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
           starts_at,
           ends_at,
           status,
-          created_by,
-          profiles:created_by (full_name)
+          created_by
         `)
         .eq("room_id", formData.room_id)
         .in("status", ["pending_review", "approved", "published"])
@@ -179,7 +178,15 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
 
       if (conflicts.length > 0) {
         const conflict = conflicts[0];
-        const creatorName = (conflict.profiles as any)?.full_name || 'Another user';
+
+        // Fetch creator profile separately
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", conflict.created_by)
+          .single();
+
+        const creatorName = profile?.full_name || 'Another user';
         setRoomConflict({
           hasConflict: true,
           conflictingEvent: conflict,
@@ -501,13 +508,16 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh]">
+      <DialogContent className="max-w-6xl max-h-[90vh]" aria-describedby="event-dialog-description">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
           {/* Left side - Event Form */}
           <div className="space-y-4">
             <DialogHeader>
               <DialogTitle>{eventId ? "Edit Event" : "Create Event"}</DialogTitle>
             </DialogHeader>
+            <p id="event-dialog-description" className="sr-only">
+              {eventId ? "Edit event details including title, description, room, and timing" : "Create a new event by filling in the details below"}
+            </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
           {validationError && (
