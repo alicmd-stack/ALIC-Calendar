@@ -193,6 +193,30 @@ const Admin = () => {
     }
   };
 
+  const handleUnapprove = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ status: "pending_review" })
+        .eq("id", eventId);
+
+      if (error) throw error;
+
+      toast({ title: "Event moved to pending review" });
+
+      refetchPending();
+      refetchApproved();
+      refetchPublished();
+      refetchRejected();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleViewEvent = (eventId: string) => {
     setSelectedEventId(eventId);
     setIsEventDialogOpen(true);
@@ -353,6 +377,13 @@ const Admin = () => {
                       >
                         Publish Event
                       </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleUnapprove(event.id)}
+                      >
+                        Unapprove
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
@@ -412,6 +443,13 @@ const Admin = () => {
                         onClick={() => handleStatusChange(event.id, "approved", true)}
                       >
                         Unpublish Event
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleUnapprove(event.id)}
+                      >
+                        Unapprove
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
                         <Eye className="h-4 w-4 mr-1" />

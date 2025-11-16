@@ -23,6 +23,7 @@ export type Database = {
           id: string
           is_recurring: boolean
           parent_event_id: string | null
+          previous_status: Database["public"]["Enums"]["event_status"] | null
           recurrence_end_date: string | null
           recurrence_rule: string | null
           reviewer_id: string | null
