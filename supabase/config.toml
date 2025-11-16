@@ -22,7 +22,6 @@ max_client_conn = 100
 [realtime]
 enabled = true
 ip_version = "IPv4"
-port = 54323
 max_header_length = 4096
 
 [studio]
@@ -53,11 +52,9 @@ minimum_password_length = 6
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
-hook = "send-auth-email"
 
 [edge_runtime]
 enabled = true
-port = 54321
 inspector_port = 8083
 
 [analytics]

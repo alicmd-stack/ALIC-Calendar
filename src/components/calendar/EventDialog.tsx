@@ -15,9 +15,10 @@ import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, MapPin, User } from "lucide-react";
+import { Clock, MapPin, User, Repeat } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { RecurrenceSelector, RecurrenceConfig, recurrenceConfigToRRule, rruleToRecurrenceConfig } from "@/components/calendar/RecurrenceSelector";
 
 interface EventDialogProps {
   open: boolean;
@@ -51,6 +52,12 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
     room_id: "",
     starts_at: "",
     ends_at: "",
+  });
+
+  const [recurrence, setRecurrence] = useState<RecurrenceConfig>({
+    frequency: 'none',
+    interval: 1,
+    endType: 'never',
   });
 
   const [validationError, setValidationError] = useState<string>("");
@@ -109,6 +116,17 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
         starts_at: formatDateTimeLocal(startsAt),
         ends_at: formatDateTimeLocal(endsAt),
       });
+
+      // Load recurrence config if available
+      if (event.recurrence_rule) {
+        setRecurrence(rruleToRecurrenceConfig(event.recurrence_rule));
+      } else {
+        setRecurrence({
+          frequency: 'none',
+          interval: 1,
+          endType: 'never',
+        });
+      }
     } else {
       // Set default start time based on initialDate or now
       const baseDate = initialDate || new Date();
@@ -130,6 +148,13 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
         room_id: "",
         starts_at: formatDateTimeLocal(startDate),
         ends_at: formatDateTimeLocal(oneHourLater),
+      });
+
+      // Reset recurrence for new events
+      setRecurrence({
+        frequency: 'none',
+        interval: 1,
+        endType: 'never',
       });
     }
     setValidationError("");
@@ -256,12 +281,26 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
     try {
       const validated = eventSchema.parse(formData);
 
+      // Validate recurrence
+      if (recurrence.frequency === 'weekly' && (!recurrence.daysOfWeek || recurrence.daysOfWeek.length === 0)) {
+        toast({
+          title: "Validation error",
+          description: "Please select at least one day for weekly recurrence",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      const startsAt = dateTimeLocalToISO(validated.starts_at);
+      const endsAt = dateTimeLocalToISO(validated.ends_at);
+
       const eventData = {
         title: validated.title,
         description: validated.description,
         room_id: validated.room_id,
-        starts_at: dateTimeLocalToISO(validated.starts_at),
-        ends_at: dateTimeLocalToISO(validated.ends_at),
+        starts_at: startsAt,
+        ends_at: endsAt,
       };
 
       if (eventId) {
@@ -284,19 +323,85 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
           description: shouldAutoSubmit ? "Your changes have been sent to admins for approval" : undefined
         });
       } else {
-        // For new events, all users create events with pending_review status
-        const { error } = await supabase.from("events").insert([{
-          ...eventData,
-          created_by: user!.id,
-          status: 'pending_review' as const,
-        }]);
+        // For new events, check if recurring
+        if (recurrence.frequency !== 'none') {
+          // Generate RRULE
+          const rrule = recurrenceConfigToRRule(recurrence, new Date(startsAt));
 
-        if (error) throw error;
+          // Calculate recurrence end date
+          let recurrenceEndDate: string | null = null;
+          if (recurrence.endType === 'on' && recurrence.endDate) {
+            recurrenceEndDate = new Date(recurrence.endDate).toISOString();
+          }
 
-        toast({
-          title: "Event created and submitted for review",
-          description: "Your event has been sent to admins for approval"
-        });
+          // Create parent event with recurrence rule
+          const parentEvent = {
+            ...eventData,
+            created_by: user!.id,
+            status: 'pending_review' as const,
+            is_recurring: true,
+            recurrence_rule: rrule,
+            recurrence_end_date: recurrenceEndDate,
+          };
+
+          const { data: parent, error: parentError } = await supabase
+            .from("events")
+            .insert([parentEvent])
+            .select()
+            .single();
+
+          if (parentError) throw parentError;
+
+          // Generate recurring instances
+          const instances = generateRecurringInstances(
+            new Date(startsAt),
+            new Date(endsAt),
+            recurrence,
+            parent.id,
+            100 // Limit to 100 instances
+          );
+
+          // Insert all instances
+          const instancesData = instances.map(inst => ({
+            title: validated.title,
+            description: validated.description,
+            room_id: validated.room_id,
+            starts_at: inst.starts_at.toISOString(),
+            ends_at: inst.ends_at.toISOString(),
+            created_by: user!.id,
+            status: 'pending_review' as const,
+            is_recurring: true,
+            parent_event_id: parent.id,
+          }));
+
+          if (instancesData.length > 0) {
+            const { error: instancesError } = await supabase
+              .from("events")
+              .insert(instancesData);
+
+            if (instancesError) throw instancesError;
+          }
+
+          toast({
+            title: "Recurring event created",
+            description: `Created ${instancesData.length + 1} event${instancesData.length > 0 ? 's' : ''} and submitted for review`
+          });
+        } else {
+          // Non-recurring event
+          const { error } = await supabase.from("events").insert([{
+            ...eventData,
+            created_by: user!.id,
+            status: 'pending_review' as const,
+            is_recurring: false,
+          }]);
+
+          if (error) throw error;
+
+          toast({
+            title: "Event created and submitted for review",
+            description: "Your event has been sent to admins for approval"
+          });
+        }
       }
 
       onSuccess();
@@ -317,6 +422,98 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to generate recurring event instances
+  const generateRecurringInstances = (
+    startDate: Date,
+    endDate: Date,
+    config: RecurrenceConfig,
+    parentId: string,
+    maxInstances: number
+  ): Array<{ starts_at: Date; ends_at: Date }> => {
+    const instances: Array<{ starts_at: Date; ends_at: Date }> = [];
+    const duration = endDate.getTime() - startDate.getTime();
+
+    let currentDate = new Date(startDate);
+    let count = 0;
+
+    // Determine end condition
+    const maxDate = config.endType === 'on' && config.endDate
+      ? new Date(config.endDate)
+      : new Date(startDate.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year max if no end date
+
+    const maxCount = config.endType === 'after' && config.occurrences
+      ? config.occurrences - 1 // -1 because parent event is the first occurrence
+      : maxInstances;
+
+    while (count < maxCount && currentDate <= maxDate) {
+      // Calculate next occurrence based on frequency
+      let nextDate: Date | null = null;
+
+      switch (config.frequency) {
+        case 'daily':
+          currentDate.setDate(currentDate.getDate() + config.interval);
+          nextDate = new Date(currentDate);
+          break;
+
+        case 'weekly':
+          // For weekly, we need to find the next matching day of week
+          let daysAdded = 0;
+          const maxDaysToCheck = 7 * config.interval;
+
+          while (daysAdded < maxDaysToCheck) {
+            currentDate.setDate(currentDate.getDate() + 1);
+            daysAdded++;
+
+            const dayOfWeek = currentDate.getDay();
+            const weeksSinceStart = Math.floor(
+              (currentDate.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
+            );
+
+            // Check if this day matches and we're on the right interval week
+            if (
+              config.daysOfWeek?.includes(dayOfWeek) &&
+              weeksSinceStart % config.interval === 0
+            ) {
+              nextDate = new Date(currentDate);
+              break;
+            }
+          }
+          break;
+
+        case 'monthly':
+          currentDate.setMonth(currentDate.getMonth() + config.interval);
+          if (config.dayOfMonth) {
+            currentDate.setDate(Math.min(config.dayOfMonth, new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()));
+          }
+          nextDate = new Date(currentDate);
+          break;
+
+        case 'yearly':
+          currentDate.setFullYear(currentDate.getFullYear() + config.interval);
+          if (config.monthOfYear) {
+            currentDate.setMonth(config.monthOfYear - 1);
+          }
+          if (config.dayOfMonth) {
+            currentDate.setDate(Math.min(config.dayOfMonth, new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate()));
+          }
+          nextDate = new Date(currentDate);
+          break;
+      }
+
+      if (!nextDate || nextDate > maxDate) break;
+
+      const instanceEnd = new Date(nextDate.getTime() + duration);
+      instances.push({
+        starts_at: nextDate,
+        ends_at: instanceEnd,
+      });
+
+      count++;
+    }
+
+    return instances;
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -478,6 +675,13 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
                 </span>
               </div>
             )}
+
+            {evt.is_recurring && (
+              <div className="flex items-center gap-1.5">
+                <Repeat className="h-3 w-3 text-primary" />
+                <span className="text-primary font-medium">Recurring event</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -635,6 +839,13 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
               )}
             </div>
           </div>
+
+          {/* Recurrence Selector */}
+          <RecurrenceSelector
+            value={recurrence}
+            onChange={setRecurrence}
+            startDate={formData.starts_at}
+          />
 
           {canEdit && (
             <div className="flex gap-2">

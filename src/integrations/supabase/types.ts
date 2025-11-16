@@ -21,6 +21,10 @@ export type Database = {
           description: string | null
           ends_at: string
           id: string
+          is_recurring: boolean
+          parent_event_id: string | null
+          recurrence_end_date: string | null
+          recurrence_rule: string | null
           reviewer_id: string | null
           reviewer_notes: string | null
           room_id: string
@@ -35,6 +39,10 @@ export type Database = {
           description?: string | null
           ends_at: string
           id?: string
+          is_recurring?: boolean
+          parent_event_id?: string | null
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
           reviewer_id?: string | null
           reviewer_notes?: string | null
           room_id: string
@@ -49,6 +57,10 @@ export type Database = {
           description?: string | null
           ends_at?: string
           id?: string
+          is_recurring?: boolean
+          parent_event_id?: string | null
+          recurrence_end_date?: string | null
+          recurrence_rule?: string | null
           reviewer_id?: string | null
           reviewer_notes?: string | null
           room_id?: string
