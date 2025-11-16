@@ -21,13 +21,13 @@ export type Database = {
           description: string | null
           ends_at: string
           id: string
-          is_recurring: boolean
+          is_recurring: boolean | null
           parent_event_id: string | null
-          previous_status: Database["public"]["Enums"]["event_status"] | null
           recurrence_end_date: string | null
           recurrence_rule: string | null
           reviewer_id: string | null
           reviewer_notes: string | null
+          room_allows_overlap: boolean
           room_id: string
           starts_at: string
           status: Database["public"]["Enums"]["event_status"]
@@ -40,12 +40,13 @@ export type Database = {
           description?: string | null
           ends_at: string
           id?: string
-          is_recurring?: boolean
+          is_recurring?: boolean | null
           parent_event_id?: string | null
           recurrence_end_date?: string | null
           recurrence_rule?: string | null
           reviewer_id?: string | null
           reviewer_notes?: string | null
+          room_allows_overlap?: boolean
           room_id: string
           starts_at: string
           status?: Database["public"]["Enums"]["event_status"]
@@ -58,12 +59,13 @@ export type Database = {
           description?: string | null
           ends_at?: string
           id?: string
-          is_recurring?: boolean
+          is_recurring?: boolean | null
           parent_event_id?: string | null
           recurrence_end_date?: string | null
           recurrence_rule?: string | null
           reviewer_id?: string | null
           reviewer_notes?: string | null
+          room_allows_overlap?: boolean
           room_id?: string
           starts_at?: string
           status?: Database["public"]["Enums"]["event_status"]
@@ -71,6 +73,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_parent_event_id_fkey"
+            columns: ["parent_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_room_id_fkey"
             columns: ["room_id"]
@@ -162,15 +171,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
+        Relationships: []
       }
     }
     Views: {
