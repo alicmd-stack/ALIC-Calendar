@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API");
+const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "Event Calendar <team@addislidet.info>";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -271,7 +272,7 @@ serve(async (req) => {
 
     // Send email using Resend
     const emailPayload = {
-      from: "Event Calendar <onboarding@resend.dev>",
+      from: RESEND_FROM_EMAIL,
       to: [to],
       subject: subject,
       html: htmlBody,
