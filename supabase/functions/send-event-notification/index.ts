@@ -62,12 +62,18 @@ serve(async (req) => {
 
     switch (status) {
       case "approved":
-      case "published":
         subject = `Event Approved: ${eventTitle}`;
         heading = "Your Event Has Been Approved! 🎉";
-        message = `Great news! Your event request for "${eventTitle}" has been approved and published to the calendar.`;
+        message = `Great news! Your event request for "${eventTitle}" has been approved. It will be published to the calendar soon.`;
         statusColor = "#22c55e";
-        statusBadge = "APPROVED & PUBLISHED";
+        statusBadge = "APPROVED";
+        break;
+      case "published":
+        subject = `Event Published: ${eventTitle}`;
+        heading = "Your Event Has Been Published! 🎉";
+        message = `Your event "${eventTitle}" has been published to the calendar and is now visible to everyone.`;
+        statusColor = "#3b82f6";
+        statusBadge = "PUBLISHED";
         break;
       case "rejected":
         subject = `Event Update: ${eventTitle}`;
@@ -210,7 +216,7 @@ serve(async (req) => {
 
           <!-- Call to Action -->
           ${
-            status === "approved" || status === "published"
+            status === "published"
               ? `
           <tr>
             <td style="padding: 0 30px 30px; text-align: center;">

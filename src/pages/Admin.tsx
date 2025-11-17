@@ -158,9 +158,8 @@ const Admin = () => {
 
   const handleStatusChange = async (eventId: string, status: "approved" | "rejected" | "published" | "pending_review", isUnpublishing?: boolean) => {
     try {
-      // When approving from pending, automatically publish the event
-      // When unpublishing, keep it as approved
-      const finalStatus = (status === "approved" && !isUnpublishing) ? "published" : status;
+      // Use the status as provided - don't automatically publish
+      const finalStatus = status;
 
       // Get event details before updating
       const { data: event } = await supabase
@@ -192,7 +191,9 @@ const Admin = () => {
       if (isUnpublishing) {
         statusMessage = "Event unpublished";
       } else if (status === "approved") {
-        statusMessage = "Event approved and published";
+        statusMessage = "Event approved";
+      } else if (status === "published") {
+        statusMessage = "Event published";
       } else {
         statusMessage = `Event ${finalStatus.replace("_", " ")}`;
       }
@@ -201,7 +202,7 @@ const Admin = () => {
 
       // Send email notification to event creator
       if (creator?.email) {
-        const emailStatus = finalStatus === "published" ? "published" : status === "rejected" ? "rejected" : "approved";
+        const emailStatus = finalStatus;
 
         try {
           console.log("Invoking send-event-notification function for:", creator.email);
