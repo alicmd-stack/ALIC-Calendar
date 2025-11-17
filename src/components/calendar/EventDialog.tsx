@@ -517,7 +517,7 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!eventId) return;
+    if (!eventId || !event) return;
 
     setLoading(true);
     try {
@@ -527,6 +527,16 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
         updateData.reviewer_id = user!.id;
       }
 
+      // Get creator profile for email notification
+      const { data: creator } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", event.created_by)
+        .single();
+
+      // Get room name
+      const selectedRoom = rooms?.find(r => r.id === event.room_id);
+
       const { error } = await supabase
         .from("events")
         .update(updateData)
@@ -535,6 +545,35 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
       if (error) throw error;
 
       toast({ title: `Event ${newStatus}` });
+
+      // Send email notification to event creator
+      if (creator?.email) {
+        const emailStatus = newStatus === "published" ? "published" : newStatus === "rejected" ? "rejected" : "approved";
+
+        try {
+          await supabase.functions.invoke("send-event-notification", {
+            body: {
+              to: creator.email,
+              eventTitle: event.title,
+              eventStartTime: new Date(event.starts_at).toLocaleString("en-US", {
+                dateStyle: "full",
+                timeStyle: "short",
+              }),
+              eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
+                timeStyle: "short",
+              }),
+              roomName: selectedRoom?.name || "Unknown Room",
+              status: emailStatus,
+              requesterName: creator.full_name || "User",
+              reviewerNotes: event.reviewer_notes || undefined,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the status update if email fails
+        }
+      }
+
       onSuccess();
     } catch (error) {
       toast({

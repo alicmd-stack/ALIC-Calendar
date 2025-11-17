@@ -162,6 +162,25 @@ const Admin = () => {
       // When unpublishing, keep it as approved
       const finalStatus = (status === "approved" && !isUnpublishing) ? "published" : status;
 
+      // Get event details before updating
+      const { data: event } = await supabase
+        .from("events")
+        .select(`
+          *,
+          rooms(name, color)
+        `)
+        .eq("id", eventId)
+        .single();
+
+      if (!event) throw new Error("Event not found");
+
+      // Get creator profile separately
+      const { data: creator } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", event.created_by)
+        .single();
+
       const { error } = await supabase
         .from("events")
         .update({ status: finalStatus, reviewer_id: (await supabase.auth.getUser()).data.user?.id })
@@ -180,6 +199,34 @@ const Admin = () => {
 
       toast({ title: statusMessage });
 
+      // Send email notification to event creator
+      if (creator?.email) {
+        const emailStatus = finalStatus === "published" ? "published" : status === "rejected" ? "rejected" : "approved";
+
+        try {
+          await supabase.functions.invoke("send-event-notification", {
+            body: {
+              to: creator.email,
+              eventTitle: event.title,
+              eventStartTime: new Date(event.starts_at).toLocaleString("en-US", {
+                dateStyle: "full",
+                timeStyle: "short",
+              }),
+              eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
+                timeStyle: "short",
+              }),
+              roomName: event.rooms?.name || "Unknown Room",
+              status: emailStatus,
+              requesterName: creator.full_name || "User",
+              reviewerNotes: event.reviewer_notes || undefined,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the status update if email fails
+        }
+      }
+
       refetchPending();
       refetchApproved();
       refetchPublished();
@@ -195,6 +242,25 @@ const Admin = () => {
 
   const handleUnapprove = async (eventId: string) => {
     try {
+      // Get event details before updating
+      const { data: event } = await supabase
+        .from("events")
+        .select(`
+          *,
+          rooms(name, color)
+        `)
+        .eq("id", eventId)
+        .single();
+
+      if (!event) throw new Error("Event not found");
+
+      // Get creator profile separately
+      const { data: creator } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", event.created_by)
+        .single();
+
       const { error } = await supabase
         .from("events")
         .update({ status: "pending_review" })
@@ -203,6 +269,32 @@ const Admin = () => {
       if (error) throw error;
 
       toast({ title: "Event moved to pending review" });
+
+      // Send email notification to event creator
+      if (creator?.email) {
+        try {
+          await supabase.functions.invoke("send-event-notification", {
+            body: {
+              to: creator.email,
+              eventTitle: event.title,
+              eventStartTime: new Date(event.starts_at).toLocaleString("en-US", {
+                dateStyle: "full",
+                timeStyle: "short",
+              }),
+              eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
+                timeStyle: "short",
+              }),
+              roomName: event.rooms?.name || "Unknown Room",
+              status: "unapproved",
+              requesterName: creator.full_name || "User",
+              reviewerNotes: event.reviewer_notes || undefined,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+          // Don't fail the status update if email fails
+        }
+      }
 
       refetchPending();
       refetchApproved();
