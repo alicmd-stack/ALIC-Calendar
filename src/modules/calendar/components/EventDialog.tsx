@@ -21,6 +21,7 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/shared/lib/utils";
 import { RecurrenceSelector, RecurrenceConfig, recurrenceConfigToRRule, rruleToRecurrenceConfig } from "@/modules/calendar/components/RecurrenceSelector";
 import { RejectionReasonDialog } from "@/shared/components/RejectionReasonDialog";
+import { RecurringEventActionDialog, RecurringActionScope } from "@/shared/components/RecurringEventActionDialog";
 
 interface EventDialogProps {
   open: boolean;
@@ -67,6 +68,11 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
   const [roomConflict, setRoomConflict] = useState<{hasConflict: boolean, conflictingEvent?: any, creatorName?: string}>({hasConflict: false});
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  const [recurringDeleteDialogOpen, setRecurringDeleteDialogOpen] = useState(false);
+  const [recurringRejectDialogOpen, setRecurringRejectDialogOpen] = useState(false);
+  const [recurringUpdateDialogOpen, setRecurringUpdateDialogOpen] = useState(false);
+  const [pendingRejectionReason, setPendingRejectionReason] = useState<string>("");
+  const [pendingUpdateData, setPendingUpdateData] = useState<any>(null);
 
   const { data: event } = useQuery({
     queryKey: ["event", eventId],
@@ -331,6 +337,15 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
           ? { ...eventData, status: 'pending_review' as const }
           : eventData;
 
+        // Check if this is a recurring event
+        if (event?.is_recurring) {
+          setPendingUpdateData({ updatePayload, shouldAutoSubmit });
+          setLoading(false);
+          setRecurringUpdateDialogOpen(true);
+          return;
+        }
+
+        // Not recurring, proceed with single event update
         const { error } = await supabase
           .from("events")
           .update(updatePayload)
@@ -660,6 +675,27 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
   const handleRejectWithReason = async (reason: string) => {
     if (!eventId || !event) return;
 
+    // Check if this is a recurring event
+    if (event.is_recurring) {
+      setPendingRejectionReason(reason);
+      setRejectionDialogOpen(false);
+      setRecurringRejectDialogOpen(true);
+      return;
+    }
+
+    // Not recurring, proceed with single event rejection
+    await executeRejection(reason, "single");
+  };
+
+  const handleRecurringRejectConfirm = async (scope: RecurringActionScope) => {
+    await executeRejection(pendingRejectionReason, scope);
+    setRecurringRejectDialogOpen(false);
+    setPendingRejectionReason("");
+  };
+
+  const executeRejection = async (reason: string, scope: RecurringActionScope) => {
+    if (!eventId || !event) return;
+
     setRejectionLoading(true);
     try {
       // Get creator profile for email notification
@@ -672,18 +708,46 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
       // Get room name
       const selectedRoom = rooms?.find(r => r.id === event.room_id);
 
-      const { error } = await supabase
-        .from("events")
-        .update({
-          status: "rejected",
-          reviewer_id: user!.id,
-          reviewer_notes: reason,
-        })
-        .eq("id", eventId);
+      if (scope === "all") {
+        // Reject all events in the series
+        const parentId = event.parent_event_id || eventId;
 
-      if (error) throw error;
+        // Update the parent event
+        await supabase
+          .from("events")
+          .update({
+            status: "rejected",
+            reviewer_id: user!.id,
+            reviewer_notes: reason,
+          })
+          .eq("id", parentId);
 
-      toast({ title: "Event rejected" });
+        // Update all child events
+        await supabase
+          .from("events")
+          .update({
+            status: "rejected",
+            reviewer_id: user!.id,
+            reviewer_notes: reason,
+          })
+          .eq("parent_event_id", parentId);
+
+        toast({ title: "All events in series rejected" });
+      } else {
+        // Reject only this event
+        const { error } = await supabase
+          .from("events")
+          .update({
+            status: "rejected",
+            reviewer_id: user!.id,
+            reviewer_notes: reason,
+          })
+          .eq("id", eventId);
+
+        if (error) throw error;
+
+        toast({ title: "Event rejected" });
+      }
 
       // Send email notification to event creator with rejection reason
       if (creator?.email) {
@@ -711,7 +775,6 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
         }
       }
 
-      setRejectionDialogOpen(false);
       onSuccess();
     } catch (error) {
       toast({
@@ -725,24 +788,118 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
   };
 
   const handleDelete = async () => {
-    if (!eventId) return;
+    if (!eventId || !event) return;
 
-    // Confirm deletion
+    // Check if this is a recurring event
+    if (event.is_recurring) {
+      setRecurringDeleteDialogOpen(true);
+      return;
+    }
+
+    // Not recurring, confirm and delete single event
     if (!window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
       return;
     }
 
+    await executeDelete("single");
+  };
+
+  const handleRecurringDeleteConfirm = async (scope: RecurringActionScope) => {
+    await executeDelete(scope);
+    setRecurringDeleteDialogOpen(false);
+  };
+
+  const executeDelete = async (scope: RecurringActionScope) => {
+    if (!eventId || !event) return;
+
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from("events")
-        .delete()
-        .eq("id", eventId);
+      if (scope === "all") {
+        // Delete all events in the series
+        const parentId = event.parent_event_id || eventId;
 
-      if (error) throw error;
+        // Delete all child events first
+        await supabase
+          .from("events")
+          .delete()
+          .eq("parent_event_id", parentId);
 
-      toast({ title: "Event deleted successfully" });
+        // Delete the parent event
+        await supabase
+          .from("events")
+          .delete()
+          .eq("id", parentId);
+
+        toast({ title: "All events in series deleted" });
+      } else {
+        // Delete only this event
+        const { error } = await supabase
+          .from("events")
+          .delete()
+          .eq("id", eventId);
+
+        if (error) throw error;
+
+        toast({ title: "Event deleted successfully" });
+      }
+
       onOpenChange(false);
+      onSuccess();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecurringUpdateConfirm = async (scope: RecurringActionScope) => {
+    if (!eventId || !event || !pendingUpdateData) return;
+
+    setLoading(true);
+    try {
+      const { updatePayload, shouldAutoSubmit } = pendingUpdateData;
+
+      if (scope === "all") {
+        // Update all events in the series
+        const parentId = event.parent_event_id || eventId;
+
+        // Update the parent event
+        await supabase
+          .from("events")
+          .update(updatePayload)
+          .eq("id", parentId);
+
+        // Update all child events
+        await supabase
+          .from("events")
+          .update(updatePayload)
+          .eq("parent_event_id", parentId);
+
+        toast({
+          title: shouldAutoSubmit ? "All events updated and submitted for review" : "All events in series updated",
+          description: shouldAutoSubmit ? "Your changes have been sent to admins for approval" : undefined
+        });
+      } else {
+        // Update only this event
+        const { error } = await supabase
+          .from("events")
+          .update(updatePayload)
+          .eq("id", eventId);
+
+        if (error) throw error;
+
+        toast({
+          title: shouldAutoSubmit ? "Event updated and submitted for review" : "Event updated successfully",
+          description: shouldAutoSubmit ? "Your changes have been sent to admins for approval" : undefined
+        });
+      }
+
+      setRecurringUpdateDialogOpen(false);
+      setPendingUpdateData(null);
       onSuccess();
     } catch (error) {
       toast({
@@ -1181,6 +1338,36 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
         onConfirm={handleRejectWithReason}
         eventTitle={event?.title || ""}
         loading={rejectionLoading}
+      />
+
+      <RecurringEventActionDialog
+        open={recurringDeleteDialogOpen}
+        onOpenChange={setRecurringDeleteDialogOpen}
+        onConfirm={handleRecurringDeleteConfirm}
+        actionType="delete"
+        eventTitle={event?.title || ""}
+        loading={loading}
+      />
+
+      <RecurringEventActionDialog
+        open={recurringRejectDialogOpen}
+        onOpenChange={setRecurringRejectDialogOpen}
+        onConfirm={handleRecurringRejectConfirm}
+        actionType="reject"
+        eventTitle={event?.title || ""}
+        loading={rejectionLoading}
+      />
+
+      <RecurringEventActionDialog
+        open={recurringUpdateDialogOpen}
+        onOpenChange={(open) => {
+          setRecurringUpdateDialogOpen(open);
+          if (!open) setPendingUpdateData(null);
+        }}
+        onConfirm={handleRecurringUpdateConfirm}
+        actionType="update"
+        eventTitle={event?.title || ""}
+        loading={loading}
       />
     </Dialog>
   );

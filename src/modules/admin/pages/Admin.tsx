@@ -10,6 +10,7 @@ import { Check, X, Eye, User } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import EventDialog from "@/modules/calendar/components/EventDialog";
 import { RejectionReasonDialog } from "@/shared/components/RejectionReasonDialog";
+import { RecurringEventActionDialog, RecurringActionScope } from "@/shared/components/RecurringEventActionDialog";
 import { formatDistance, format } from "date-fns";
 import { useOrganization } from "@/shared/contexts/OrganizationContext";
 import { useSearch } from "@/shared/contexts/SearchContext";
@@ -51,8 +52,10 @@ const Admin = () => {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
-  const [eventToReject, setEventToReject] = useState<{ id: string; title: string } | null>(null);
+  const [eventToReject, setEventToReject] = useState<{ id: string; title: string; is_recurring?: boolean; parent_event_id?: string | null } | null>(null);
   const [rejectionLoading, setRejectionLoading] = useState(false);
+  const [recurringRejectDialogOpen, setRecurringRejectDialogOpen] = useState(false);
+  const [pendingRejectionReason, setPendingRejectionReason] = useState<string>("");
 
   const { data: pendingEvents, refetch: refetchPending } = useQuery({
     queryKey: ["pending-events", currentOrganization?.id, user?.id, isAdmin],
@@ -361,12 +364,33 @@ const Admin = () => {
     }
   };
 
-  const handleOpenRejectionDialog = (eventId: string, eventTitle: string) => {
-    setEventToReject({ id: eventId, title: eventTitle });
+  const handleOpenRejectionDialog = (eventId: string, eventTitle: string, isRecurring?: boolean, parentEventId?: string | null) => {
+    setEventToReject({ id: eventId, title: eventTitle, is_recurring: isRecurring, parent_event_id: parentEventId });
     setRejectionDialogOpen(true);
   };
 
   const handleRejectWithReason = async (reason: string) => {
+    if (!eventToReject) return;
+
+    // Check if this is a recurring event
+    if (eventToReject.is_recurring) {
+      setPendingRejectionReason(reason);
+      setRejectionDialogOpen(false);
+      setRecurringRejectDialogOpen(true);
+      return;
+    }
+
+    // Not recurring, proceed with single event rejection
+    await executeRejection(reason, "single");
+  };
+
+  const handleRecurringRejectConfirm = async (scope: RecurringActionScope) => {
+    await executeRejection(pendingRejectionReason, scope);
+    setRecurringRejectDialogOpen(false);
+    setPendingRejectionReason("");
+  };
+
+  const executeRejection = async (reason: string, scope: RecurringActionScope) => {
     if (!eventToReject) return;
 
     setRejectionLoading(true);
@@ -390,18 +414,48 @@ const Admin = () => {
         .eq("id", event.created_by)
         .single();
 
-      const { error } = await supabase
-        .from("events")
-        .update({
-          status: "rejected",
-          reviewer_id: (await supabase.auth.getUser()).data.user?.id,
-          reviewer_notes: reason,
-        })
-        .eq("id", eventToReject.id);
+      const reviewerId = (await supabase.auth.getUser()).data.user?.id;
 
-      if (error) throw error;
+      if (scope === "all") {
+        // Reject all events in the series
+        const parentId = eventToReject.parent_event_id || eventToReject.id;
 
-      toast({ title: "Event rejected" });
+        // Update the parent event
+        await supabase
+          .from("events")
+          .update({
+            status: "rejected",
+            reviewer_id: reviewerId,
+            reviewer_notes: reason,
+          })
+          .eq("id", parentId);
+
+        // Update all child events
+        await supabase
+          .from("events")
+          .update({
+            status: "rejected",
+            reviewer_id: reviewerId,
+            reviewer_notes: reason,
+          })
+          .eq("parent_event_id", parentId);
+
+        toast({ title: "All events in series rejected" });
+      } else {
+        // Reject only this event
+        const { error } = await supabase
+          .from("events")
+          .update({
+            status: "rejected",
+            reviewer_id: reviewerId,
+            reviewer_notes: reason,
+          })
+          .eq("id", eventToReject.id);
+
+        if (error) throw error;
+
+        toast({ title: "Event rejected" });
+      }
 
       // Send email notification to event creator with rejection reason
       if (creator?.email) {
@@ -659,7 +713,7 @@ const Admin = () => {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleOpenRejectionDialog(event.id, event.title)}
+                            onClick={() => handleOpenRejectionDialog(event.id, event.title, event.is_recurring, event.parent_event_id)}
                           >
                             <X className="h-4 w-4 mr-1" />
                             Reject
@@ -916,6 +970,15 @@ const Admin = () => {
           open={rejectionDialogOpen}
           onOpenChange={setRejectionDialogOpen}
           onConfirm={handleRejectWithReason}
+          eventTitle={eventToReject?.title || ""}
+          loading={rejectionLoading}
+        />
+
+        <RecurringEventActionDialog
+          open={recurringRejectDialogOpen}
+          onOpenChange={setRecurringRejectDialogOpen}
+          onConfirm={handleRecurringRejectConfirm}
+          actionType="reject"
           eventTitle={eventToReject?.title || ""}
           loading={rejectionLoading}
         />
