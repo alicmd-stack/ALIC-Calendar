@@ -317,7 +317,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <p class="greeting">Hello,</p>
                   
                   <p class="main-text">
-                    We received a request to reset the password for your <strong>ALIC Event Management</strong> account. 
+                    We received a request to reset the password for your <strong>ALIC Church Management</strong> account. 
                     If you made this request, click the button below to create a new password.
                   </p>
                   
@@ -354,7 +354,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <div class="footer">
                   <div class="footer-content">
                     <strong style="color: #cbd5e0;">Addis Lidet International Church</strong><br>
-                    Event Management System
+                    Church Management System
                   </div>
                   
                   <div class="footer-links">
@@ -380,7 +380,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_action_type === "invite"
     ) {
       subject =
-        "✨ Welcome to ALIC Event Management | Addis Lidet International Church";
+        "✨ Welcome to ALIC Church Management | Addis Lidet International Church";
       html = `
         <!DOCTYPE html>
         <html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -657,13 +657,13 @@ const handler = async (req: Request): Promise<Response> => {
                   <!-- Welcome Badge -->
                   <div class="welcome-badge">
                     <div class="welcome-badge-icon">🎉</div>
-                    <p class="welcome-badge-text">Welcome to ALIC Event Management</p>
+                    <p class="welcome-badge-text">Welcome to ALIC Church Management</p>
                   </div>
                   
                   <p class="greeting">Welcome to Our Community!</p>
                   
                   <p class="main-text">
-                    Thank you for joining the <strong>ALIC Event Management System</strong>. 
+                    Thank you for joining the <strong>ALIC Church Management System</strong>. 
                     We're excited to have you on board! To get started, please confirm your email address.
                   </p>
                   
@@ -726,7 +726,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <div class="footer">
                   <div class="footer-content">
                     <strong style="color: #cbd5e0;">Addis Lidet International Church</strong><br>
-                    Event Management System
+                    Church Management System
                   </div>
                   
                   <div class="footer-links">

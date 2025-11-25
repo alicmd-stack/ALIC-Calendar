@@ -166,7 +166,7 @@ const ResetPassword = () => {
         <div>
           <div className="flex items-center gap-2 text-white">
             <Calendar className="h-8 w-8" />
-            <span className="text-2xl font-bold">ALIC Event Management</span>
+            <span className="text-2xl font-bold">ALIC Church Management</span>
           </div>
         </div>
         <div className="text-white">
@@ -176,7 +176,7 @@ const ResetPassword = () => {
           </p>
         </div>
         <div className="text-blue-200 text-sm">
-          © 2025 ALIC Event Management. All rights reserved.
+          © 2025 ALIC Church Management. All rights reserved.
         </div>
       </div>
 

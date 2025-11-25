@@ -180,9 +180,9 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold mb-4">Addis Lidet International Church</h1>
-          <h2 className="text-2xl font-semibold mb-4">Event Management</h2>
+          <h2 className="text-2xl font-semibold mb-4">Church Management</h2>
           <p className="text-xl opacity-90 mb-8">
-            Organizing ministry events with faith and purpose, bringing our community together in worship and service
+            Empowering ministry operations with faith and purpose, bringing our community together in worship and service
           </p>
           <div className="flex justify-center space-x-8 text-sm">
             <div className="flex items-center space-x-2">
@@ -220,8 +220,8 @@ const Auth = () => {
               </CardTitle>
               <CardDescription className="text-base mt-2">
                 {activeTab === "signin"
-                  ? "Sign in to manage your events and rooms"
-                  : "Join us to start organizing events"}
+                  ? "Sign in to manage your church operations"
+                  : "Join us to get started"}
               </CardDescription>
             </div>
           </CardHeader>

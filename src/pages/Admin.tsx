@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, X, Eye, User } from "lucide-react";
+import DashboardLayout from "@/shared/components/layout/DashboardLayout";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/shared/components/ui/tabs";
+import { Check, X, Eye, User, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import EventDialog from "@/components/calendar/EventDialog";
+import EventDialog from "@/modules/calendar/components/EventDialog";
 import { formatDistance, format } from "date-fns";
 import { useOrganization } from "@/contexts/OrganizationContext";
 
@@ -25,10 +36,12 @@ const Admin = () => {
 
       const { data, error } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           *,
           rooms(name, color)
-        `)
+        `
+        )
         .eq("organization_id", currentOrganization.id)
         .eq("status", "pending_review")
         .order("created_at", { ascending: false });
@@ -64,10 +77,12 @@ const Admin = () => {
 
       const { data, error } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           *,
           rooms(name, color)
-        `)
+        `
+        )
         .eq("organization_id", currentOrganization.id)
         .eq("status", "approved")
         .order("starts_at", { ascending: true });
@@ -103,10 +118,12 @@ const Admin = () => {
 
       const { data, error } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           *,
           rooms(name, color)
-        `)
+        `
+        )
         .eq("organization_id", currentOrganization.id)
         .eq("status", "published")
         .order("starts_at", { ascending: true });
@@ -142,10 +159,12 @@ const Admin = () => {
 
       const { data, error } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           *,
           rooms(name, color)
-        `)
+        `
+        )
         .eq("organization_id", currentOrganization.id)
         .eq("status", "rejected")
         .order("created_at", { ascending: false });
@@ -174,7 +193,11 @@ const Admin = () => {
     enabled: !!currentOrganization?.id,
   });
 
-  const handleStatusChange = async (eventId: string, status: "approved" | "rejected" | "published" | "pending_review", isUnpublishing?: boolean) => {
+  const handleStatusChange = async (
+    eventId: string,
+    status: "approved" | "rejected" | "published" | "pending_review",
+    isUnpublishing?: boolean
+  ) => {
     try {
       // Use the status as provided - don't automatically publish
       const finalStatus = status;
@@ -182,10 +205,12 @@ const Admin = () => {
       // Get event details before updating
       const { data: event } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           *,
           rooms(name, color)
-        `)
+        `
+        )
         .eq("id", eventId)
         .single();
 
@@ -200,7 +225,10 @@ const Admin = () => {
 
       const { error } = await supabase
         .from("events")
-        .update({ status: finalStatus, reviewer_id: (await supabase.auth.getUser()).data.user?.id })
+        .update({
+          status: finalStatus,
+          reviewer_id: (await supabase.auth.getUser()).data.user?.id,
+        })
         .eq("id", eventId);
 
       if (error) throw error;
@@ -223,25 +251,34 @@ const Admin = () => {
         const emailStatus = finalStatus;
 
         try {
-          console.log("Invoking send-event-notification function for:", creator.email);
+          console.log(
+            "Invoking send-event-notification function for:",
+            creator.email
+          );
 
-          const response = await supabase.functions.invoke("send-event-notification", {
-            body: {
-              to: creator.email,
-              eventTitle: event.title,
-              eventStartTime: new Date(event.starts_at).toLocaleString("en-US", {
-                dateStyle: "full",
-                timeStyle: "short",
-              }),
-              eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
-                timeStyle: "short",
-              }),
-              roomName: event.rooms?.name || "Unknown Room",
-              status: emailStatus,
-              requesterName: creator.full_name || "User",
-              reviewerNotes: event.reviewer_notes || undefined,
-            },
-          });
+          const response = await supabase.functions.invoke(
+            "send-event-notification",
+            {
+              body: {
+                to: creator.email,
+                eventTitle: event.title,
+                eventStartTime: new Date(event.starts_at).toLocaleString(
+                  "en-US",
+                  {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  }
+                ),
+                eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
+                  timeStyle: "short",
+                }),
+                roomName: event.rooms?.name || "Unknown Room",
+                status: emailStatus,
+                requesterName: creator.full_name || "User",
+                reviewerNotes: event.reviewer_notes || undefined,
+              },
+            }
+          );
 
           console.log("Email notification response:", response);
 
@@ -274,7 +311,8 @@ const Admin = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     }
@@ -285,10 +323,12 @@ const Admin = () => {
       // Get event details before updating
       const { data: event } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           *,
           rooms(name, color)
-        `)
+        `
+        )
         .eq("id", eventId)
         .single();
 
@@ -313,25 +353,34 @@ const Admin = () => {
       // Send email notification to event creator
       if (creator?.email) {
         try {
-          console.log("Invoking send-event-notification (unapprove) for:", creator.email);
+          console.log(
+            "Invoking send-event-notification (unapprove) for:",
+            creator.email
+          );
 
-          const response = await supabase.functions.invoke("send-event-notification", {
-            body: {
-              to: creator.email,
-              eventTitle: event.title,
-              eventStartTime: new Date(event.starts_at).toLocaleString("en-US", {
-                dateStyle: "full",
-                timeStyle: "short",
-              }),
-              eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
-                timeStyle: "short",
-              }),
-              roomName: event.rooms?.name || "Unknown Room",
-              status: "unapproved",
-              requesterName: creator.full_name || "User",
-              reviewerNotes: event.reviewer_notes || undefined,
-            },
-          });
+          const response = await supabase.functions.invoke(
+            "send-event-notification",
+            {
+              body: {
+                to: creator.email,
+                eventTitle: event.title,
+                eventStartTime: new Date(event.starts_at).toLocaleString(
+                  "en-US",
+                  {
+                    dateStyle: "full",
+                    timeStyle: "short",
+                  }
+                ),
+                eventEndTime: new Date(event.ends_at).toLocaleString("en-US", {
+                  timeStyle: "short",
+                }),
+                roomName: event.rooms?.name || "Unknown Room",
+                status: "unapproved",
+                requesterName: creator.full_name || "User",
+                reviewerNotes: event.reviewer_notes || undefined,
+              },
+            }
+          );
 
           console.log("Email notification response (unapprove):", response);
 
@@ -364,7 +413,8 @@ const Admin = () => {
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "An error occurred",
+        description:
+          error instanceof Error ? error.message : "An error occurred",
         variant: "destructive",
       });
     }
@@ -373,6 +423,35 @@ const Admin = () => {
   const handleViewEvent = (eventId: string) => {
     setSelectedEventId(eventId);
     setIsEventDialogOpen(true);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    if (
+      !confirm(
+        "Are you sure you want to permanently delete this event? This action cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", eventId);
+
+      if (error) throw error;
+
+      toast({ title: "Event deleted successfully" });
+      refetchRejected();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to delete event",
+        variant: "destructive",
+      });
+    }
   };
 
   const statusColors: Record<string, string> = {
@@ -388,7 +467,9 @@ const Admin = () => {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Admin Panel</h1>
-          <p className="text-muted-foreground mt-1">Review and manage event submissions</p>
+          <p className="text-muted-foreground mt-1">
+            Review and manage event submissions
+          </p>
         </div>
 
         <Tabs defaultValue="pending" className="space-y-4">
@@ -411,7 +492,9 @@ const Admin = () => {
             {pendingEvents && pendingEvents.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
-                  <p className="text-center text-muted-foreground">No events pending review</p>
+                  <p className="text-center text-muted-foreground">
+                    No events pending review
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -423,11 +506,19 @@ const Admin = () => {
                         <CardTitle className="text-xl">{event.title}</CardTitle>
                         <CardDescription className="mt-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                            <Badge
+                              variant="secondary"
+                              className={statusColors[event.status]}
+                            >
                               {event.status.replace("_", " ")}
                             </Badge>
                             <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                              {event.room?.name} •{" "}
+                              {format(
+                                new Date(event.starts_at),
+                                "MMM d, yyyy h:mm a"
+                              )}{" "}
+                              - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
@@ -438,15 +529,27 @@ const Admin = () => {
                               <div className="flex flex-col gap-0.5 text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
-                                  <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                  <span>
+                                    Requested by:{" "}
+                                    <span className="font-medium text-foreground">
+                                      {event.creator.full_name}
+                                    </span>
+                                  </span>
                                 </div>
                                 {event.creator.ministry_name && (
-                                  <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                  <span className="text-xs ml-4">
+                                    {event.creator.ministry_name}
+                                  </span>
                                 )}
                               </div>
                             )}
                             <span className="text-muted-foreground">
-                              Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
+                              Submitted{" "}
+                              {formatDistance(
+                                new Date(event.created_at),
+                                new Date(),
+                                { addSuffix: true }
+                              )}
                             </span>
                           </div>
                         </CardDescription>
@@ -471,7 +574,11 @@ const Admin = () => {
                         <X className="h-4 w-4 mr-1" />
                         Reject
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewEvent(event.id)}
+                      >
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
                       </Button>
@@ -486,7 +593,9 @@ const Admin = () => {
             {approvedEvents && approvedEvents.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
-                  <p className="text-center text-muted-foreground">No approved events</p>
+                  <p className="text-center text-muted-foreground">
+                    No approved events
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -498,11 +607,19 @@ const Admin = () => {
                         <CardTitle className="text-xl">{event.title}</CardTitle>
                         <CardDescription className="mt-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                            <Badge
+                              variant="secondary"
+                              className={statusColors[event.status]}
+                            >
                               {event.status.replace("_", " ")}
                             </Badge>
                             <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                              {event.room?.name} •{" "}
+                              {format(
+                                new Date(event.starts_at),
+                                "MMM d, yyyy h:mm a"
+                              )}{" "}
+                              - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
@@ -512,10 +629,17 @@ const Admin = () => {
                             <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                <span>
+                                  Requested by:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {event.creator.full_name}
+                                  </span>
+                                </span>
                               </div>
                               {event.creator.ministry_name && (
-                                <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                <span className="text-xs ml-4">
+                                  {event.creator.ministry_name}
+                                </span>
                               )}
                             </div>
                           )}
@@ -526,7 +650,9 @@ const Admin = () => {
                   <CardContent>
                     <div className="flex gap-2">
                       <Button
-                        onClick={() => handleStatusChange(event.id, "published")}
+                        onClick={() =>
+                          handleStatusChange(event.id, "published")
+                        }
                       >
                         Publish Event
                       </Button>
@@ -537,7 +663,11 @@ const Admin = () => {
                       >
                         Unapprove
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewEvent(event.id)}
+                      >
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
                       </Button>
@@ -552,7 +682,9 @@ const Admin = () => {
             {publishedEvents && publishedEvents.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
-                  <p className="text-center text-muted-foreground">No published events</p>
+                  <p className="text-center text-muted-foreground">
+                    No published events
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -564,11 +696,19 @@ const Admin = () => {
                         <CardTitle className="text-xl">{event.title}</CardTitle>
                         <CardDescription className="mt-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                            <Badge
+                              variant="secondary"
+                              className={statusColors[event.status]}
+                            >
                               {event.status.replace("_", " ")}
                             </Badge>
                             <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                              {event.room?.name} •{" "}
+                              {format(
+                                new Date(event.starts_at),
+                                "MMM d, yyyy h:mm a"
+                              )}{" "}
+                              - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
@@ -578,10 +718,17 @@ const Admin = () => {
                             <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                <span>
+                                  Requested by:{" "}
+                                  <span className="font-medium text-foreground">
+                                    {event.creator.full_name}
+                                  </span>
+                                </span>
                               </div>
                               {event.creator.ministry_name && (
-                                <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                <span className="text-xs ml-4">
+                                  {event.creator.ministry_name}
+                                </span>
                               )}
                             </div>
                           )}
@@ -593,7 +740,9 @@ const Admin = () => {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        onClick={() => handleStatusChange(event.id, "approved", true)}
+                        onClick={() =>
+                          handleStatusChange(event.id, "approved", true)
+                        }
                       >
                         Unpublish Event
                       </Button>
@@ -604,7 +753,11 @@ const Admin = () => {
                       >
                         Unapprove
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewEvent(event.id)}
+                      >
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
                       </Button>
@@ -619,7 +772,9 @@ const Admin = () => {
             {rejectedEvents && rejectedEvents.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
-                  <p className="text-center text-muted-foreground">No rejected events</p>
+                  <p className="text-center text-muted-foreground">
+                    No rejected events
+                  </p>
                 </CardContent>
               </Card>
             ) : (
@@ -631,11 +786,19 @@ const Admin = () => {
                         <CardTitle className="text-xl">{event.title}</CardTitle>
                         <CardDescription className="mt-2">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                            <Badge
+                              variant="secondary"
+                              className={statusColors[event.status]}
+                            >
                               {event.status.replace("_", " ")}
                             </Badge>
                             <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                              {event.room?.name} •{" "}
+                              {format(
+                                new Date(event.starts_at),
+                                "MMM d, yyyy h:mm a"
+                              )}{" "}
+                              - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
@@ -646,15 +809,27 @@ const Admin = () => {
                               <div className="flex flex-col gap-0.5 text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
-                                  <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                  <span>
+                                    Requested by:{" "}
+                                    <span className="font-medium text-foreground">
+                                      {event.creator.full_name}
+                                    </span>
+                                  </span>
                                 </div>
                                 {event.creator.ministry_name && (
-                                  <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                  <span className="text-xs ml-4">
+                                    {event.creator.ministry_name}
+                                  </span>
                                 )}
                               </div>
                             )}
                             <span className="text-muted-foreground">
-                              Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
+                              Submitted{" "}
+                              {formatDistance(
+                                new Date(event.created_at),
+                                new Date(),
+                                { addSuffix: true }
+                              )}
                             </span>
                           </div>
                         </CardDescription>
@@ -662,15 +837,39 @@ const Admin = () => {
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {event.reviewer_notes && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-sm font-medium text-red-700">
+                          Rejection Reason:
+                        </p>
+                        <p className="text-sm text-red-600">
+                          {event.reviewer_notes}
+                        </p>
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <Button
                         variant="default"
                         size="sm"
-                        onClick={() => handleStatusChange(event.id, "pending_review")}
+                        onClick={() =>
+                          handleStatusChange(event.id, "pending_review")
+                        }
                       >
                         Move to Pending
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteEvent(event.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewEvent(event.id)}
+                      >
                         <Eye className="h-4 w-4 mr-1" />
                         View Details
                       </Button>

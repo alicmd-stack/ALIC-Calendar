@@ -79,6 +79,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
           is_primary: boolean
           joined_at: string
+          email: string | null
         }
         Insert: {
           id?: string
@@ -87,6 +88,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           is_primary?: boolean
           joined_at?: string
+          email?: string | null
         }
         Update: {
           id?: string
@@ -95,6 +97,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           is_primary?: boolean
           joined_at?: string
+          email?: string | null
         }
         Relationships: [
           {

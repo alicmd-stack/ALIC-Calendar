@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import GoogleCalendarView from "@/components/calendar/GoogleCalendarView";
-import CalendarViewSwitcher, { CalendarView } from "@/components/calendar/CalendarViewSwitcher";
+import GoogleCalendarView from "@/modules/calendar/components/GoogleCalendarView";
+import CalendarViewSwitcher, { CalendarView } from "@/modules/calendar/components/CalendarViewSwitcher";
 import {
   Calendar,
   Church,

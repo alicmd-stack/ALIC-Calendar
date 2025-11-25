@@ -1,0 +1,407 @@
+import { ReactNode, useState, useEffect, useRef } from "react";
+import { useAuth } from "@/shared/contexts/AuthContext";
+import { useOrganization } from "@/shared/contexts/OrganizationContext";
+import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@/shared/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/shared/components/ui/popover";
+import { Input } from "@/shared/components/ui/input";
+import { useSearch } from "@/shared/contexts/SearchContext";
+import {
+  LogOut,
+  Users,
+  Settings,
+  DoorOpen,
+  Menu,
+  ChevronRight,
+  Home,
+  Bell,
+  Search,
+  Package,
+  DollarSign,
+  UserCheck,
+  Building,
+  X,
+} from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/shared/lib/utils";
+
+interface DashboardLayoutProps {
+  children: ReactNode;
+}
+
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+  comingSoon?: boolean;
+  module: string;
+}
+
+const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const { user, isAdmin, signOut } = useAuth();
+  const { currentOrganization } = useOrganization();
+  const { searchQuery, setSearchQuery, isSearchOpen, setIsSearchOpen, clearSearch } = useSearch();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Main navigation items
+  const mainNavigation: NavItem[] = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: Home,
+      description: "Calendar overview",
+      module: "calendar",
+    },
+  ];
+
+  // Navigation items accessible to both admins and contributors
+  const contributorNavigation: NavItem[] = [
+    {
+      name: "Event Review",
+      href: "/admin",
+      icon: Settings,
+      description: isAdmin ? "Approve events" : "View my requests",
+      module: "admin",
+    },
+  ];
+
+  // Admin-only navigation items
+  const adminNavigation: NavItem[] = isAdmin
+    ? [
+        {
+          name: "Users",
+          href: "/users",
+          icon: Users,
+          description: "Manage users",
+          module: "users",
+        },
+        {
+          name: "Rooms",
+          href: "/rooms",
+          icon: DoorOpen,
+          description: "Manage rooms",
+          module: "rooms",
+        },
+      ]
+    : [];
+
+  // Future modules (accessible to both admins and contributors)
+  const futureNavigation: NavItem[] = [
+    {
+      name: "Inventory",
+      href: "/inventory",
+      icon: Package,
+      description: isAdmin ? "Asset tracking" : "My requests",
+      comingSoon: true,
+      module: "inventory",
+    },
+    {
+      name: "Budget",
+      href: "/budget",
+      icon: DollarSign,
+      description: isAdmin ? "Financial management" : "My requests",
+      comingSoon: true,
+      module: "budget",
+    },
+  ];
+
+  // Admin-only future modules
+  const adminFutureNavigation: NavItem[] = isAdmin
+    ? [
+        {
+          name: "Members",
+          href: "/members",
+          icon: UserCheck,
+          description: "Church membership",
+          comingSoon: true,
+          module: "members",
+        },
+      ]
+    : [];
+
+  const allNavigation = [...mainNavigation, ...contributorNavigation, ...adminNavigation, ...futureNavigation, ...adminFutureNavigation];
+
+  // Get user initials for avatar
+  const getUserInitials = (name?: string) => {
+    if (!name) return user?.email?.charAt(0).toUpperCase() || "U";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  // Get page title based on current route
+  const getPageTitle = () => {
+    const currentNav = allNavigation.find((nav) => nav.href === location.pathname);
+    return currentNav?.name || "Church Management";
+  };
+
+  // Close sidebar and clear search on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+    clearSearch();
+    setIsSearchOpen(false);
+  }, [location.pathname]);
+
+  // Focus search input when popover opens
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.href;
+
+    return (
+      <Link
+        key={item.name}
+        to={item.href}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group",
+          isActive
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground hover:bg-secondary",
+          item.comingSoon && "opacity-75"
+        )}
+      >
+        <Icon className="h-5 w-5" />
+        <div className="flex-1">
+          <div className="font-medium text-sm flex items-center gap-2">
+            {item.name}
+            {item.comingSoon && (
+              <Badge variant="outline" className="text-[10px] px-1 py-0">
+                Soon
+              </Badge>
+            )}
+          </div>
+          <div
+            className={cn(
+              "text-xs",
+              isActive ? "text-primary-foreground/80" : "text-muted-foreground"
+            )}
+          >
+            {item.description}
+          </div>
+        </div>
+        {isActive && <ChevronRight className="h-4 w-4" />}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-72 bg-card border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-6 border-b">
+            <Link to="/dashboard" className="flex items-center gap-3">
+              <div className="bg-gradient-primary p-2.5 rounded-xl">
+                <Building className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="font-bold text-lg truncate max-w-[180px]">
+                  {currentOrganization?.name || "Church CMS"}
+                </h1>
+                <p className="text-xs text-muted-foreground">Management System</p>
+              </div>
+            </Link>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+            {/* Main Navigation */}
+            <div className="space-y-2">
+              {mainNavigation.map(renderNavItem)}
+            </div>
+
+            {/* Administration Section - includes contributor items + admin-only items */}
+            <div className="space-y-2">
+              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Administration
+              </div>
+              {contributorNavigation.map(renderNavItem)}
+              {adminNavigation.map(renderNavItem)}
+            </div>
+
+            {/* Future Modules Section */}
+            {futureNavigation.length > 0 && (
+              <div className="space-y-2">
+                <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Coming Soon
+                </div>
+                {futureNavigation.map(renderNavItem)}
+                {adminFutureNavigation.map(renderNavItem)}
+              </div>
+            )}
+          </nav>
+
+          {/* User Profile Section */}
+          <div className="p-4 border-t">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="w-full justify-start p-3 h-auto">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback className="text-xs">
+                      {getUserInitials(user?.email)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3 text-left flex-1">
+                    <div className="text-sm font-medium truncate">
+                      {user?.email?.split("@")[0] || "User"}
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {user?.email}
+                    </div>
+                  </div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem>
+                  <Users className="mr-2 h-4 w-4" />
+                  Profile Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Preferences
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={signOut} className="text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="lg:ml-72">
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div>
+                <h2 className="text-xl font-semibold">{getPageTitle()}</h2>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={searchQuery ? "default" : "ghost"}
+                    size="sm"
+                    className="hidden sm:flex"
+                  >
+                    <Search className="h-4 w-4" />
+                    {searchQuery && (
+                      <span className="ml-1 max-w-[100px] truncate text-xs">
+                        {searchQuery}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-3" align="end">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        ref={searchInputRef}
+                        placeholder="Search events..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="h-8"
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setIsSearchOpen(false);
+                          }
+                        }}
+                      />
+                      {searchQuery && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={clearSearch}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Search by event title, description, room, or requester
+                    </p>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Button variant="ghost" size="sm" className="relative">
+                <Bell className="h-4 w-4" />
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">3</Badge>
+              </Button>
+              <div className="h-6 w-px bg-border" />
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="hidden sm:block">
+                  {isAdmin && <Badge variant="secondary">Admin</Badge>}
+                </div>
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs">
+                    {getUserInitials(user?.email)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="p-4 sm:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default DashboardLayout;

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(npm run build)",
+      "Bash(cd /Users/mulukenmekuriya/Library/Mobile\\ Documents/com~apple~CloudDocs/Documents/Coding/approval-agenda && find:*)",
+      "Bash(cd /Users/mulukenmekuriya/Library/Mobile\\ Documents/com~apple~CloudDocs/Documents/Coding/approval-agenda:*)",
+      "Bash(cd:*)",
+      "Bash(supabase status:*)",
+      "Bash(npx tsc:*)",
+      "Bash(supabase db push:*)",
+      "Bash(lsof:*)",
+      "Bash(cat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
