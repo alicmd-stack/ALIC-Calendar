@@ -1,14 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API");
-const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "ALIC Finance <finance@addislidet.info>";
-const CHURCH_NAME = Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
-const CHURCH_LOGO_URL = Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
+const RESEND_FROM_EMAIL =
+  Deno.env.get("RESEND_FROM_EMAIL") || "ALIC Finance <finance@addislidet.info>";
+const CHURCH_NAME =
+  Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
+const CHURCH_LOGO_URL =
+  Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.addislidet.info";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 type NotificationType =
@@ -46,7 +50,9 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-const getNotificationContent = (request: BudgetNotificationRequest): {
+const getNotificationContent = (
+  request: BudgetNotificationRequest
+): {
   subject: string;
   heading: string;
   message: string;
@@ -63,7 +69,7 @@ const getNotificationContent = (request: BudgetNotificationRequest): {
     requesterName,
     reviewerName,
     paymentReference,
-    alertMessage
+    alertMessage,
   } = request;
 
   const amountStr = expenseAmount ? formatCurrency(expenseAmount) : "";
@@ -128,7 +134,9 @@ const getNotificationContent = (request: BudgetNotificationRequest): {
       return {
         subject: `Payment Complete: ${expenseTitle}`,
         heading: "Your Payment Has Been Processed",
-        message: `Your expense request for "${expenseTitle}" (${amountStr}) has been fully processed. Payment reference: ${paymentReference || "N/A"}.`,
+        message: `Your expense request for "${expenseTitle}" (${amountStr}) has been fully processed. Payment reference: ${
+          paymentReference || "N/A"
+        }.`,
         statusColor: "#22c55e",
         statusBadge: "COMPLETED",
         showActionButton: false,
@@ -183,7 +191,9 @@ const getNotificationContent = (request: BudgetNotificationRequest): {
       return {
         subject: `Budget Alert: ${ministryName}`,
         heading: "Budget Alert",
-        message: alertMessage || `There is an important update regarding the budget for ${ministryName}.`,
+        message:
+          alertMessage ||
+          `There is an important update regarding the budget for ${ministryName}.`,
         statusColor: "#f59e0b",
         statusBadge: "ALERT",
         showActionButton: true,
@@ -204,13 +214,16 @@ const getNotificationContent = (request: BudgetNotificationRequest): {
 };
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const requestBody: BudgetNotificationRequest = await req.json();
-    console.log("Budget notification request received:", JSON.stringify(requestBody, null, 2));
+    console.log(
+      "Budget notification request received:",
+      JSON.stringify(requestBody, null, 2)
+    );
 
     const { to, recipientName, reviewerNotes, actionUrl } = requestBody;
 
@@ -283,7 +296,9 @@ serve(async (req) => {
           <!-- Status Badge -->
           <tr>
             <td style="padding: 30px 30px 20px; text-align: center;">
-              <div style="display: inline-block; background-color: ${content.statusColor}; color: #ffffff; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">
+              <div style="display: inline-block; background-color: ${
+                content.statusColor
+              }; color: #ffffff; padding: 8px 20px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;">
                 ${content.statusBadge}
               </div>
             </td>
@@ -301,7 +316,9 @@ serve(async (req) => {
             </td>
           </tr>
 
-          ${requestBody.expenseAmount ? `
+          ${
+            requestBody.expenseAmount
+              ? `
           <!-- Amount Display -->
           <tr>
             <td style="padding: 0 30px 30px;">
@@ -309,15 +326,21 @@ serve(async (req) => {
                 <tr>
                   <td style="padding: 20px; text-align: center;">
                     <p style="margin: 0 0 5px; color: #15803d; font-size: 14px; font-weight: 600;">Amount</p>
-                    <p style="margin: 0; color: #166534; font-size: 28px; font-weight: 700;">${formatCurrency(requestBody.expenseAmount)}</p>
+                    <p style="margin: 0; color: #166534; font-size: 28px; font-weight: 700;">${formatCurrency(
+                      requestBody.expenseAmount
+                    )}</p>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
-          ` : ""}
+          `
+              : ""
+          }
 
-          ${reviewerNotes ? `
+          ${
+            reviewerNotes
+              ? `
           <!-- Reviewer Notes -->
           <tr>
             <td style="padding: 0 30px 30px;">
@@ -335,9 +358,13 @@ serve(async (req) => {
               </table>
             </td>
           </tr>
-          ` : ""}
+          `
+              : ""
+          }
 
-          ${content.showActionButton && actionUrl ? `
+          ${
+            content.showActionButton && actionUrl
+              ? `
           <!-- Action Button -->
           <tr>
             <td style="padding: 0 30px 30px; text-align: center;">
@@ -346,7 +373,9 @@ serve(async (req) => {
               </a>
             </td>
           </tr>
-          ` : ""}
+          `
+              : ""
+          }
 
           <!-- Footer -->
           <tr>
@@ -442,7 +471,8 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("Error in send-budget-notification function:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

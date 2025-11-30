@@ -9,8 +9,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const CHURCH_NAME = Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
-const CHURCH_LOGO_URL = Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
+const CHURCH_NAME =
+  Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
+const CHURCH_LOGO_URL =
+  Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.addislidet.info";
 
 interface AuthEmailPayload {

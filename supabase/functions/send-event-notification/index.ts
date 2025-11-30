@@ -1,14 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API");
-const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "Event Calendar <team@addislidet.info>";
-const CHURCH_NAME = Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
-const CHURCH_LOGO_URL = Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
+const RESEND_FROM_EMAIL =
+  Deno.env.get("RESEND_FROM_EMAIL") || "Event Calendar <team@addislidet.info>";
+const CHURCH_NAME =
+  Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
+const CHURCH_LOGO_URL =
+  Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
 const APP_URL = Deno.env.get("APP_URL") || "https://app.addislidet.info";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface EventNotificationRequest {
@@ -24,13 +28,16 @@ interface EventNotificationRequest {
 
 serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     const requestBody = await req.json();
-    console.log("Email notification request received:", JSON.stringify(requestBody, null, 2));
+    console.log(
+      "Email notification request received:",
+      JSON.stringify(requestBody, null, 2)
+    );
 
     const {
       to,
@@ -44,7 +51,11 @@ serve(async (req) => {
     }: EventNotificationRequest = requestBody;
 
     if (!to || !eventTitle || !status) {
-      console.error("Missing required fields:", { to: !!to, eventTitle: !!eventTitle, status: !!status });
+      console.error("Missing required fields:", {
+        to: !!to,
+        eventTitle: !!eventTitle,
+        status: !!status,
+      });
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         {
@@ -54,7 +65,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Preparing to send ${status} notification to ${to} for event: ${eventTitle}`);
+    console.log(
+      `Preparing to send ${status} notification to ${to} for event: ${eventTitle}`
+    );
 
     // Generate email content based on status
     let subject = "";
@@ -342,7 +355,10 @@ serve(async (req) => {
       html: htmlBody,
     };
 
-    console.log("Email payload:", JSON.stringify({ ...emailPayload, html: "[HTML CONTENT]" }));
+    console.log(
+      "Email payload:",
+      JSON.stringify({ ...emailPayload, html: "[HTML CONTENT]" })
+    );
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -376,7 +392,8 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("Error in send-event-notification function:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
