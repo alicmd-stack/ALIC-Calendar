@@ -323,7 +323,7 @@ const BudgetDashboard = () => {
                 </span>
               )}
             </TabsTrigger>
-            {(isMinistryLeader || isAdmin) && (
+            {isAdmin && (
               <TabsTrigger
                 value="leader-review"
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -504,7 +504,7 @@ const BudgetDashboard = () => {
 
           {/* Leader Review Tab */}
           <TabsContent value="leader-review" className="mt-6">
-            {isMinistryLeader || isAdmin ? (
+            {isAdmin ? (
               <ExpenseList
                 expenses={pendingLeader || []}
                 isLoading={false}
@@ -514,7 +514,7 @@ const BudgetDashboard = () => {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  You are not assigned as a ministry leader.
+                  You don't have access to leader review functions.
                 </CardContent>
               </Card>
             )}
