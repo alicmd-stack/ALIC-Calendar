@@ -63,7 +63,6 @@ import {
   ExpenseRequestForm,
   ExpenseList,
   BudgetMetricsGrid,
-  BudgetReportExport,
   EnhancedReportExport,
   BudgetOverview,
 } from "../components";
@@ -218,14 +217,6 @@ const BudgetDashboard = () => {
               </SelectContent>
             </Select>
 
-            {/* Export Report Button */}
-            {hasFullAccess && budgetSummary && expenses && (
-              <BudgetReportExport
-                budgetSummary={budgetSummary}
-                expenses={expenses}
-                organizationName={currentOrganization.name}
-              />
-            )}
             {/* Enhanced Report Export - Role-based data filtering */}
             {hasFullAccess &&
               (expenses?.length > 0 || allocationRequests?.length > 0) &&
