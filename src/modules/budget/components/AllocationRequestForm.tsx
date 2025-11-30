@@ -118,6 +118,42 @@ const createMonthlyAmounts = () =>
     amount: 0,
   }));
 
+/**
+ * Determines if a period (quarter or month) is in the past based on the fiscal year.
+ * @param fiscalYear - The fiscal year (e.g., 2025)
+ * @param periodType - "quarterly" or "monthly"
+ * @param periodNumber - 1-4 for quarters, 1-12 for months
+ * @returns true if the period is in the past
+ */
+const isPeriodInPast = (
+  fiscalYear: number,
+  periodType: "quarterly" | "monthly",
+  periodNumber: number
+): boolean => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+
+  // If fiscal year is in the past, all periods are in the past
+  if (fiscalYear < currentYear) {
+    return true;
+  }
+
+  // If fiscal year is in the future, no periods are in the past
+  if (fiscalYear > currentYear) {
+    return false;
+  }
+
+  // Fiscal year is current year - check the specific period
+  if (periodType === "monthly") {
+    return periodNumber < currentMonth;
+  }
+
+  // For quarterly: Q1=Jan-Mar (1-3), Q2=Apr-Jun (4-6), Q3=Jul-Sep (7-9), Q4=Oct-Dec (10-12)
+  const currentQuarter = Math.ceil(currentMonth / 3);
+  return periodNumber < currentQuarter;
+};
+
 export function AllocationRequestForm({
   open,
   onOpenChange,
@@ -524,42 +560,64 @@ export function AllocationRequestForm({
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      {periodAmounts.map((pa, index) => (
-                        <FormField
-                          key={pa.period}
-                          control={form.control}
-                          name={`period_amounts.${index}.amount`}
-                          render={({ field }) => (
-                            <FormItem>
-                              <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm hover:shadow-md hover:border-violet-300 transition-all duration-200">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-md">
-                                    {pa.shortLabel}
-                                  </span>
-                                  <span className="text-[10px] text-slate-400 font-medium">
-                                    {pa.label.replace(/Q\d\s/, "")}
-                                  </span>
-                                </div>
-                                <FormControl>
-                                  <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
-                                      $
+                      {periodAmounts.map((pa, index) => {
+                        const isPast = activeFiscalYear
+                          ? isPeriodInPast(activeFiscalYear.year, "quarterly", pa.period)
+                          : false;
+                        return (
+                          <FormField
+                            key={pa.period}
+                            control={form.control}
+                            name={`period_amounts.${index}.amount`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <div
+                                  className={`bg-white rounded-xl border p-3 shadow-sm transition-all duration-200 ${
+                                    isPast
+                                      ? "border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed"
+                                      : "border-slate-200 hover:shadow-md hover:border-violet-300"
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span
+                                      className={`text-xs font-bold px-2 py-0.5 rounded-md ${
+                                        isPast
+                                          ? "text-slate-400 bg-slate-100"
+                                          : "text-violet-600 bg-violet-50"
+                                      }`}
+                                    >
+                                      {pa.shortLabel}
                                     </span>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      placeholder="0.00"
-                                      className="pl-7 h-11 text-right text-base font-semibold border-0 bg-slate-50 rounded-lg focus:bg-white focus:ring-2 focus:ring-violet-500/20"
-                                      {...field}
-                                    />
+                                    <span className="text-[10px] text-slate-400 font-medium">
+                                      {pa.label.replace(/Q\d\s/, "")}
+                                    </span>
                                   </div>
-                                </FormControl>
-                              </div>
-                            </FormItem>
-                          )}
-                        />
-                      ))}
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
+                                        $
+                                      </span>
+                                      <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        placeholder="0.00"
+                                        disabled={isPast}
+                                        className={`pl-7 h-11 text-right text-base font-semibold border-0 rounded-lg ${
+                                          isPast
+                                            ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                            : "bg-slate-50 focus:bg-white focus:ring-2 focus:ring-violet-500/20"
+                                        }`}
+                                        {...field}
+                                      />
+                                    </div>
+                                  </FormControl>
+                                </div>
+                              </FormItem>
+                            )}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
@@ -580,6 +638,9 @@ export function AllocationRequestForm({
                             .slice(rowIndex * 3, rowIndex * 3 + 3)
                             .map((pa, colIndex) => {
                               const actualIndex = rowIndex * 3 + colIndex;
+                              const isPast = activeFiscalYear
+                                ? isPeriodInPast(activeFiscalYear.year, "monthly", pa.period)
+                                : false;
                               return (
                                 <FormField
                                   key={pa.period}
@@ -591,15 +652,25 @@ export function AllocationRequestForm({
                                         colIndex > 0
                                           ? "border-l border-slate-100"
                                           : ""
-                                      }`}
+                                      } ${isPast ? "bg-slate-50 opacity-60" : ""}`}
                                     >
                                       <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                        <span
+                                          className={`text-[11px] font-semibold uppercase tracking-wider ${
+                                            isPast ? "text-slate-400" : "text-slate-500"
+                                          }`}
+                                        >
                                           {pa.shortLabel}
                                         </span>
                                       </div>
                                       <FormControl>
-                                        <div className="relative flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 transition-all">
+                                        <div
+                                          className={`relative flex items-center border rounded-lg overflow-hidden transition-all ${
+                                            isPast
+                                              ? "bg-slate-100 border-slate-200 cursor-not-allowed"
+                                              : "bg-white border-slate-200 focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400"
+                                          }`}
+                                        >
                                           <span className="pl-3 pr-1 text-slate-400 text-sm font-medium select-none">
                                             $
                                           </span>
@@ -608,7 +679,10 @@ export function AllocationRequestForm({
                                             step="0.01"
                                             min="0"
                                             placeholder="0.00"
-                                            className="h-10 pl-0 pr-3 text-right text-sm font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            disabled={isPast}
+                                            className={`h-10 pl-0 pr-3 text-right text-sm font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                              isPast ? "text-slate-400 cursor-not-allowed" : ""
+                                            }`}
                                             {...field}
                                           />
                                         </div>
