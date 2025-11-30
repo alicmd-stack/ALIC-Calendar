@@ -6,9 +6,10 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Check, X, Eye, User } from "lucide-react";
+import { Check, X, Eye, User, Download } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import EventDialog from "@/modules/calendar/components/EventDialog";
+import { ExportDialog } from "@/modules/calendar/components";
 import { RejectionReasonDialog } from "@/shared/components/RejectionReasonDialog";
 import { RecurringEventActionDialog, RecurringActionScope } from "@/shared/components/RecurringEventActionDialog";
 import { formatDistance, format } from "date-fns";
@@ -51,6 +52,7 @@ const Admin = () => {
   const { user, isAdmin } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [eventToReject, setEventToReject] = useState<{ id: string; title: string; is_recurring?: boolean; parent_event_id?: string | null } | null>(null);
   const [rejectionLoading, setRejectionLoading] = useState(false);
@@ -627,11 +629,21 @@ const Admin = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">{isAdmin ? "Admin Panel" : "My Requests"}</h1>
-          <p className="text-muted-foreground mt-1">
-            {isAdmin ? "Review and manage event submissions" : "Track the status of your event requests"}
-          </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold">{isAdmin ? "Event Review" : "My Requests"}</h1>
+            <p className="text-muted-foreground mt-1">
+              {isAdmin ? "Review and manage event submissions" : "Track the status of your event requests"}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => setIsExportDialogOpen(true)}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
         </div>
 
         <Tabs defaultValue="pending" className="space-y-4">
@@ -981,6 +993,20 @@ const Admin = () => {
           actionType="reject"
           eventTitle={eventToReject?.title || ""}
           loading={rejectionLoading}
+        />
+
+        <ExportDialog
+          open={isExportDialogOpen}
+          onOpenChange={setIsExportDialogOpen}
+          events={[
+            ...(approvedEvents || []),
+            ...(publishedEvents || []),
+          ]}
+          organizationName={currentOrganization?.name || "Calendar"}
+          organizationSlug={currentOrganization?.slug}
+          timezone={currentOrganization?.timezone}
+          userId={user?.id}
+          isAdmin={isAdmin}
         />
       </div>
     </DashboardLayout>
