@@ -134,72 +134,96 @@ const BudgetOverview = ({
 
       {/* Tabbed Interface */}
       {hasExpenses || hasAllocations ? (
-        <div className="border-t pt-8">
+        <div className="space-y-6">
           <Tabs
             defaultValue={getDefaultTab()}
             value={activeView !== "combined" ? activeView : undefined}
             onValueChange={(value) => setActiveView(value as typeof activeView)}
             className="w-full"
           >
-            <div className="flex items-center justify-center">
-              <TabsList
-                className="grid w-auto bg-muted/50 p-1 rounded-xl border shadow-sm"
-                style={{
-                  gridTemplateColumns: `repeat(${
-                    (hasExpenses ? 1 : 0) + (hasAllocations ? 1 : 0)
-                  }, 1fr)`,
-                }}
-              >
-                {hasExpenses && (
-                  <TabsTrigger
-                    value="expenses"
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium"
-                  >
-                    <DollarSign className="h-4 w-4" />
-                    Expenses
-                    <Badge variant="secondary" className="ml-1">
-                      {expenses.length}
-                    </Badge>
-                  </TabsTrigger>
-                )}
-                {hasAllocations && (
-                  <TabsTrigger
-                    value="allocations"
-                    className="flex items-center gap-2 px-6 py-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium"
-                  >
-                    <Wallet className="h-4 w-4" />
-                    Allocations
-                    <Badge variant="secondary" className="ml-1">
-                      {allocations.length}
-                    </Badge>
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </div>
+            {/* Enhanced Tab Navigation */}
+            <div className="flex flex-col space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Financial Overview
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Breakdown by category
+                  </p>
+                </div>
+                <TabsList className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-1 shadow-lg border backdrop-blur-sm">
+                  {hasExpenses && (
+                    <TabsTrigger
+                      value="expenses"
+                      className="relative inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 hover:bg-white/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600">
+                          <DollarSign className="h-4 w-4" />
+                        </div>
+                        <span>Expenses</span>
+                        <Badge
+                          variant="secondary"
+                          className="ml-1 bg-blue-100 text-blue-700 border-0 px-2 py-0.5 text-xs font-bold"
+                        >
+                          {expenses.length}
+                        </Badge>
+                      </div>
+                    </TabsTrigger>
+                  )}
+                  {hasAllocations && (
+                    <TabsTrigger
+                      value="allocations"
+                      className="relative inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 data-[state=active]:bg-white data-[state=active]:text-primary data-[state=active]:shadow-lg data-[state=active]:shadow-primary/20 hover:bg-white/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600">
+                          <Wallet className="h-4 w-4" />
+                        </div>
+                        <span>Allocations</span>
+                        <Badge
+                          variant="secondary"
+                          className="ml-1 bg-purple-100 text-purple-700 border-0 px-2 py-0.5 text-xs font-bold"
+                        >
+                          {allocations.length}
+                        </Badge>
+                      </div>
+                    </TabsTrigger>
+                  )}
+                </TabsList>
+              </div>
 
-            {/* Tab Content */}
-            <div className="mt-8">
-              {/* Expense Tab */}
-              {hasExpenses && (
-                <TabsContent value="expenses" className="mt-0">
-                  <BudgetSection
-                    type="expenses"
-                    data={expenses}
-                    showHeader={false}
-                  />
-                </TabsContent>
-              )}
+              {/* Tab Content with Enhanced Styling */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 via-purple-50/30 to-emerald-50/30 rounded-2xl blur-3xl opacity-60" />
+                <div className="relative bg-white/80 backdrop-blur-sm border border-white/20 rounded-2xl shadow-xl p-6">
+                  {/* Tab Content */}
+                  <div className="space-y-4">
+                    {/* Expense Tab */}
+                    {hasExpenses && (
+                      <TabsContent value="expenses" className="mt-0">
+                        <BudgetSection
+                          type="expenses"
+                          data={expenses}
+                          showHeader={false}
+                        />
+                      </TabsContent>
+                    )}
 
-              {/* Allocation Tab */}
-              {hasAllocations && (
-                <TabsContent value="allocations" className="mt-0">
-                  <BudgetSection
-                    type="allocations"
-                    data={allocations}
-                    showHeader={false}
-                  />
-                </TabsContent>
-              )}
+                    {/* Allocation Tab */}
+                    {hasAllocations && (
+                      <TabsContent value="allocations" className="mt-0">
+                        <BudgetSection
+                          type="allocations"
+                          data={allocations}
+                          showHeader={false}
+                        />
+                      </TabsContent>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </Tabs>
         </div>
