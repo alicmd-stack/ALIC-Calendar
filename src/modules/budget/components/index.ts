@@ -3,7 +3,10 @@
  */
 
 export { ExpenseRequestForm } from "./ExpenseRequestForm";
-export { ExpenseStatusBadge, ExpenseStatusIndicator } from "./ExpenseStatusBadge";
+export {
+  ExpenseStatusBadge,
+  ExpenseStatusIndicator,
+} from "./ExpenseStatusBadge";
 export {
   LeaderApproveDialog,
   LeaderDenyDialog,
@@ -24,3 +27,8 @@ export { AllocationReviewDialog } from "./AllocationReviewDialog";
 
 // Budget Alerts
 export { BudgetAlertsPanel, BudgetAlertsBadge } from "./BudgetAlertsPanel";
+
+// Budget Overview & Analytics
+export { default as BudgetOverviewCharts } from "./BudgetOverviewCharts";
+export { default as BudgetMetricsGrid } from "./BudgetMetricsGrid";
+export { BudgetReportExport } from "./BudgetReportExport";

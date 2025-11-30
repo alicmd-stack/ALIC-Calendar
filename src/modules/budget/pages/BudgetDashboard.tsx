@@ -11,13 +11,7 @@ import {
   TabsTrigger,
 } from "@/shared/components/ui/tabs";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -59,8 +53,9 @@ import { useAllocationRequests, usePendingAllocationRequests } from "../hooks";
 import {
   ExpenseRequestForm,
   ExpenseList,
-  BudgetSummaryCard,
-  BudgetQuickStats,
+  BudgetOverviewCharts,
+  BudgetMetricsGrid,
+  BudgetReportExport,
 } from "../components";
 import { AllocationRequestForm } from "../components/AllocationRequestForm";
 import { AllocationRequestList } from "../components/AllocationRequestList";
@@ -185,7 +180,7 @@ const BudgetDashboard = () => {
               Manage expenses, track budgets, and process payments
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {/* Fiscal Year Selector */}
             <Select
               value={effectiveFiscalYearId || ""}
@@ -202,6 +197,15 @@ const BudgetDashboard = () => {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Export Report Button */}
+            {budgetSummary && expenses && (
+              <BudgetReportExport
+                budgetSummary={budgetSummary}
+                expenses={expenses}
+                organizationName={currentOrganization.name}
+              />
+            )}
 
             {/* New Request Dropdown */}
             <DropdownMenu>
@@ -226,13 +230,11 @@ const BudgetDashboard = () => {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        {statistics && (
-          <BudgetQuickStats
-            totalAllocated={budgetSummary?.total_allocated || 0}
-            totalSpent={statistics.total_amount_completed}
-            totalRemaining={budgetSummary?.total_remaining || 0}
-            pendingCount={statistics.pending_requests}
+        {/* Metrics Grid - World Class KPIs */}
+        {!isLoading && budgetSummary && expenses && (
+          <BudgetMetricsGrid
+            budgetSummary={budgetSummary}
+            expenses={expenses}
           />
         )}
 
@@ -328,7 +330,7 @@ const BudgetDashboard = () => {
             )}
           </TabsList>
 
-          {/* Overview Tab */}
+          {/* Overview Tab - World Class Analytics */}
           <TabsContent value="overview" className="space-y-6 mt-6">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
@@ -336,87 +338,24 @@ const BudgetDashboard = () => {
               </div>
             ) : (
               <>
-                {/* Budget Summary */}
-                {budgetSummary && (
-                  <BudgetSummaryCard
-                    summary={budgetSummary}
-                    type="organization"
+                {/* World-Class Charts and Visualizations */}
+                {budgetSummary && expenses && (
+                  <BudgetOverviewCharts
+                    budgetSummary={budgetSummary}
+                    expenses={expenses}
                   />
                 )}
 
-                {/* Ministry Budgets */}
-                {budgetSummary?.ministry_summaries &&
-                  budgetSummary.ministry_summaries.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Settings2 className="h-5 w-5" />
-                          Ministry Budgets
-                        </CardTitle>
-                        <CardDescription>
-                          Budget allocation and spending by ministry
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                          {budgetSummary.ministry_summaries.map((ministry) => (
-                            <div
-                              key={ministry.ministry_id}
-                              className="p-4 border rounded-lg space-y-2"
-                            >
-                              <h4 className="font-medium">
-                                {ministry.ministry_name}
-                              </h4>
-                              <div className="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Allocated:
-                                  </span>
-                                  <span className="ml-1 font-medium">
-                                    $
-                                    {ministry.allocated_amount.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Spent:
-                                  </span>
-                                  <span className="ml-1 font-medium text-green-600">
-                                    ${ministry.total_spent.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Pending:
-                                  </span>
-                                  <span className="ml-1 font-medium text-yellow-600">
-                                    ${ministry.total_pending.toLocaleString()}
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">
-                                    Remaining:
-                                  </span>
-                                  <span className="ml-1 font-medium text-blue-600">
-                                    ${ministry.remaining.toLocaleString()}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                {/* All Expenses */}
+                {/* All Expenses for Admins */}
                 {isAdmin && expenses && (
-                  <ExpenseList
-                    expenses={expenses}
-                    isLoading={expensesLoading}
-                    userRole="admin"
-                    onRefresh={handleRefresh}
-                  />
+                  <div className="mt-8">
+                    <ExpenseList
+                      expenses={expenses}
+                      isLoading={expensesLoading}
+                      userRole="admin"
+                      onRefresh={handleRefresh}
+                    />
+                  </div>
                 )}
               </>
             )}
