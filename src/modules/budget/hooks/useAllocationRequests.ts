@@ -384,12 +384,45 @@ export function useApproveAllocationRequest() {
 
       if (updateError) throw updateError;
 
-      // Create or update the budget allocation record
-      const { error: allocationError } = await supabase
+      // Check if a budget allocation already exists for this ministry/fiscal year
+      const { data: existingAllocation } = await supabase
         .schema("budget")
         .from("budget_allocations")
-        .upsert(
-          {
+        .select("id, allocated_amount")
+        .eq("ministry_id", current.ministry_id)
+        .eq("fiscal_year_id", current.fiscal_year_id)
+        .single();
+
+      if (existingAllocation) {
+        // Add to existing allocation amount
+        const newAmount =
+          Number(existingAllocation.allocated_amount) + approvedAmount;
+        const { error: updateAllocationError } = await supabase
+          .schema("budget")
+          .from("budget_allocations")
+          .update({
+            allocated_amount: newAmount,
+            approved_by: actorId,
+            approved_at: new Date().toISOString(),
+            notes: adminNotes
+              ? `${adminNotes} (added $${approvedAmount.toFixed(2)})`
+              : `Added $${approvedAmount.toFixed(2)} from allocation request`,
+          })
+          .eq("id", existingAllocation.id);
+
+        if (updateAllocationError) {
+          console.error(
+            "Budget allocation update error:",
+            updateAllocationError
+          );
+          throw updateAllocationError;
+        }
+      } else {
+        // Create new allocation
+        const { error: insertAllocationError } = await supabase
+          .schema("budget")
+          .from("budget_allocations")
+          .insert({
             organization_id: current.organization_id,
             ministry_id: current.ministry_id,
             fiscal_year_id: current.fiscal_year_id,
@@ -397,15 +430,15 @@ export function useApproveAllocationRequest() {
             approved_by: actorId,
             approved_at: new Date().toISOString(),
             notes: adminNotes || null,
-          },
-          {
-            onConflict: "fiscal_year_id,ministry_id",
-          }
-        );
+          });
 
-      if (allocationError) {
-        console.error("Budget allocation creation error:", allocationError);
-        throw allocationError;
+        if (insertAllocationError) {
+          console.error(
+            "Budget allocation creation error:",
+            insertAllocationError
+          );
+          throw insertAllocationError;
+        }
       }
 
       // Add history entry
