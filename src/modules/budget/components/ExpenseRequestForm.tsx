@@ -166,15 +166,11 @@ export function ExpenseRequestForm({
           continue;
         }
 
-        // Get the public URL
-        const { data: urlData } = supabase.storage
-          .from("expense-attachments")
-          .getPublicUrl(fileName);
-
+        // Store the file path (we'll generate signed URLs when viewing)
         newAttachments.push({
           id: fileName,
           name: file.name,
-          url: urlData.publicUrl,
+          url: fileName, // Store the path, not the full URL
           type: file.type,
           size: file.size,
           uploaded_at: new Date().toISOString(),

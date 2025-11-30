@@ -2,6 +2,7 @@
  * ExpenseDetailDialog - View expense request details including attachments
  */
 
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
-import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Separator } from "@/shared/components/ui/separator";
 import {
@@ -23,8 +23,11 @@ import {
   Paperclip,
   ExternalLink,
   Download,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 import { ExpenseStatusBadge } from "./ExpenseStatusBadge";
 import type { ExpenseRequestWithRelations, AttachmentData } from "../types";
 import { REIMBURSEMENT_TYPE_LABELS } from "../types";
@@ -35,14 +38,74 @@ interface ExpenseDetailDialogProps {
   expense: ExpenseRequestWithRelations | null;
 }
 
+interface AttachmentWithSignedUrl extends AttachmentData {
+  signedUrl?: string;
+  urlError?: boolean;
+}
+
 export function ExpenseDetailDialog({
   open,
   onOpenChange,
   expense,
 }: ExpenseDetailDialogProps) {
-  if (!expense) return null;
+  const [attachmentsWithUrls, setAttachmentsWithUrls] = useState<AttachmentWithSignedUrl[]>([]);
+  const [loadingUrls, setLoadingUrls] = useState(false);
 
-  const attachments = (expense.attachments as AttachmentData[]) || [];
+  // Generate signed URLs when dialog opens
+  useEffect(() => {
+    if (!open || !expense) {
+      setAttachmentsWithUrls([]);
+      return;
+    }
+
+    const rawAttachments = (expense.attachments as AttachmentData[]) || [];
+    if (rawAttachments.length === 0) {
+      setAttachmentsWithUrls([]);
+      return;
+    }
+
+    const generateSignedUrls = async () => {
+      setLoadingUrls(true);
+      const updatedAttachments: AttachmentWithSignedUrl[] = [];
+
+      for (const attachment of rawAttachments) {
+        try {
+          // Extract the file path - handle both old (full URL) and new (path only) formats
+          let filePath = attachment.url || attachment.id;
+
+          // If it's a full Supabase URL, extract just the path
+          if (filePath.includes("supabase.co/storage")) {
+            // Extract path after /expense-attachments/
+            const match = filePath.match(/expense-attachments\/(.+)$/);
+            if (match) {
+              filePath = match[1];
+            }
+          }
+
+          const { data, error } = await supabase.storage
+            .from("expense-attachments")
+            .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+          if (error) {
+            console.error("Error creating signed URL:", error);
+            updatedAttachments.push({ ...attachment, urlError: true });
+          } else {
+            updatedAttachments.push({ ...attachment, signedUrl: data.signedUrl });
+          }
+        } catch (error) {
+          console.error("Error generating signed URL:", error);
+          updatedAttachments.push({ ...attachment, urlError: true });
+        }
+      }
+
+      setAttachmentsWithUrls(updatedAttachments);
+      setLoadingUrls(false);
+    };
+
+    generateSignedUrls();
+  }, [open, expense]);
+
+  if (!expense) return null;
 
   // Format file size
   const formatFileSize = (bytes: number) => {
@@ -53,6 +116,8 @@ export function ExpenseDetailDialog({
 
   // Check if file is an image
   const isImageFile = (type: string) => type.startsWith("image/");
+
+  const rawAttachments = (expense.attachments as AttachmentData[]) || [];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,59 +256,75 @@ export function ExpenseDetailDialog({
           )}
 
           {/* Attachments */}
-          {attachments.length > 0 && (
+          {rawAttachments.length > 0 && (
             <>
               <Separator />
               <div className="space-y-3">
                 <h4 className="font-medium flex items-center gap-2">
                   <Paperclip className="h-4 w-4" />
-                  Attachments ({attachments.length})
+                  Attachments ({rawAttachments.length})
                 </h4>
 
-                <div className="space-y-2">
-                  {attachments.map((attachment) => (
-                    <div
-                      key={attachment.id}
-                      className="flex items-center justify-between p-3 bg-muted rounded-md"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {isImageFile(attachment.type) ? (
-                          <ImageIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
-                        ) : (
-                          <FileText className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">
-                            {attachment.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(attachment.size)} • {format(new Date(attachment.uploaded_at), "MMM d, yyyy")}
-                          </p>
+                {loadingUrls ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">Loading attachments...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {attachmentsWithUrls.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between p-3 bg-muted rounded-md"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {isImageFile(attachment.type) ? (
+                            <ImageIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                          ) : (
+                            <FileText className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {attachment.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(attachment.size)} • {format(new Date(attachment.uploaded_at), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          {attachment.urlError ? (
+                            <div className="flex items-center text-red-500 text-xs">
+                              <AlertCircle className="h-4 w-4 mr-1" />
+                              Error
+                            </div>
+                          ) : attachment.signedUrl ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(attachment.signedUrl, "_blank")}
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                              >
+                                <a href={attachment.signedUrl} download={attachment.name}>
+                                  <Download className="h-4 w-4" />
+                                </a>
+                              </Button>
+                            </>
+                          ) : (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          )}
                         </div>
                       </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                        >
-                          <a href={attachment.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                        >
-                          <a href={attachment.url} download={attachment.name}>
-                            <Download className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </>
           )}
