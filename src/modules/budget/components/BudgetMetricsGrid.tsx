@@ -130,7 +130,7 @@ const BudgetMetricsGrid = ({
 
   // Expense calculations from real data (EXCLUDING cancelled requests)
   const activeExpenses = safeExpenses.filter((e) => e.status !== "cancelled");
-  
+
   const pendingExpenses = activeExpenses.filter(
     (e) =>
       e.status === "pending_leader" ||
@@ -149,8 +149,10 @@ const BudgetMetricsGrid = ({
   const totalExpenses = activeExpenses.length;
 
   // Allocation calculations from real data (EXCLUDING cancelled requests)
-  const activeAllocations = safeAllocations.filter((a) => a.status !== "cancelled");
-  
+  const activeAllocations = safeAllocations.filter(
+    (a) => a.status !== "cancelled"
+  );
+
   const pendingAllocations = activeAllocations.filter(
     (a) => a.status === "pending"
   ).length;

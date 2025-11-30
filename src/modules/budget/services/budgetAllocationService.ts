@@ -20,14 +20,18 @@ export const budgetAllocationService = {
   /**
    * List all budget allocations for a fiscal year
    */
-  async listByFiscalYear(fiscalYearId: string): Promise<BudgetAllocationWithRelations[]> {
+  async listByFiscalYear(
+    fiscalYearId: string
+  ): Promise<BudgetAllocationWithRelations[]> {
     const { data, error } = await budgetSchema()
       .from("budget_allocations")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .eq("fiscal_year_id", fiscalYearId)
       .order("created_at", { ascending: false });
 
@@ -49,11 +53,13 @@ export const budgetAllocationService = {
   ): Promise<BudgetAllocationWithRelations | null> {
     const { data, error } = await budgetSchema()
       .from("budget_allocations")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .eq("ministry_id", ministryId)
       .eq("fiscal_year_id", fiscalYearId)
       .single();
@@ -71,7 +77,9 @@ export const budgetAllocationService = {
   /**
    * Create or update budget allocation
    */
-  async upsert(allocationData: BudgetAllocationInsert): Promise<BudgetAllocation> {
+  async upsert(
+    allocationData: BudgetAllocationInsert
+  ): Promise<BudgetAllocation> {
     const { data, error } = await budgetSchema()
       .from("budget_allocations")
       .upsert(allocationData, {
@@ -87,7 +95,9 @@ export const budgetAllocationService = {
   /**
    * Create a new budget allocation
    */
-  async create(allocationData: BudgetAllocationInsert): Promise<BudgetAllocation> {
+  async create(
+    allocationData: BudgetAllocationInsert
+  ): Promise<BudgetAllocation> {
     const { data, error } = await budgetSchema()
       .from("budget_allocations")
       .insert(allocationData)
@@ -139,7 +149,10 @@ export const budgetAllocationService = {
     fiscalYearId: string
   ): Promise<MinistryBudgetSummary | null> {
     // Get the budget allocation
-    const allocation = await this.getByMinistryAndFiscalYear(ministryId, fiscalYearId);
+    const allocation = await this.getByMinistryAndFiscalYear(
+      ministryId,
+      fiscalYearId
+    );
     if (!allocation) return null;
 
     // Get expense totals by status (EXCLUDING cancelled expenses)
@@ -156,7 +169,9 @@ export const budgetAllocationService = {
       (acc, exp) => {
         const amount = Number(exp.amount);
         if (
-          ["pending_leader", "leader_approved", "pending_treasury"].includes(exp.status)
+          ["pending_leader", "leader_approved", "pending_treasury"].includes(
+            exp.status
+          )
         ) {
           acc.pending += amount;
         } else if (
@@ -172,7 +187,8 @@ export const budgetAllocationService = {
     );
 
     const allocatedAmount = Number(allocation.allocated_amount);
-    const remaining = allocatedAmount - totals.pending - totals.approved - totals.spent;
+    const remaining =
+      allocatedAmount - totals.pending - totals.approved - totals.spent;
 
     return {
       ministry_id: ministryId,
@@ -197,10 +213,12 @@ export const budgetAllocationService = {
     // Get all allocations for this fiscal year
     const { data: allocations, error: allocError } = await budgetSchema()
       .from("budget_allocations")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name)
-      `)
+      `
+      )
       .eq("organization_id", organizationId)
       .eq("fiscal_year_id", fiscalYearId);
 
@@ -236,9 +254,11 @@ export const budgetAllocationService = {
           (acc, exp) => {
             const amount = Number(exp.amount);
             if (
-              ["pending_leader", "leader_approved", "pending_treasury"].includes(
-                exp.status
-              )
+              [
+                "pending_leader",
+                "leader_approved",
+                "pending_treasury",
+              ].includes(exp.status)
             ) {
               acc.pending += amount;
             } else if (
@@ -259,7 +279,8 @@ export const budgetAllocationService = {
 
         return {
           ministry_id: allocation.ministry_id,
-          ministry_name: (allocation.ministries as { id: string; name: string }).name,
+          ministry_name: (allocation.ministries as { id: string; name: string })
+            .name,
           fiscal_year_id: fiscalYearId,
           fiscal_year_name: fiscalYear.name,
           allocated_amount: allocatedAmount,

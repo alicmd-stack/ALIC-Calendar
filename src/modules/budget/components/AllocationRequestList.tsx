@@ -279,12 +279,13 @@ export function AllocationRequestList({
                 <TableBody>
                   {filteredRequests.map((request) => (
                     <TableRow key={request.id}>
-                      <TableCell className="font-medium max-w-[200px] truncate" title={request.justification}>
+                      <TableCell
+                        className="font-medium max-w-[200px] truncate"
+                        title={request.justification}
+                      >
                         {request.justification}
                       </TableCell>
-                      <TableCell>
-                        {request.ministry?.name || "-"}
-                      </TableCell>
+                      <TableCell>{request.ministry?.name || "-"}</TableCell>
                       <TableCell>
                         {getPeriodLabel(request.period_type)}
                       </TableCell>

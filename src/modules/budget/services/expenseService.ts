@@ -29,11 +29,13 @@ export const expenseService = {
   ): Promise<ExpenseRequestWithRelations[]> {
     let query = budgetSchema()
       .from("expense_requests")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .eq("organization_id", organizationId)
       .neq("status", "cancelled") // Exclude cancelled requests by default
       .order("created_at", { ascending: false });
@@ -80,7 +82,9 @@ export const expenseService = {
   /**
    * Get expense requests pending leader review for a user's ministries
    */
-  async listPendingForLeader(userId: string): Promise<ExpenseRequestWithRelations[]> {
+  async listPendingForLeader(
+    userId: string
+  ): Promise<ExpenseRequestWithRelations[]> {
     // First get ministries led by this user from budget schema
     const { data: ministries } = await budgetSchema()
       .from("ministries")
@@ -93,11 +97,13 @@ export const expenseService = {
 
     const { data, error } = await budgetSchema()
       .from("expense_requests")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .in("ministry_id", ministryIds)
       .eq("status", "pending_leader")
       .order("created_at", { ascending: true });
@@ -119,11 +125,13 @@ export const expenseService = {
   ): Promise<ExpenseRequestWithRelations[]> {
     const { data, error } = await budgetSchema()
       .from("expense_requests")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .eq("organization_id", organizationId)
       .in("status", ["leader_approved", "pending_treasury"])
       .order("leader_reviewed_at", { ascending: true });
@@ -145,11 +153,13 @@ export const expenseService = {
   ): Promise<ExpenseRequestWithRelations[]> {
     const { data, error } = await budgetSchema()
       .from("expense_requests")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .eq("organization_id", organizationId)
       .in("status", ["treasury_approved", "pending_finance"])
       .order("treasury_reviewed_at", { ascending: true });
@@ -169,11 +179,13 @@ export const expenseService = {
   async get(expenseId: string): Promise<ExpenseRequestWithRelations | null> {
     const { data, error } = await budgetSchema()
       .from("expense_requests")
-      .select(`
+      .select(
+        `
         *,
         ministries(id, name, description),
         fiscal_years(id, name, year)
-      `)
+      `
+      )
       .eq("id", expenseId)
       .single();
 
@@ -189,7 +201,15 @@ export const expenseService = {
     ].filter((id): id is string => !!id);
 
     // Batch fetch all profiles in a single query
-    const profilesMap: Record<string, { id: string; full_name: string; email?: string; phone_number?: string | null }> = {};
+    const profilesMap: Record<
+      string,
+      {
+        id: string;
+        full_name: string;
+        email?: string;
+        phone_number?: string | null;
+      }
+    > = {};
 
     if (profileIds.length > 0) {
       const { data: profiles } = await supabase
@@ -208,10 +228,18 @@ export const expenseService = {
       ...data,
       ministry: data.ministries,
       fiscal_year: data.fiscal_years,
-      requester_profile: data.requester_id ? profilesMap[data.requester_id] || null : null,
-      leader_reviewer_profile: data.leader_reviewer_id ? profilesMap[data.leader_reviewer_id] || null : null,
-      treasury_reviewer_profile: data.treasury_reviewer_id ? profilesMap[data.treasury_reviewer_id] || null : null,
-      finance_processor_profile: data.finance_processor_id ? profilesMap[data.finance_processor_id] || null : null,
+      requester_profile: data.requester_id
+        ? profilesMap[data.requester_id] || null
+        : null,
+      leader_reviewer_profile: data.leader_reviewer_id
+        ? profilesMap[data.leader_reviewer_id] || null
+        : null,
+      treasury_reviewer_profile: data.treasury_reviewer_id
+        ? profilesMap[data.treasury_reviewer_id] || null
+        : null,
+      finance_processor_profile: data.finance_processor_id
+        ? profilesMap[data.finance_processor_id] || null
+        : null,
     } as unknown as ExpenseRequestWithRelations;
   },
 
@@ -541,7 +569,9 @@ export const expenseService = {
       new_status: "completed",
       actor_id: processorId,
       actor_name: processorName,
-      notes: `Payment processed. Reference: ${paymentReference}${notes ? `. ${notes}` : ""}`,
+      notes: `Payment processed. Reference: ${paymentReference}${
+        notes ? `. ${notes}` : ""
+      }`,
     });
 
     return data;
@@ -617,7 +647,11 @@ export const expenseService = {
     if (!data || data.length === 0) return [];
 
     // Collect unique actor IDs and batch fetch profiles
-    const actorIds = [...new Set(data.map((h) => h.actor_id).filter((id): id is string => !!id))];
+    const actorIds = [
+      ...new Set(
+        data.map((h) => h.actor_id).filter((id): id is string => !!id)
+      ),
+    ];
 
     const profilesMap: Record<string, { id: string; full_name: string }> = {};
 
@@ -636,7 +670,9 @@ export const expenseService = {
 
     return data.map((history) => ({
       ...history,
-      actor_profile: history.actor_id ? profilesMap[history.actor_id] || null : null,
+      actor_profile: history.actor_id
+        ? profilesMap[history.actor_id] || null
+        : null,
     }));
   },
 
@@ -673,10 +709,16 @@ export const expenseService = {
         const amount = Number(exp.amount);
         acc.total_requests++;
 
-        if (["pending_leader", "leader_approved", "pending_treasury"].includes(exp.status)) {
+        if (
+          ["pending_leader", "leader_approved", "pending_treasury"].includes(
+            exp.status
+          )
+        ) {
           acc.pending_requests++;
           acc.total_amount_pending += amount;
-        } else if (["treasury_approved", "pending_finance"].includes(exp.status)) {
+        } else if (
+          ["treasury_approved", "pending_finance"].includes(exp.status)
+        ) {
           acc.approved_requests++;
           acc.total_amount_approved += amount;
         } else if (exp.status === "completed") {

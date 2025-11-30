@@ -26,7 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import {
   MoreHorizontal,
   Eye,
@@ -78,7 +83,8 @@ export function ExpenseList({
   const { searchQuery } = useSearch();
 
   // State for dialogs
-  const [selectedExpense, setSelectedExpense] = useState<ExpenseRequestWithRelations | null>(null);
+  const [selectedExpense, setSelectedExpense] =
+    useState<ExpenseRequestWithRelations | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLeaderApproveOpen, setIsLeaderApproveOpen] = useState(false);
@@ -89,7 +95,9 @@ export function ExpenseList({
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState<ExpenseStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ExpenseStatus | "all">(
+    "all"
+  );
 
   // Mutations
   const deleteExpense = useDeleteExpense();
@@ -104,7 +112,9 @@ export function ExpenseList({
 
     const matchesSearch =
       expense.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      expense.requester_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      expense.requester_name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       expense.ministry?.name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
@@ -114,7 +124,8 @@ export function ExpenseList({
   });
 
   const handleDelete = async (expense: ExpenseRequestWithRelations) => {
-    if (!confirm("Are you sure you want to delete this expense request?")) return;
+    if (!confirm("Are you sure you want to delete this expense request?"))
+      return;
 
     try {
       await deleteExpense.mutateAsync(expense.id);
@@ -126,7 +137,8 @@ export function ExpenseList({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete expense",
+        description:
+          error instanceof Error ? error.message : "Failed to delete expense",
         variant: "destructive",
       });
     }
@@ -149,17 +161,20 @@ export function ExpenseList({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit expense",
+        description:
+          error instanceof Error ? error.message : "Failed to submit expense",
         variant: "destructive",
       });
     }
   };
 
   const canEdit = (expense: ExpenseRequestWithRelations) =>
-    expense.status === "draft" && (expense.requester_id === user?.id || userRole === "admin");
+    expense.status === "draft" &&
+    (expense.requester_id === user?.id || userRole === "admin");
 
   const canDelete = (expense: ExpenseRequestWithRelations) =>
-    expense.status === "draft" && (expense.requester_id === user?.id || userRole === "admin");
+    expense.status === "draft" &&
+    (expense.requester_id === user?.id || userRole === "admin");
 
   const canSubmit = (expense: ExpenseRequestWithRelations) =>
     expense.status === "draft" && expense.requester_id === user?.id;
@@ -169,14 +184,17 @@ export function ExpenseList({
     (expense.requester_id === user?.id || userRole === "admin");
 
   const canLeaderReview = (expense: ExpenseRequestWithRelations) =>
-    expense.status === "pending_leader" && (userRole === "leader" || userRole === "admin");
+    expense.status === "pending_leader" &&
+    (userRole === "leader" || userRole === "admin");
 
   const canTreasuryReview = (expense: ExpenseRequestWithRelations) =>
-    (expense.status === "leader_approved" || expense.status === "pending_treasury") &&
+    (expense.status === "leader_approved" ||
+      expense.status === "pending_treasury") &&
     (userRole === "treasury" || userRole === "admin");
 
   const canFinanceProcess = (expense: ExpenseRequestWithRelations) =>
-    (expense.status === "treasury_approved" || expense.status === "pending_finance") &&
+    (expense.status === "treasury_approved" ||
+      expense.status === "pending_finance") &&
     (userRole === "finance" || userRole === "admin");
 
   if (isLoading) {
@@ -203,18 +221,22 @@ export function ExpenseList({
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as ExpenseStatus | "all")}
+              onValueChange={(value) =>
+                setStatusFilter(value as ExpenseStatus | "all")
+              }
             >
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                {Object.entries(EXPENSE_STATUS_CONFIG).map(([status, config]) => (
-                  <SelectItem key={status} value={status}>
-                    {config.label}
-                  </SelectItem>
-                ))}
+                {Object.entries(EXPENSE_STATUS_CONFIG).map(
+                  ([status, config]) => (
+                    <SelectItem key={status} value={status}>
+                      {config.label}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -241,10 +263,13 @@ export function ExpenseList({
                 <TableBody>
                   {filteredExpenses.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell className="font-medium">{expense.title}</TableCell>
+                      <TableCell className="font-medium">
+                        {expense.title}
+                      </TableCell>
                       <TableCell>{expense.ministry?.name || "-"}</TableCell>
                       <TableCell className="font-medium">
-                        ${Number(expense.amount).toLocaleString("en-US", {
+                        $
+                        {Number(expense.amount).toLocaleString("en-US", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
@@ -286,7 +311,9 @@ export function ExpenseList({
                             )}
 
                             {canSubmit(expense) && (
-                              <DropdownMenuItem onClick={() => handleSubmit(expense)}>
+                              <DropdownMenuItem
+                                onClick={() => handleSubmit(expense)}
+                              >
                                 <Send className="mr-2 h-4 w-4" />
                                 Submit for Review
                               </DropdownMenuItem>
