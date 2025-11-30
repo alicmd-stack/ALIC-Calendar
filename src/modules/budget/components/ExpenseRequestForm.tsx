@@ -46,7 +46,6 @@ import { REIMBURSEMENT_TYPE_LABELS } from "../types";
 
 // Form validation schema
 const expenseFormSchema = z.object({
-  ministry_id: z.string().min(1, "Please select a ministry"),
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
   amount: z.coerce.number().positive("Amount must be greater than 0"),
@@ -90,7 +89,6 @@ export function ExpenseRequestForm({
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
-      ministry_id: "",
       title: "",
       description: "",
       amount: 0,
@@ -98,23 +96,15 @@ export function ExpenseRequestForm({
     },
   });
 
-  // Auto-select ministry based on user's profile ministry_name
-  useEffect(() => {
-    if (!expense && profile?.ministry_name && ministries) {
-      const userMinistry = ministries.find(
-        (m) => m.name.toLowerCase() === profile.ministry_name?.toLowerCase()
-      );
-      if (userMinistry) {
-        form.setValue("ministry_id", userMinistry.id);
-      }
-    }
-  }, [profile?.ministry_name, ministries, expense, form]);
+  // Get the user's ministry from their profile
+  const userMinistry = ministries?.find(
+    (m) => m.name.toLowerCase() === profile?.ministry_name?.toLowerCase()
+  );
 
   // Update form values when expense changes (for editing)
   useEffect(() => {
     if (expense) {
       form.reset({
-        ministry_id: expense.ministry_id,
         title: expense.title,
         description: expense.description || "",
         amount: expense.amount,
@@ -122,7 +112,6 @@ export function ExpenseRequestForm({
       });
     } else {
       form.reset({
-        ministry_id: "",
         title: "",
         description: "",
         amount: 0,
@@ -141,6 +130,15 @@ export function ExpenseRequestForm({
       return;
     }
 
+    if (!userMinistry) {
+      toast({
+        title: "Error",
+        description: "You are not assigned to a ministry. Please contact an administrator.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -149,7 +147,7 @@ export function ExpenseRequestForm({
         await updateExpense.mutateAsync({
           expenseId: expense.id,
           data: {
-            ministry_id: values.ministry_id,
+            ministry_id: userMinistry.id,
             title: values.title,
             description: values.description || null,
             amount: values.amount,
@@ -180,7 +178,7 @@ export function ExpenseRequestForm({
           expenseData: {
             organization_id: currentOrganization.id,
             fiscal_year_id: activeFiscalYear.id,
-            ministry_id: values.ministry_id,
+            ministry_id: userMinistry.id,
             title: values.title,
             description: values.description || null,
             amount: values.amount,
@@ -258,11 +256,11 @@ export function ExpenseRequestForm({
             {isEditing
               ? "Update your expense request details."
               : "Fill out the form to submit a new expense request."}
-            {activeFiscalYear && (
-              <span className="block mt-1 text-xs">
-                Fiscal Year: {activeFiscalYear.name}
-              </span>
-            )}
+            <span className="block mt-1 text-xs">
+              {activeFiscalYear && <>Fiscal Year: {activeFiscalYear.name}</>}
+              {activeFiscalYear && userMinistry && <> • </>}
+              {userMinistry && <>Ministry: {userMinistry.name}</>}
+            </span>
           </DialogDescription>
         </DialogHeader>
 
@@ -270,34 +268,18 @@ export function ExpenseRequestForm({
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
+        ) : !userMinistry ? (
+          <div className="py-8 text-center">
+            <p className="text-muted-foreground">
+              You are not assigned to a ministry. Please contact an administrator to be assigned to a ministry before submitting expense requests.
+            </p>
+            <Button className="mt-4" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </div>
         ) : (
           <Form {...form}>
             <form className="space-y-4">
-              <FormField
-                control={form.control}
-                name="ministry_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ministry *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a ministry" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ministries?.map((ministry) => (
-                          <SelectItem key={ministry.id} value={ministry.id}>
-                            {ministry.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="title"
