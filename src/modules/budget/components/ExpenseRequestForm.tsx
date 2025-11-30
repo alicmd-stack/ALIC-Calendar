@@ -474,7 +474,7 @@ export function ExpenseRequestForm({
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm font-medium text-slate-700">Title / Purpose</FormLabel>
+                    <FormLabel className="text-sm font-medium text-slate-700">Justification</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="e.g., Youth Ministry Supplies"

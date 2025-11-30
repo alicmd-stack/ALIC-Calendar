@@ -270,10 +270,10 @@ export function AllocationRequestList({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Justification</TableHead>
                     <TableHead>Ministry</TableHead>
                     <TableHead>Period</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Title</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
@@ -282,7 +282,10 @@ export function AllocationRequestList({
                 <TableBody>
                   {filteredRequests.map((request) => (
                     <TableRow key={request.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium max-w-[200px] truncate" title={request.justification}>
+                        {request.justification}
+                      </TableCell>
+                      <TableCell>
                         {request.ministry?.name || "-"}
                       </TableCell>
                       <TableCell>
@@ -311,9 +314,6 @@ export function AllocationRequestList({
                               )}
                             </span>
                           )}
-                      </TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={request.justification}>
-                        {request.justification}
                       </TableCell>
                       <TableCell>
                         <AllocationRequestStatusBadge status={request.status} />

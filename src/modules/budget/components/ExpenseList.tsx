@@ -227,7 +227,7 @@ export function ExpenseList({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Title</TableHead>
+                    <TableHead>Justification</TableHead>
                     <TableHead>Ministry</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
