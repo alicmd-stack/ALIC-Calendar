@@ -2,6 +2,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API");
 const RESEND_FROM_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "Event Calendar <team@addislidet.info>";
+const CHURCH_NAME = Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
+const CHURCH_LOGO_URL = Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
+const APP_URL = Deno.env.get("APP_URL") || "https://app.addislidet.info";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -104,19 +107,49 @@ serve(async (req) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
-  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 0;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);">
 
-          <!-- Header with Gradient -->
+          <!-- Church Branding Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                ${heading}
-              </h1>
+            <td style="background: linear-gradient(135deg, #b22222 0%, #8b0000 100%); padding: 48px 40px; text-align: center; position: relative;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <!-- Logo Container -->
+                    <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); width: 96px; height: 96px; border-radius: 24px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+                      <img src="${CHURCH_LOGO_URL}" alt="${CHURCH_NAME}" style="width: 80px; height: 80px; border-radius: 16px; display: block;" />
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      ${heading}
+                    </h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.9); font-size: 14px; font-weight: 500; letter-spacing: 0.5px;">
+                      ${CHURCH_NAME}
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -245,13 +278,38 @@ serve(async (req) => {
 
           <!-- Footer -->
           <tr>
-            <td style="padding: 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
-              <p style="margin: 0 0 10px; color: #6b7280; font-size: 12px;">
-                This is an automated notification from ALIC Event Approval System
-              </p>
-              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                Please do not reply to this email
-              </p>
+            <td style="padding: 40px 30px; background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%); border-top: 1px solid #e5e7eb; text-align: center;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <img src="${CHURCH_LOGO_URL}" alt="${CHURCH_NAME}" style="width: 48px; height: 48px; border-radius: 12px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto;" />
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 8px; color: #1f2937; font-size: 14px; font-weight: 600;">
+                      ${CHURCH_NAME}
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 16px; color: #6b7280; font-size: 12px; line-height: 1.5;">
+                      Event Calendar & Room Booking System
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                    <p style="margin: 0 0 8px; color: #9ca3af; font-size: 11px;">
+                      This is an automated notification. Please do not reply to this email.
+                    </p>
+                    <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                      © ${new Date().getFullYear()} ${CHURCH_NAME}. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
         </table>
@@ -318,7 +376,8 @@ serve(async (req) => {
     }
   } catch (error) {
     console.error("Error in send-event-notification function:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
