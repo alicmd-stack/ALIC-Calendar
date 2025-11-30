@@ -39,7 +39,15 @@ import { useAuth } from "@/shared/contexts/AuthContext";
 import { useOrganization } from "@/shared/contexts/OrganizationContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import {
   useMinistries,
+  useFiscalYears,
   useActiveFiscalYear,
   useCreateAllocationRequest,
   useUpdateAllocationRequest,
@@ -169,8 +177,20 @@ export function AllocationRequestForm({
   const { data: ministries, isLoading: ministriesLoading } = useMinistries(
     currentOrganization?.id
   );
-  const { data: activeFiscalYear, isLoading: fiscalYearLoading } =
-    useActiveFiscalYear(currentOrganization?.id);
+  const { data: fiscalYears, isLoading: fiscalYearsLoading } = useFiscalYears(
+    currentOrganization?.id
+  );
+  const { data: activeFiscalYear } = useActiveFiscalYear(
+    currentOrganization?.id
+  );
+
+  // Selected fiscal year state - defaults to active fiscal year
+  const [selectedFiscalYearId, setSelectedFiscalYearId] = useState<string | null>(null);
+
+  // Get the effective fiscal year (selected or active)
+  const selectedFiscalYear = fiscalYears?.find(
+    (fy) => fy.id === (selectedFiscalYearId || activeFiscalYear?.id)
+  ) || activeFiscalYear;
 
   const createRequest = useCreateAllocationRequest();
   const updateRequest = useUpdateAllocationRequest();
@@ -296,7 +316,7 @@ export function AllocationRequestForm({
     values: AllocationRequestFormValues,
     submit: boolean = false
   ) => {
-    if (!currentOrganization || !user || !activeFiscalYear) {
+    if (!currentOrganization || !user || !selectedFiscalYear) {
       toast({
         title: "Error",
         description: "Missing required data.",
@@ -390,7 +410,7 @@ export function AllocationRequestForm({
         const newRequest = await createRequest.mutateAsync({
           requestData: {
             organization_id: currentOrganization.id,
-            fiscal_year_id: activeFiscalYear.id,
+            fiscal_year_id: selectedFiscalYear.id,
             ministry_id: userMinistry.id,
             requester_id: user.id,
             requester_name: profile?.full_name || "Unknown",
@@ -436,9 +456,9 @@ export function AllocationRequestForm({
     }
   };
 
-  const isLoading = ministriesLoading || fiscalYearLoading;
+  const isLoading = ministriesLoading || fiscalYearsLoading;
 
-  if (!activeFiscalYear && !fiscalYearLoading) {
+  if (!selectedFiscalYear && !fiscalYearsLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
@@ -468,7 +488,21 @@ export function AllocationRequestForm({
           </DialogTitle>
           <div className="flex items-center gap-2 mt-2 text-violet-100 text-sm">
             <Calendar className="h-4 w-4" />
-            <span>{activeFiscalYear?.name}</span>
+            <Select
+              value={selectedFiscalYearId || activeFiscalYear?.id || ""}
+              onValueChange={setSelectedFiscalYearId}
+            >
+              <SelectTrigger className="h-7 w-auto gap-1 border-violet-400/50 bg-violet-500/30 text-white hover:bg-violet-500/50 focus:ring-violet-300 [&>svg]:text-white">
+                <SelectValue placeholder="Select year" />
+              </SelectTrigger>
+              <SelectContent>
+                {fiscalYears?.map((fy) => (
+                  <SelectItem key={fy.id} value={fy.id}>
+                    {fy.name} {fy.is_active && "(Active)"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="opacity-50">•</span>
             <span>{userMinistry?.name || "No Ministry"}</span>
           </div>
@@ -561,8 +595,8 @@ export function AllocationRequestForm({
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {periodAmounts.map((pa, index) => {
-                        const isPast = activeFiscalYear
-                          ? isPeriodInPast(activeFiscalYear.year, "quarterly", pa.period)
+                        const isPast = selectedFiscalYear
+                          ? isPeriodInPast(selectedFiscalYear.year, "quarterly", pa.period)
                           : false;
                         return (
                           <FormField
@@ -638,8 +672,8 @@ export function AllocationRequestForm({
                             .slice(rowIndex * 3, rowIndex * 3 + 3)
                             .map((pa, colIndex) => {
                               const actualIndex = rowIndex * 3 + colIndex;
-                              const isPast = activeFiscalYear
-                                ? isPeriodInPast(activeFiscalYear.year, "monthly", pa.period)
+                              const isPast = selectedFiscalYear
+                                ? isPeriodInPast(selectedFiscalYear.year, "monthly", pa.period)
                                 : false;
                               return (
                                 <FormField
