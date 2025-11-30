@@ -237,94 +237,94 @@ const BudgetSection = ({
   ].filter((item) => item.amount > 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       {showHeader && (
-        <div className="flex items-center gap-3 mb-6">
-          <Icon className="h-6 w-6 text-primary" />
+        <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
           <div>
-            <h2 className="text-2xl font-bold">{title || config.title}</h2>
+            <h2 className="text-xl sm:text-2xl font-bold">{title || config.title}</h2>
             {description && (
-              <p className="text-sm text-muted-foreground">{description}</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">{description}</p>
             )}
           </div>
         </div>
       )}
 
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Total Requested
                 </p>
-                <h3 className="text-2xl font-bold mt-2">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 truncate">
                   ${totalAmount.toLocaleString()}
                 </h3>
               </div>
-              <DollarSign className="h-8 w-8 text-blue-500" />
+              <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Approved
                 </p>
-                <h3 className="text-2xl font-bold mt-2 text-green-600">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 text-green-600 truncate">
                   ${approvedAmount.toLocaleString()}
                 </h3>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-500" />
+              <CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Pending
                 </p>
-                <h3 className="text-2xl font-bold mt-2 text-yellow-600">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 text-yellow-600 truncate">
                   ${pendingAmount.toLocaleString()}
                 </h3>
               </div>
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
+              <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Approval Rate
                 </p>
-                <h3 className="text-2xl font-bold mt-2 text-blue-600">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 text-blue-600 truncate">
                   {approvalRate}%
                 </h3>
               </div>
-              <TrendingUp className="h-8 w-8 text-blue-500" />
+              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts Row */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Status Breakdown Pie Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle>Status Distribution</CardTitle>
-            <CardDescription>Breakdown by current status</CardDescription>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Status Distribution</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Breakdown by current status</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <PieChart>
                 <Pie
                   data={statusData}
@@ -378,12 +378,12 @@ const BudgetSection = ({
         {/* Amount Breakdown Bar Chart */}
         {amountData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle>Amount by Status</CardTitle>
-              <CardDescription>Total amounts in each category</CardDescription>
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Amount by Status</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Total amounts in each category</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={amountData}>
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -426,12 +426,12 @@ const BudgetSection = ({
       {/* Monthly Trend */}
       {monthlyData.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle>Monthly Trend</CardTitle>
-            <CardDescription>Activity over time</CardDescription>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Monthly Trend</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Activity over time</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <AreaChart data={monthlyData}>
                 <defs>
                   <linearGradient
@@ -503,21 +503,21 @@ const BudgetSection = ({
 
       {/* Ministry Breakdown Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Ministry Summary</CardTitle>
-          <CardDescription>Breakdown by ministry</CardDescription>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Ministry Summary</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Breakdown by ministry</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <table className="w-full min-w-[400px]">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Ministry</th>
-                  <th className="text-right py-3 px-4 font-medium">Count</th>
-                  <th className="text-right py-3 px-4 font-medium">
+                  <th className="text-left py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">Ministry</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">Count</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
                     Total Amount
                   </th>
-                  <th className="text-right py-3 px-4 font-medium">
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm hidden sm:table-cell">
                     Avg. Amount
                   </th>
                 </tr>
@@ -530,14 +530,14 @@ const BudgetSection = ({
                       key={ministry.fullName}
                       className="border-b hover:bg-muted/50"
                     >
-                      <td className="py-3 px-4 font-medium">
+                      <td className="py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
                         {ministry.fullName}
                       </td>
-                      <td className="text-right py-3 px-4">{ministry.count}</td>
-                      <td className="text-right py-3 px-4 font-medium text-blue-600">
+                      <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">{ministry.count}</td>
+                      <td className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-blue-600 text-xs sm:text-sm">
                         ${ministry.amount.toLocaleString()}
                       </td>
-                      <td className="text-right py-3 px-4 text-muted-foreground">
+                      <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-muted-foreground text-xs sm:text-sm hidden sm:table-cell">
                         ${avgAmount.toLocaleString()}
                       </td>
                     </tr>
@@ -546,12 +546,12 @@ const BudgetSection = ({
               </tbody>
               <tfoot>
                 <tr className="border-t-2 font-bold">
-                  <td className="py-3 px-4">Total</td>
-                  <td className="text-right py-3 px-4">{totalRequests}</td>
-                  <td className="text-right py-3 px-4">
+                  <td className="py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">Total</td>
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">{totalRequests}</td>
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">
                     ${totalAmount.toLocaleString()}
                   </td>
-                  <td className="text-right py-3 px-4">
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
                     ${(totalAmount / totalRequests).toLocaleString()}
                   </td>
                 </tr>

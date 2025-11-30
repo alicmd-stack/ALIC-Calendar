@@ -183,87 +183,87 @@ const AllocationOverviewCharts = ({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Total Requested
                 </p>
-                <h3 className="text-2xl font-bold mt-2">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 truncate">
                   ${totalRequested.toLocaleString()}
                 </h3>
               </div>
-              <DollarSign className="h-8 w-8 text-blue-500" />
+              <DollarSign className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Approved
                 </p>
-                <h3 className="text-2xl font-bold mt-2 text-green-600">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 text-green-600 truncate">
                   ${approvedAmount.toLocaleString()}
                 </h3>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
+              <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Pending Review
                 </p>
-                <h3 className="text-2xl font-bold mt-2 text-yellow-600">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 text-yellow-600 truncate">
                   ${pendingAmount.toLocaleString()}
                 </h3>
               </div>
-              <AlertCircle className="h-8 w-8 text-yellow-500" />
+              <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   Approval Rate
                 </p>
-                <h3 className="text-2xl font-bold mt-2 text-blue-600">
+                <h3 className="text-lg sm:text-2xl font-bold mt-1 sm:mt-2 text-blue-600 truncate">
                   {approvalRate}%
                 </h3>
               </div>
-              <Wallet className="h-8 w-8 text-blue-500" />
+              <Wallet className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts Row */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Status Breakdown Pie Chart */}
         {statusData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
                 Allocation Requests by Status
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Distribution of allocation requests
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <PieChart>
                   <Pie
                     data={statusData}
@@ -318,17 +318,17 @@ const AllocationOverviewCharts = ({
         {/* Amount Breakdown Bar Chart */}
         {amountData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 Amount by Status
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Total amounts in each status category
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={amountData}>
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -369,19 +369,19 @@ const AllocationOverviewCharts = ({
       </div>
 
       {/* Second Row */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Monthly Trend */}
         {monthlyData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 Monthly Allocation Trend
               </CardTitle>
-              <CardDescription>Allocation requests over time</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">Allocation requests over time</CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <AreaChart data={monthlyData}>
                   <defs>
                     <linearGradient
@@ -451,17 +451,17 @@ const AllocationOverviewCharts = ({
         {/* Ministry Breakdown */}
         {ministryData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Wallet className="h-4 w-4 sm:h-5 sm:w-5" />
                 Allocations by Ministry
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Allocation requests across ministries
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={ministryData} layout="vertical">
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -514,43 +514,43 @@ const AllocationOverviewCharts = ({
 
       {/* Detailed Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Allocation Request Summary</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Allocation Request Summary</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Detailed breakdown of all allocation requests by ministry
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <table className="w-full min-w-[400px]">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Ministry</th>
-                  <th className="text-right py-3 px-4 font-medium">Requests</th>
-                  <th className="text-right py-3 px-4 font-medium">
+                  <th className="text-left py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">Ministry</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">Requests</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
                     Total Amount
                   </th>
-                  <th className="text-right py-3 px-4 font-medium">
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm hidden sm:table-cell">
                     Avg. Amount
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {ministryData.map((ministry, index) => {
+                {ministryData.map((ministry) => {
                   const avgAmount = ministry.amount / ministry.count;
                   return (
                     <tr
                       key={ministry.fullName}
                       className="border-b hover:bg-muted/50"
                     >
-                      <td className="py-3 px-4 font-medium">
+                      <td className="py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
                         {ministry.fullName}
                       </td>
-                      <td className="text-right py-3 px-4">{ministry.count}</td>
-                      <td className="text-right py-3 px-4 font-medium text-blue-600">
+                      <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">{ministry.count}</td>
+                      <td className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-blue-600 text-xs sm:text-sm">
                         ${ministry.amount.toLocaleString()}
                       </td>
-                      <td className="text-right py-3 px-4 text-muted-foreground">
+                      <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-muted-foreground text-xs sm:text-sm hidden sm:table-cell">
                         ${avgAmount.toLocaleString()}
                       </td>
                     </tr>
@@ -559,12 +559,12 @@ const AllocationOverviewCharts = ({
               </tbody>
               <tfoot>
                 <tr className="border-t-2 font-bold">
-                  <td className="py-3 px-4">Total</td>
-                  <td className="text-right py-3 px-4">{totalRequests}</td>
-                  <td className="text-right py-3 px-4">
+                  <td className="py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">Total</td>
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">{totalRequests}</td>
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">
                     ${totalRequested.toLocaleString()}
                   </td>
-                  <td className="text-right py-3 px-4">
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm hidden sm:table-cell">
                     ${(totalRequested / totalRequests).toLocaleString()}
                   </td>
                 </tr>

@@ -236,7 +236,7 @@ const BudgetOverviewCharts = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Budget Utilization Alert */}
       {(isOverBudget || isNearLimit) && (
         <Card
@@ -246,21 +246,21 @@ const BudgetOverviewCharts = ({
               : "border-yellow-500 bg-yellow-50 dark:bg-yellow-950"
           }
         >
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
+          <CardContent className="pt-4 sm:pt-6 p-3 sm:p-6">
+            <div className="flex items-start gap-2 sm:gap-3">
               <AlertCircle
                 className={
                   isOverBudget
-                    ? "h-5 w-5 text-red-600 mt-0.5"
-                    : "h-5 w-5 text-yellow-600 mt-0.5"
+                    ? "h-4 w-4 sm:h-5 sm:w-5 text-red-600 mt-0.5 flex-shrink-0"
+                    : "h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 mt-0.5 flex-shrink-0"
                 }
               />
               <div>
                 <h4
                   className={
                     isOverBudget
-                      ? "font-semibold text-red-900 dark:text-red-100"
-                      : "font-semibold text-yellow-900 dark:text-yellow-100"
+                      ? "font-semibold text-sm sm:text-base text-red-900 dark:text-red-100"
+                      : "font-semibold text-sm sm:text-base text-yellow-900 dark:text-yellow-100"
                   }
                 >
                   {isOverBudget
@@ -270,8 +270,8 @@ const BudgetOverviewCharts = ({
                 <p
                   className={
                     isOverBudget
-                      ? "text-sm text-red-700 dark:text-red-200 mt-1"
-                      : "text-sm text-yellow-700 dark:text-yellow-200 mt-1"
+                      ? "text-xs sm:text-sm text-red-700 dark:text-red-200 mt-1"
+                      : "text-xs sm:text-sm text-yellow-700 dark:text-yellow-200 mt-1"
                   }
                 >
                   {isOverBudget
@@ -288,20 +288,20 @@ const BudgetOverviewCharts = ({
       )}
 
       {/* Top Row - Main Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Ministry Budget Allocation Pie Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
               Budget Allocation by Ministry
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Distribution of allocated budget across ministries
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <PieChart>
                 <Pie
                   data={ministryAllocationData}
@@ -330,17 +330,17 @@ const BudgetOverviewCharts = ({
 
         {/* Budget vs Spending Comparison */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               Budget vs Spending Analysis
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Compare allocated budget with actual spending by ministry
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+          <CardContent className="p-3 sm:p-6 pt-0">
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
               <BarChart data={budgetComparisonData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
@@ -367,21 +367,21 @@ const BudgetOverviewCharts = ({
       </div>
 
       {/* Bottom Row - Trend and Status Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {/* Monthly Spending Trend */}
         {monthlyData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 Monthly Spending Trend
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Track spending patterns over time
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <AreaChart data={monthlyData}>
                   <defs>
                     <linearGradient
@@ -451,17 +451,17 @@ const BudgetOverviewCharts = ({
         {/* Expense Status Breakdown */}
         {statusData.length > 0 && (
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="h-5 w-5" />
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5" />
                 Expense Request Status
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Current status of all expense requests
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="p-3 sm:p-6 pt-0">
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={statusData} layout="vertical">
                   <CartesianGrid
                     strokeDasharray="3 3"
@@ -510,28 +510,28 @@ const BudgetOverviewCharts = ({
 
       {/* Ministry Performance Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Ministry Performance Summary</CardTitle>
-          <CardDescription>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Ministry Performance Summary</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             Detailed breakdown of budget utilization by ministry
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        <CardContent className="p-3 sm:p-6 pt-0">
+          <div className="overflow-x-auto -mx-3 sm:mx-0">
+            <table className="w-full min-w-[500px]">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium">Ministry</th>
-                  <th className="text-right py-3 px-4 font-medium">
+                  <th className="text-left py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">Ministry</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
                     Allocated
                   </th>
-                  <th className="text-right py-3 px-4 font-medium">Spent</th>
-                  <th className="text-right py-3 px-4 font-medium">Pending</th>
-                  <th className="text-right py-3 px-4 font-medium">
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">Spent</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm hidden sm:table-cell">Pending</th>
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm hidden sm:table-cell">
                     Remaining
                   </th>
-                  <th className="text-right py-3 px-4 font-medium">
-                    Utilization
+                  <th className="text-right py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
+                    Util.
                   </th>
                 </tr>
               </thead>
@@ -549,22 +549,22 @@ const BudgetOverviewCharts = ({
                         key={ministry.ministry_id}
                         className="border-b hover:bg-muted/50"
                       >
-                        <td className="py-3 px-4 font-medium">
+                        <td className="py-2 sm:py-3 px-3 sm:px-4 font-medium text-xs sm:text-sm">
                           {ministry.ministry_name}
                         </td>
-                        <td className="text-right py-3 px-4">
+                        <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">
                           ${ministry.allocated_amount.toLocaleString()}
                         </td>
-                        <td className="text-right py-3 px-4 text-green-600">
+                        <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-green-600 text-xs sm:text-sm">
                           ${ministry.total_spent.toLocaleString()}
                         </td>
-                        <td className="text-right py-3 px-4 text-yellow-600">
+                        <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-yellow-600 text-xs sm:text-sm hidden sm:table-cell">
                           ${ministry.total_pending.toLocaleString()}
                         </td>
-                        <td className="text-right py-3 px-4 text-blue-600">
+                        <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-blue-600 text-xs sm:text-sm hidden sm:table-cell">
                           ${ministry.remaining.toLocaleString()}
                         </td>
-                        <td className="text-right py-3 px-4">
+                        <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">
                           <span
                             className={`inline-flex items-center gap-1 ${
                               utilization > 100
@@ -586,20 +586,20 @@ const BudgetOverviewCharts = ({
               </tbody>
               <tfoot>
                 <tr className="border-t-2 font-bold">
-                  <td className="py-3 px-4">Total</td>
-                  <td className="text-right py-3 px-4">
+                  <td className="py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">Total</td>
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">
                     ${budgetSummary.total_allocated.toLocaleString()}
                   </td>
-                  <td className="text-right py-3 px-4 text-green-600">
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-green-600 text-xs sm:text-sm">
                     ${budgetSummary.total_spent.toLocaleString()}
                   </td>
-                  <td className="text-right py-3 px-4 text-yellow-600">
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-yellow-600 text-xs sm:text-sm hidden sm:table-cell">
                     ${budgetSummary.total_pending.toLocaleString()}
                   </td>
-                  <td className="text-right py-3 px-4 text-blue-600">
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-blue-600 text-xs sm:text-sm hidden sm:table-cell">
                     ${budgetSummary.total_remaining.toLocaleString()}
                   </td>
-                  <td className="text-right py-3 px-4">{utilizationRate}%</td>
+                  <td className="text-right py-2 sm:py-3 px-3 sm:px-4 text-xs sm:text-sm">{utilizationRate}%</td>
                 </tr>
               </tfoot>
             </table>
