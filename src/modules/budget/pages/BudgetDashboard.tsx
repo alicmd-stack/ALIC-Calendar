@@ -120,15 +120,22 @@ const BudgetDashboard = () => {
     useAllocationRequests(effectiveFiscalYearId);
 
   // User's expenses (requester's own) - EXCLUDE cancelled
-  const myExpenses = expenses?.filter((e) => e.requester_id === user?.id && e.status !== "cancelled") || [];
+  const myExpenses =
+    expenses?.filter(
+      (e) => e.requester_id === user?.id && e.status !== "cancelled"
+    ) || [];
 
   // User's allocation requests - EXCLUDE cancelled
   const myAllocationRequests =
-    allocationRequests?.filter((r) => r.requester_id === user?.id && r.status !== "cancelled") || [];
+    allocationRequests?.filter(
+      (r) => r.requester_id === user?.id && r.status !== "cancelled"
+    ) || [];
 
   // Filtered data for admin views - EXCLUDE cancelled
-  const activeExpenses = expenses?.filter((e) => e.status !== "cancelled") || [];
-  const activeAllocationRequests = allocationRequests?.filter((r) => r.status !== "cancelled") || [];
+  const activeExpenses =
+    expenses?.filter((e) => e.status !== "cancelled") || [];
+  const activeAllocationRequests =
+    allocationRequests?.filter((r) => r.status !== "cancelled") || [];
 
   // Extract ministry name from user's expenses or allocations
   const userMinistryName =
@@ -195,7 +202,8 @@ const BudgetDashboard = () => {
 
             {/* Enhanced Report Export - Role-based data filtering */}
             {hasFullAccess &&
-              (activeExpenses?.length > 0 || activeAllocationRequests?.length > 0) &&
+              (activeExpenses?.length > 0 ||
+                activeAllocationRequests?.length > 0) &&
               user && (
                 <EnhancedReportExport
                   expenses={expenses || []}
