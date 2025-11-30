@@ -241,202 +241,370 @@ export function ExpenseList({
             </Select>
           </div>
 
-          {/* Table */}
+          {/* Table / Cards */}
           {filteredExpenses.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
               <p>No expense requests found</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Justification</TableHead>
-                    <TableHead>Ministry</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="w-[80px]">View</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell className="font-medium">
-                        {expense.title}
-                      </TableCell>
-                      <TableCell>{expense.ministry?.name || "-"}</TableCell>
-                      <TableCell className="font-medium">
-                        $
-                        {Number(expense.amount).toLocaleString("en-US", {
+            <>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {filteredExpenses.map((expense) => (
+                  <div
+                    key={expense.id}
+                    className="border rounded-lg p-4 space-y-3 bg-card"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm line-clamp-2">
+                          {expense.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {expense.ministry?.name || "-"}
+                        </p>
+                      </div>
+                      <ExpenseStatusBadge status={expense.status} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-lg font-semibold">
+                        ${Number(expense.amount).toLocaleString("en-US", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
-                      </TableCell>
-                      <TableCell>
-                        <ExpenseStatusBadge status={expense.status} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         {format(new Date(expense.created_at), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedExpense(expense);
-                            setIsDetailDialogOpen(true);
-                          }}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedExpense(expense);
+                          setIsDetailDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canEdit(expense) && (
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedExpense(expense);
-                                setIsDetailDialogOpen(true);
+                                setIsEditDialogOpen(true);
                               }}
                             >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
                             </DropdownMenuItem>
-
-                            {canEdit(expense) && (
+                          )}
+                          {canSubmit(expense) && (
+                            <DropdownMenuItem onClick={() => handleSubmit(expense)}>
+                              <Send className="mr-2 h-4 w-4" />
+                              Submit for Review
+                            </DropdownMenuItem>
+                          )}
+                          {canCancel(expense) && (
+                            <>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => {
                                   setSelectedExpense(expense);
-                                  setIsEditDialogOpen(true);
+                                  setIsCancelDialogOpen(true);
+                                }}
+                                className="text-orange-600"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Cancel Request
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canLeaderReview(expense) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setIsLeaderApproveOpen(true);
+                                }}
+                                className="text-green-600"
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setIsLeaderDenyOpen(true);
+                                }}
+                                className="text-red-600"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Deny
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canTreasuryReview(expense) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setIsTreasuryApproveOpen(true);
+                                }}
+                                className="text-green-600"
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve Payment
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setIsTreasuryDenyOpen(true);
+                                }}
+                                className="text-red-600"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Deny Payment
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canFinanceProcess(expense) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setIsFinanceProcessOpen(true);
+                                }}
+                                className="text-purple-600"
+                              >
+                                <CreditCard className="mr-2 h-4 w-4" />
+                                Process Payment
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canDelete(expense) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(expense)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Justification</TableHead>
+                      <TableHead>Ministry</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="w-[80px]">View</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredExpenses.map((expense) => (
+                      <TableRow key={expense.id}>
+                        <TableCell className="font-medium">
+                          {expense.title}
+                        </TableCell>
+                        <TableCell>{expense.ministry?.name || "-"}</TableCell>
+                        <TableCell className="font-medium">
+                          $
+                          {Number(expense.amount).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <ExpenseStatusBadge status={expense.status} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {format(new Date(expense.created_at), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedExpense(expense);
+                              setIsDetailDialogOpen(true);
+                            }}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedExpense(expense);
+                                  setIsDetailDialogOpen(true);
                                 }}
                               >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
                               </DropdownMenuItem>
-                            )}
 
-                            {canSubmit(expense) && (
-                              <DropdownMenuItem
-                                onClick={() => handleSubmit(expense)}
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                Submit for Review
-                              </DropdownMenuItem>
-                            )}
-
-                            {canCancel(expense) && (
-                              <>
-                                <DropdownMenuSeparator />
+                              {canEdit(expense) && (
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setSelectedExpense(expense);
-                                    setIsCancelDialogOpen(true);
+                                    setIsEditDialogOpen(true);
                                   }}
-                                  className="text-orange-600"
                                 >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel Request
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
                                 </DropdownMenuItem>
-                              </>
-                            )}
+                              )}
 
-                            {canLeaderReview(expense) && (
-                              <>
-                                <DropdownMenuSeparator />
+                              {canSubmit(expense) && (
                                 <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedExpense(expense);
-                                    setIsLeaderApproveOpen(true);
-                                  }}
-                                  className="text-green-600"
+                                  onClick={() => handleSubmit(expense)}
                                 >
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Approve
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Submit for Review
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedExpense(expense);
-                                    setIsLeaderDenyOpen(true);
-                                  }}
-                                  className="text-red-600"
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Deny
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                              )}
 
-                            {canTreasuryReview(expense) && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedExpense(expense);
-                                    setIsTreasuryApproveOpen(true);
-                                  }}
-                                  className="text-green-600"
-                                >
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Approve Payment
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedExpense(expense);
-                                    setIsTreasuryDenyOpen(true);
-                                  }}
-                                  className="text-red-600"
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Deny Payment
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                              {canCancel(expense) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(expense);
+                                      setIsCancelDialogOpen(true);
+                                    }}
+                                    className="text-orange-600"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Cancel Request
+                                  </DropdownMenuItem>
+                                </>
+                              )}
 
-                            {canFinanceProcess(expense) && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedExpense(expense);
-                                    setIsFinanceProcessOpen(true);
-                                  }}
-                                  className="text-purple-600"
-                                >
-                                  <CreditCard className="mr-2 h-4 w-4" />
-                                  Process Payment
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                              {canLeaderReview(expense) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(expense);
+                                      setIsLeaderApproveOpen(true);
+                                    }}
+                                    className="text-green-600"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(expense);
+                                      setIsLeaderDenyOpen(true);
+                                    }}
+                                    className="text-red-600"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Deny
+                                  </DropdownMenuItem>
+                                </>
+                              )}
 
-                            {canDelete(expense) && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(expense)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                              {canTreasuryReview(expense) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(expense);
+                                      setIsTreasuryApproveOpen(true);
+                                    }}
+                                    className="text-green-600"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve Payment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(expense);
+                                      setIsTreasuryDenyOpen(true);
+                                    }}
+                                    className="text-red-600"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Deny Payment
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {canFinanceProcess(expense) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedExpense(expense);
+                                      setIsFinanceProcessOpen(true);
+                                    }}
+                                    className="text-purple-600"
+                                  >
+                                    <CreditCard className="mr-2 h-4 w-4" />
+                                    Process Payment
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {canDelete(expense) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(expense)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

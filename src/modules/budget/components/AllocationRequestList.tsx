@@ -259,183 +259,321 @@ export function AllocationRequestList({
             </Select>
           </div>
 
-          {/* Table */}
+          {/* Table / Cards */}
           {filteredRequests.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Wallet className="h-12 w-12 mx-auto mb-4 opacity-20" />
               <p>No allocation requests found</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Justification</TableHead>
-                    <TableHead>Ministry</TableHead>
-                    <TableHead>Period</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="w-[80px]">View</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell
-                        className="font-medium max-w-[200px] truncate"
-                        title={request.justification}
-                      >
-                        {request.justification}
-                      </TableCell>
-                      <TableCell>{request.ministry?.name || "-"}</TableCell>
-                      <TableCell>
-                        {getPeriodLabel(request.period_type)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        $
-                        {Number(request.requested_amount).toLocaleString(
-                          "en-US",
-                          {
+            <>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
+                {filteredRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="border rounded-lg p-4 space-y-3 bg-card"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm line-clamp-2">
+                          {request.justification}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {request.ministry?.name || "-"} • {getPeriodLabel(request.period_type)}
+                        </p>
+                      </div>
+                      <AllocationRequestStatusBadge status={request.status} />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-semibold">
+                          ${Number(request.requested_amount).toLocaleString("en-US", {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          }
-                        )}
+                          })}
+                        </p>
                         {request.approved_amount &&
-                          request.approved_amount !==
-                            request.requested_amount && (
-                            <span className="block text-xs text-green-600">
-                              Approved: $
-                              {Number(request.approved_amount).toLocaleString(
-                                "en-US",
-                                {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                }
-                              )}
-                            </span>
+                          request.approved_amount !== request.requested_amount && (
+                            <p className="text-xs text-green-600">
+                              Approved: ${Number(request.approved_amount).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </p>
                           )}
-                      </TableCell>
-                      <TableCell>
-                        <AllocationRequestStatusBadge status={request.status} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      </div>
+                      <p className="text-xs text-muted-foreground">
                         {format(new Date(request.created_at), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsDetailDialogOpen(true);
-                          }}
-                          title="View Details"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setIsDetailDialogOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        View
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {canEdit(request) && (
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedRequest(request);
-                                setIsDetailDialogOpen(true);
+                                setIsEditDialogOpen(true);
                               }}
                             >
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
                             </DropdownMenuItem>
-
-                            {canEdit(request) && (
+                          )}
+                          {canSubmit(request) && (
+                            <DropdownMenuItem onClick={() => handleSubmit(request)}>
+                              <Send className="mr-2 h-4 w-4" />
+                              Submit for Review
+                            </DropdownMenuItem>
+                          )}
+                          {canReview(request) && (
+                            <>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem
                                 onClick={() => {
                                   setSelectedRequest(request);
-                                  setIsEditDialogOpen(true);
+                                  setReviewAction("approve");
+                                  setIsReviewDialogOpen(true);
+                                }}
+                                className="text-green-600"
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Approve
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setReviewAction("deny");
+                                  setIsReviewDialogOpen(true);
+                                }}
+                                className="text-red-600"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Deny
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canCancel(request) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleCancel(request)}
+                                className="text-orange-600"
+                              >
+                                <XCircle className="mr-2 h-4 w-4" />
+                                Cancel Request
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {canDelete(request) && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDelete(request)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Justification</TableHead>
+                      <TableHead>Ministry</TableHead>
+                      <TableHead>Period</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead className="w-[80px]">View</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRequests.map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell
+                          className="font-medium max-w-[200px] truncate"
+                          title={request.justification}
+                        >
+                          {request.justification}
+                        </TableCell>
+                        <TableCell>{request.ministry?.name || "-"}</TableCell>
+                        <TableCell>
+                          {getPeriodLabel(request.period_type)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          $
+                          {Number(request.requested_amount).toLocaleString(
+                            "en-US",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }
+                          )}
+                          {request.approved_amount &&
+                            request.approved_amount !==
+                              request.requested_amount && (
+                              <span className="block text-xs text-green-600">
+                                Approved: $
+                                {Number(request.approved_amount).toLocaleString(
+                                  "en-US",
+                                  {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  }
+                                )}
+                              </span>
+                            )}
+                        </TableCell>
+                        <TableCell>
+                          <AllocationRequestStatusBadge status={request.status} />
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {format(new Date(request.created_at), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsDetailDialogOpen(true);
+                            }}
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedRequest(request);
+                                  setIsDetailDialogOpen(true);
                                 }}
                               >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
                               </DropdownMenuItem>
-                            )}
 
-                            {canSubmit(request) && (
-                              <DropdownMenuItem
-                                onClick={() => handleSubmit(request)}
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                Submit for Review
-                              </DropdownMenuItem>
-                            )}
-
-                            {canReview(request) && (
-                              <>
-                                <DropdownMenuSeparator />
+                              {canEdit(request) && (
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setSelectedRequest(request);
-                                    setReviewAction("approve");
-                                    setIsReviewDialogOpen(true);
+                                    setIsEditDialogOpen(true);
                                   }}
-                                  className="text-green-600"
                                 >
-                                  <CheckCircle className="mr-2 h-4 w-4" />
-                                  Approve
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedRequest(request);
-                                    setReviewAction("deny");
-                                    setIsReviewDialogOpen(true);
-                                  }}
-                                  className="text-red-600"
-                                >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Deny
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                              )}
 
-                            {canCancel(request) && (
-                              <>
-                                <DropdownMenuSeparator />
+                              {canSubmit(request) && (
                                 <DropdownMenuItem
-                                  onClick={() => handleCancel(request)}
-                                  className="text-orange-600"
+                                  onClick={() => handleSubmit(request)}
                                 >
-                                  <XCircle className="mr-2 h-4 w-4" />
-                                  Cancel Request
+                                  <Send className="mr-2 h-4 w-4" />
+                                  Submit for Review
                                 </DropdownMenuItem>
-                              </>
-                            )}
+                              )}
 
-                            {canDelete(request) && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleDelete(request)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                              {canReview(request) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setReviewAction("approve");
+                                      setIsReviewDialogOpen(true);
+                                    }}
+                                    className="text-green-600"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Approve
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setReviewAction("deny");
+                                      setIsReviewDialogOpen(true);
+                                    }}
+                                    className="text-red-600"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Deny
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {canCancel(request) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleCancel(request)}
+                                    className="text-orange-600"
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Cancel Request
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+
+                              {canDelete(request) && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => handleDelete(request)}
+                                    className="text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

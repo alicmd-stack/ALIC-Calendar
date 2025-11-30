@@ -206,21 +206,21 @@ const Users = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground mt-1">Manage users and roles</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">User Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage users and roles</p>
         </div>
 
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <UserCog className="h-5 w-5" />
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <UserCog className="h-4 w-4 sm:h-5 sm:w-5" />
                 Users ({users?.length || 0})
               </CardTitle>
               <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                 <DialogTrigger asChild>
-                  <Button size="sm">
+                  <Button size="sm" className="w-full sm:w-auto">
                     <UserPlus className="h-4 w-4 mr-2" />
                     Add User
                   </Button>
@@ -349,67 +349,120 @@ const Users = () => {
                 </DialogContent>
               </Dialog>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               {usersError && (
                 <div className="text-sm text-destructive mb-4">
                   Error loading users: {usersError instanceof Error ? usersError.message : "Unknown error"}
                 </div>
               )}
               {!users || users.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-6 sm:py-8 text-sm sm:text-base text-muted-foreground">
                   {usersError ? "Failed to load users." : "No users found. Add users using the 'Add User' button above."}
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Ministry</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* Mobile Card View */}
+                  <div className="md:hidden space-y-3">
                     {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.full_name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.phone_number || "-"}</TableCell>
-                        <TableCell>{user.ministry_name || "-"}</TableCell>
-                        <TableCell>
+                      <div key={user.id} className="border rounded-lg p-3 space-y-3 bg-card">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{user.full_name}</p>
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
+                          </div>
                           {user.user_roles && user.user_roles.some(r => r.role === 'admin') ? (
-                            <Badge variant="default">
+                            <Badge variant="default" className="text-xs shrink-0">
                               <Shield className="h-3 w-3 mr-1" />
                               Admin
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">Contributor</Badge>
+                            <Badge variant="secondary" className="text-xs shrink-0">Contributor</Badge>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openEditDialog(user)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDeleteUser(user.id, user.full_name)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                        </div>
+                        {(user.phone_number || user.ministry_name) && (
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                            {user.phone_number && <span>{user.phone_number}</span>}
+                            {user.ministry_name && <span>{user.ministry_name}</span>}
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        )}
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => openEditDialog(user)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => handleDeleteUser(user.id, user.full_name)}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1.5 text-destructive" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Ministry</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">{user.full_name}</TableCell>
+                            <TableCell>{user.email}</TableCell>
+                            <TableCell>{user.phone_number || "-"}</TableCell>
+                            <TableCell>{user.ministry_name || "-"}</TableCell>
+                            <TableCell>
+                              {user.user_roles && user.user_roles.some(r => r.role === 'admin') ? (
+                                <Badge variant="default">
+                                  <Shield className="h-3 w-3 mr-1" />
+                                  Admin
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">Contributor</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openEditDialog(user)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteUser(user.id, user.full_name)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

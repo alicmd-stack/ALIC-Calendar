@@ -62,19 +62,19 @@ const MetricCard = ({
         isVisible
           ? "opacity-100 translate-y-0 scale-100"
           : "opacity-0 translate-y-6 scale-95"
-      } hover:shadow-xl hover:-translate-y-1 hover:scale-105`}
+      } hover:shadow-xl hover:-translate-y-1 sm:hover:scale-105`}
     >
-      <CardContent className="pt-6 pb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 space-y-3">
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+      <CardContent className="pt-4 pb-4 sm:pt-6 sm:pb-6">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0 space-y-2 sm:space-y-3">
+            <p className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider truncate">
               {title}
             </p>
-            <div className="space-y-2">
-              <h3 className="text-3xl font-bold tracking-tight">{value}</h3>
+            <div className="space-y-1 sm:space-y-2">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{value}</h3>
               {trend && trendValue && (
                 <span
-                  className={`flex items-center text-sm font-semibold ${
+                  className={`flex items-center text-xs sm:text-sm font-semibold ${
                     trend === "up"
                       ? "text-green-600 dark:text-green-400"
                       : trend === "down"
@@ -82,21 +82,21 @@ const MetricCard = ({
                       : "text-muted-foreground"
                   }`}
                 >
-                  {trend === "up" && <TrendingUp className="h-4 w-4 mr-1" />}
+                  {trend === "up" && <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />}
                   {trend === "down" && (
-                    <TrendingDown className="h-4 w-4 mr-1" />
+                    <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   )}
                   {trendValue}
                 </span>
               )}
             </div>
             {subtitle && (
-              <p className="text-xs text-muted-foreground font-medium">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium truncate">
                 {subtitle}
               </p>
             )}
           </div>
-          <div className={`${colorClass} p-4 rounded-xl shadow-lg`}>{icon}</div>
+          <div className={`${colorClass} p-2 sm:p-3 md:p-4 rounded-lg sm:rounded-xl shadow-lg flex-shrink-0`}>{icon}</div>
         </div>
       </CardContent>
     </Card>
@@ -306,14 +306,14 @@ const BudgetMetricsGrid = ({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Essential Financial Metrics - Most Important */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Budget"
           value={`$${totalBudget.toLocaleString()}`}
           subtitle={safeBudgetSummary.fiscal_year_name}
-          icon={<DollarSign className="h-6 w-6 text-white" />}
+          icon={<DollarSign className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />}
           colorClass="bg-gradient-to-br from-blue-500 to-blue-600"
           delay={0}
         />
@@ -321,7 +321,7 @@ const BudgetMetricsGrid = ({
           title="Total Spent"
           value={`$${totalSpent.toLocaleString()}`}
           subtitle={`${utilizationRate}% of budget`}
-          icon={<TrendingUp className="h-6 w-6 text-white" />}
+          icon={<TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />}
           trend={
             parseFloat(utilizationRate) > 75
               ? ("up" as const)
@@ -338,10 +338,10 @@ const BudgetMetricsGrid = ({
           delay={100}
         />
         <MetricCard
-          title="Available Balance"
+          title="Available"
           value={`$${totalRemaining.toLocaleString()}`}
-          subtitle={totalRemaining < 0 ? "Over budget" : "Remaining funds"}
-          icon={<Wallet className="h-6 w-6 text-white" />}
+          subtitle={totalRemaining < 0 ? "Over budget" : "Remaining"}
+          icon={<Wallet className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />}
           colorClass={
             totalRemaining < 0
               ? "bg-gradient-to-br from-red-500 to-red-600"
@@ -350,10 +350,10 @@ const BudgetMetricsGrid = ({
           delay={200}
         />
         <MetricCard
-          title="Pending Approvals"
+          title="Pending"
           value={totalPendingRequests}
           subtitle={`$${totalPending.toLocaleString()} total`}
-          icon={<Clock className="h-6 w-6 text-white" />}
+          icon={<Clock className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />}
           colorClass={
             totalPendingRequests > 10
               ? "bg-gradient-to-br from-yellow-500 to-yellow-600"
@@ -364,28 +364,28 @@ const BudgetMetricsGrid = ({
       </div>
 
       {/* Activity & Performance Metrics */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-2">
         <MetricCard
-          title="Activity Summary"
+          title="Activity"
           value={totalRequests}
-          subtitle={`${totalExpenses} expenses${
-            totalAllocations > 0 ? ` + ${totalAllocations} allocations` : ""
+          subtitle={`${totalExpenses} exp${
+            totalAllocations > 0 ? ` + ${totalAllocations} alloc` : ""
           }`}
-          icon={<Activity className="h-6 w-6 text-white" />}
+          icon={<Activity className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />}
           colorClass="bg-gradient-to-br from-indigo-500 to-indigo-600"
           delay={400}
         />
         <MetricCard
-          title="Overall Success Rate"
+          title="Success Rate"
           value={`${approvalRate}%`}
-          subtitle={`${totalApprovedRequests} of ${totalRequests} approved`}
-          icon={<CheckCircle className="h-6 w-6 text-white" />}
+          subtitle={`${totalApprovedRequests}/${totalRequests} approved`}
+          icon={<CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-white" />}
           trend={
             parseFloat(approvalRate) > 75
               ? ("up" as const)
               : ("neutral" as const)
           }
-          trendValue={`${completionRate}% completed`}
+          trendValue={`${completionRate}%`}
           colorClass={
             parseFloat(approvalRate) > 90
               ? "bg-gradient-to-br from-green-500 to-green-600"

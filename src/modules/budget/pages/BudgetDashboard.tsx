@@ -168,27 +168,27 @@ const BudgetDashboard = () => {
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <DollarSign className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-primary/10">
+                <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary" />
               </div>
-              Budget Management
+              <span className="truncate">Budget</span>
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-sm sm:text-base md:text-lg text-muted-foreground line-clamp-2">
               {hasFullAccess
                 ? "Manage expenses, track budgets, and process payments"
                 : `Submit and track ${userMinistryName.toLowerCase()} expense requests`}
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
             {/* Fiscal Year Selector */}
             <Select
               value={effectiveFiscalYearId || ""}
               onValueChange={setSelectedFiscalYearId}
             >
-              <SelectTrigger className="w-[200px] shadow-sm">
+              <SelectTrigger className="w-full sm:w-[180px] shadow-sm">
                 <SelectValue placeholder="Select fiscal year" />
               </SelectTrigger>
               <SelectContent>
@@ -200,61 +200,63 @@ const BudgetDashboard = () => {
               </SelectContent>
             </Select>
 
-            {/* Enhanced Report Export - Role-based data filtering */}
-            {hasFullAccess &&
-              (activeExpenses?.length > 0 ||
-                activeAllocationRequests?.length > 0) &&
-              user && (
-                <EnhancedReportExport
-                  expenses={expenses || []}
-                  allocations={allocationRequests || []}
-                  userName={user.email || "User"}
-                  organizationName={currentOrganization.name}
-                  ministryName="All Ministries"
-                  fiscalYearName={
-                    fiscalYears?.find((fy) => fy.id === effectiveFiscalYearId)
-                      ?.name
-                  }
-                  isContributor={false}
-                />
-              )}
-            {isContributor &&
-              (myExpenses?.length > 0 || myAllocationRequests?.length > 0) &&
-              user && (
-                <EnhancedReportExport
-                  expenses={myExpenses}
-                  allocations={myAllocationRequests}
-                  userName={user.email || "User"}
-                  organizationName={currentOrganization.name}
-                  ministryName={userMinistryName}
-                  fiscalYearName={
-                    fiscalYears?.find((fy) => fy.id === effectiveFiscalYearId)
-                      ?.name
-                  }
-                  isContributor={true}
-                />
-              )}
+            <div className="flex items-center gap-2">
+              {/* Enhanced Report Export - Role-based data filtering */}
+              {hasFullAccess &&
+                (activeExpenses?.length > 0 ||
+                  activeAllocationRequests?.length > 0) &&
+                user && (
+                  <EnhancedReportExport
+                    expenses={expenses || []}
+                    allocations={allocationRequests || []}
+                    userName={user.email || "User"}
+                    organizationName={currentOrganization.name}
+                    ministryName="All Ministries"
+                    fiscalYearName={
+                      fiscalYears?.find((fy) => fy.id === effectiveFiscalYearId)
+                        ?.name
+                    }
+                    isContributor={false}
+                  />
+                )}
+              {isContributor &&
+                (myExpenses?.length > 0 || myAllocationRequests?.length > 0) &&
+                user && (
+                  <EnhancedReportExport
+                    expenses={myExpenses}
+                    allocations={myAllocationRequests}
+                    userName={user.email || "User"}
+                    organizationName={currentOrganization.name}
+                    ministryName={userMinistryName}
+                    fiscalYearName={
+                      fiscalYears?.find((fy) => fy.id === effectiveFiscalYearId)
+                        ?.name
+                    }
+                    isContributor={true}
+                  />
+                )}
 
-            {/* New Request Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="lg" className="font-semibold shadow-sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Request
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setIsExpenseFormOpen(true)}>
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Expense Request
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setIsAllocationFormOpen(true)}>
-                  <Wallet className="mr-2 h-4 w-4" />
-                  Budget Allocation Request
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              {/* New Request Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="default" className="font-semibold shadow-sm flex-1 sm:flex-none">
+                    <Plus className="mr-1.5 sm:mr-2 h-4 w-4" />
+                    <span className="hidden xs:inline">New </span>Request
+                    <ChevronDown className="ml-1.5 sm:ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={() => setIsExpenseFormOpen(true)}>
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Expense Request
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setIsAllocationFormOpen(true)}>
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Budget Allocation Request
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
@@ -323,48 +325,51 @@ const BudgetDashboard = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="flex flex-wrap h-auto gap-2 bg-transparent p-0">
+          <TabsList className="grid grid-cols-3 w-full sm:w-auto sm:inline-flex h-auto gap-1 sm:gap-2 bg-muted/50 p-1 rounded-lg">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 sm:px-4 py-2 text-xs sm:text-sm"
             >
-              <FileText className="mr-2 h-4 w-4" />
-              Overview
+              <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Overview</span>
+              <span className="xs:hidden">Home</span>
             </TabsTrigger>
             <TabsTrigger
               value="expenses"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 sm:px-4 py-2 text-xs sm:text-sm"
             >
-              <DollarSign className="mr-2 h-4 w-4" />
-              Expenses
+              <DollarSign className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Expenses</span>
+              <span className="sm:hidden">Exp</span>
               {hasFullAccess
                 ? activeExpenses &&
                   activeExpenses.length > 0 && (
-                    <span className="ml-2 bg-muted text-muted-foreground rounded-full px-2 text-xs">
+                    <span className="ml-1 sm:ml-2 bg-muted text-muted-foreground rounded-full px-1.5 sm:px-2 text-[10px] sm:text-xs">
                       {activeExpenses.length}
                     </span>
                   )
                 : myExpenses.length > 0 && (
-                    <span className="ml-2 bg-muted text-muted-foreground rounded-full px-2 text-xs">
+                    <span className="ml-1 sm:ml-2 bg-muted text-muted-foreground rounded-full px-1.5 sm:px-2 text-[10px] sm:text-xs">
                       {myExpenses.length}
                     </span>
                   )}
             </TabsTrigger>
             <TabsTrigger
               value="allocations"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-2 sm:px-4 py-2 text-xs sm:text-sm"
             >
-              <Wallet className="mr-2 h-4 w-4" />
-              Allocations
+              <Wallet className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Allocations</span>
+              <span className="sm:hidden">Alloc</span>
               {hasFullAccess
                 ? activeAllocationRequests &&
                   activeAllocationRequests.length > 0 && (
-                    <span className="ml-2 bg-muted text-muted-foreground rounded-full px-2 text-xs">
+                    <span className="ml-1 sm:ml-2 bg-muted text-muted-foreground rounded-full px-1.5 sm:px-2 text-[10px] sm:text-xs">
                       {activeAllocationRequests.length}
                     </span>
                   )
                 : myAllocationRequests.length > 0 && (
-                    <span className="ml-2 bg-muted text-muted-foreground rounded-full px-2 text-xs">
+                    <span className="ml-1 sm:ml-2 bg-muted text-muted-foreground rounded-full px-1.5 sm:px-2 text-[10px] sm:text-xs">
                       {myAllocationRequests.length}
                     </span>
                   )}

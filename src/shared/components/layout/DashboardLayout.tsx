@@ -371,26 +371,26 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={searchQuery ? "default" : "ghost"}
                     size="sm"
-                    className="hidden sm:flex"
+                    className="flex"
                   >
                     <Search className="h-4 w-4" />
                     {searchQuery && (
-                      <span className="ml-1 max-w-[100px] truncate text-xs">
+                      <span className="ml-1 max-w-[60px] sm:max-w-[100px] truncate text-xs hidden xs:inline">
                         {searchQuery}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-3" align="end">
+                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3" align="end">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <Input
                         ref={searchInputRef}
                         placeholder="Search events and budget..."
@@ -407,7 +407,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 flex-shrink-0"
                           onClick={clearSearch}
                         >
                           <X className="h-4 w-4" />
@@ -426,12 +426,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   3
                 </Badge>
               </Button>
-              <div className="h-6 w-px bg-border" />
+              <div className="h-6 w-px bg-border hidden sm:block" />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="hidden sm:block">
                   {isAdmin && <Badge variant="secondary">Admin</Badge>}
                 </div>
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 hidden sm:flex">
                   <AvatarFallback className="text-xs">
                     {getUserInitials(user?.email)}
                   </AvatarFallback>
