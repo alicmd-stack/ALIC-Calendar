@@ -42,21 +42,21 @@ export function ExpenseStatusBadge({
 
   const sizeClasses = {
     sm: "text-xs px-2 py-0.5",
-    default: "text-xs px-2.5 py-0.5",
-    lg: "text-sm px-3 py-1",
+    default: "text-sm px-3 py-1.5",
+    lg: "text-sm px-4 py-2",
   };
 
   const iconSizes = {
     sm: "h-3 w-3",
-    default: "h-3.5 w-3.5",
-    lg: "h-4 w-4",
+    default: "h-4 w-4",
+    lg: "h-5 w-5",
   };
 
   return (
     <Badge
       variant="outline"
       className={cn(
-        "font-medium",
+        "font-semibold",
         config.bgColor,
         config.borderColor,
         config.color,
@@ -64,7 +64,7 @@ export function ExpenseStatusBadge({
       )}
     >
       {showIcon && Icon && (
-        <Icon className={cn("mr-1", iconSizes[size], config.color)} />
+        <Icon className={cn("mr-1.5", iconSizes[size], config.color)} />
       )}
       {config.label}
     </Badge>
