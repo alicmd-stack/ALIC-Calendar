@@ -62,9 +62,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const checkRoleStatus = async (userId: string) => {
     try {
-      // Check all roles for the user
+      // Check all roles for the user from user_organizations table
       const { data, error } = await supabase
-        .from("user_roles")
+        .from("user_organizations")
         .select("role")
         .eq("user_id", userId);
 
