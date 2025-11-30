@@ -330,6 +330,7 @@ export function useSubmitAllocationRequest() {
 
 /**
  * Approve an allocation request (admin action)
+ * This also creates/updates the budget allocation record
  */
 export function useApproveAllocationRequest() {
   const queryClient = useQueryClient();
@@ -348,15 +349,18 @@ export function useApproveAllocationRequest() {
       actorId: string;
       actorName: string;
     }) => {
-      // Get current request to check requested amount
-      const { data: current, error: fetchError } = await supabase
+      // Get current request with all fields needed for budget allocation
+      const { data, error: fetchError } = await supabase
         .schema("budget")
         .from("allocation_requests")
-        .select("requested_amount, status")
+        .select("*")
         .eq("id", requestId)
         .single();
 
       if (fetchError) throw fetchError;
+      if (!data) throw new Error("Allocation request not found");
+
+      const current = data as unknown as AllocationRequest;
 
       const newStatus: AllocationRequestStatus =
         approvedAmount === current.requested_amount
@@ -380,6 +384,30 @@ export function useApproveAllocationRequest() {
 
       if (updateError) throw updateError;
 
+      // Create or update the budget allocation record
+      const { error: allocationError } = await supabase
+        .schema("budget")
+        .from("budget_allocations")
+        .upsert(
+          {
+            organization_id: current.organization_id,
+            ministry_id: current.ministry_id,
+            fiscal_year_id: current.fiscal_year_id,
+            allocated_amount: approvedAmount,
+            approved_by: actorId,
+            approved_at: new Date().toISOString(),
+            notes: adminNotes || null,
+          },
+          {
+            onConflict: "fiscal_year_id,ministry_id",
+          }
+        );
+
+      if (allocationError) {
+        console.error("Budget allocation creation error:", allocationError);
+        throw allocationError;
+      }
+
       // Add history entry
       const { error: historyError } = await supabase
         .schema("budget")
@@ -400,6 +428,9 @@ export function useApproveAllocationRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [ALLOCATION_REQUESTS_KEY] });
+      // Also invalidate budget allocations queries so the UI updates
+      queryClient.invalidateQueries({ queryKey: ["budget-allocations"] });
+      queryClient.invalidateQueries({ queryKey: ["budget-summary"] });
     },
   });
 }
