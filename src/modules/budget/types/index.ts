@@ -4,7 +4,12 @@
  * Uses the 'budget' schema for all budget-related tables
  */
 
-import type { Tables, TablesInsert, TablesUpdate, Enums } from "@/integrations/supabase/types";
+import type {
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+  Enums,
+} from "@/integrations/supabase/types";
 
 // Base database types from budget schema
 export type Ministry = Tables<{ schema: "budget" }, "ministries">;
@@ -12,23 +17,50 @@ export type MinistryInsert = TablesInsert<{ schema: "budget" }, "ministries">;
 export type MinistryUpdate = TablesUpdate<{ schema: "budget" }, "ministries">;
 
 export type FiscalYear = Tables<{ schema: "budget" }, "fiscal_years">;
-export type FiscalYearInsert = TablesInsert<{ schema: "budget" }, "fiscal_years">;
-export type FiscalYearUpdate = TablesUpdate<{ schema: "budget" }, "fiscal_years">;
+export type FiscalYearInsert = TablesInsert<
+  { schema: "budget" },
+  "fiscal_years"
+>;
+export type FiscalYearUpdate = TablesUpdate<
+  { schema: "budget" },
+  "fiscal_years"
+>;
 
-export type BudgetAllocation = Tables<{ schema: "budget" }, "budget_allocations">;
-export type BudgetAllocationInsert = TablesInsert<{ schema: "budget" }, "budget_allocations">;
-export type BudgetAllocationUpdate = TablesUpdate<{ schema: "budget" }, "budget_allocations">;
+export type BudgetAllocation = Tables<
+  { schema: "budget" },
+  "budget_allocations"
+>;
+export type BudgetAllocationInsert = TablesInsert<
+  { schema: "budget" },
+  "budget_allocations"
+>;
+export type BudgetAllocationUpdate = TablesUpdate<
+  { schema: "budget" },
+  "budget_allocations"
+>;
 
 export type ExpenseRequest = Tables<{ schema: "budget" }, "expense_requests">;
-export type ExpenseRequestInsert = TablesInsert<{ schema: "budget" }, "expense_requests">;
-export type ExpenseRequestUpdate = TablesUpdate<{ schema: "budget" }, "expense_requests">;
+export type ExpenseRequestInsert = TablesInsert<
+  { schema: "budget" },
+  "expense_requests"
+>;
+export type ExpenseRequestUpdate = TablesUpdate<
+  { schema: "budget" },
+  "expense_requests"
+>;
 
 export type ExpenseHistory = Tables<{ schema: "budget" }, "expense_history">;
-export type ExpenseHistoryInsert = TablesInsert<{ schema: "budget" }, "expense_history">;
+export type ExpenseHistoryInsert = TablesInsert<
+  { schema: "budget" },
+  "expense_history"
+>;
 
 // Enum types from budget schema
 export type ExpenseStatus = Enums<{ schema: "budget" }, "expense_status">;
-export type ReimbursementType = Enums<{ schema: "budget" }, "reimbursement_type">;
+export type ReimbursementType = Enums<
+  { schema: "budget" },
+  "reimbursement_type"
+>;
 
 // Extended types with relationships
 export interface MinistryWithLeader extends Ministry {
@@ -159,11 +191,11 @@ export interface BudgetFilters {
 
 // Role-based view types
 export type BudgetUserRole =
-  | "requester"       // Can submit expense requests
+  | "requester" // Can submit expense requests
   | "ministry_leader" // Can approve/deny ministry expenses
-  | "treasury"        // Can approve/deny payments
-  | "finance"         // Can process payments
-  | "admin";          // Full access
+  | "treasury" // Can approve/deny payments
+  | "finance" // Can process payments
+  | "admin"; // Full access
 
 export interface BudgetPermissions {
   canSubmitExpenses: boolean;
@@ -299,7 +331,6 @@ export interface AllocationRequest {
   requester_id: string;
   requester_name: string;
   period_type: AllocationPeriodType;
-  period_number: number | null;
   requested_amount: number;
   justification: string;
   budget_breakdown: BudgetBreakdownItem[] | null;
@@ -312,6 +343,16 @@ export interface AllocationRequest {
   updated_at: string;
 }
 
+export interface AllocationPeriodAmount {
+  id: string;
+  allocation_request_id: string;
+  period_number: number; // 1-4 for quarterly, 1-12 for monthly
+  amount: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AllocationRequestInsert {
   organization_id: string;
   fiscal_year_id: string;
@@ -319,16 +360,21 @@ export interface AllocationRequestInsert {
   requester_id: string;
   requester_name: string;
   period_type: AllocationPeriodType;
-  period_number?: number | null;
   requested_amount: number;
   justification: string;
   budget_breakdown?: BudgetBreakdownItem[] | null;
   status?: AllocationRequestStatus;
 }
 
+export interface AllocationPeriodAmountInsert {
+  allocation_request_id: string;
+  period_number: number;
+  amount: number;
+  notes?: string | null;
+}
+
 export interface AllocationRequestUpdate {
   period_type?: AllocationPeriodType;
-  period_number?: number | null;
   requested_amount?: number;
   justification?: string;
   budget_breakdown?: BudgetBreakdownItem[] | null;
@@ -337,6 +383,12 @@ export interface AllocationRequestUpdate {
   reviewed_at?: string | null;
   admin_notes?: string | null;
   approved_amount?: number | null;
+}
+
+export interface AllocationPeriodAmountUpdate {
+  period_number?: number;
+  amount?: number;
+  notes?: string | null;
 }
 
 export interface BudgetBreakdownItem {
@@ -351,6 +403,7 @@ export const PERIOD_AMOUNT_CATEGORY = "__period_amount__" as const;
 export interface AllocationRequestWithRelations extends AllocationRequest {
   ministry: Ministry;
   fiscal_year: FiscalYear;
+  period_amounts?: AllocationPeriodAmount[];
   requester_profile?: {
     id: string;
     full_name: string;
@@ -409,16 +462,25 @@ export const getPeriodLabel = (
 ): string => {
   if (periodType === "annual") return "Annual";
   if (periodType === "quarterly" && periodNumber) {
-    return QUARTERLY_PERIODS.find((p) => p.value === periodNumber)?.label || `Q${periodNumber}`;
+    return (
+      QUARTERLY_PERIODS.find((p) => p.value === periodNumber)?.label ||
+      `Q${periodNumber}`
+    );
   }
   if (periodType === "monthly" && periodNumber) {
-    return MONTHLY_PERIODS.find((p) => p.value === periodNumber)?.label || `Month ${periodNumber}`;
+    return (
+      MONTHLY_PERIODS.find((p) => p.value === periodNumber)?.label ||
+      `Month ${periodNumber}`
+    );
   }
   return "Unknown";
 };
 
 // Allocation Request Status Config
-export const ALLOCATION_REQUEST_STATUS_CONFIG: Record<AllocationRequestStatus, StatusConfig> = {
+export const ALLOCATION_REQUEST_STATUS_CONFIG: Record<
+  AllocationRequestStatus,
+  StatusConfig
+> = {
   draft: {
     label: "Draft",
     color: "text-gray-600",

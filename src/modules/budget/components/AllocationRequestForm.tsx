@@ -45,10 +45,7 @@ import {
   useUpdateAllocationRequest,
   useSubmitAllocationRequest,
 } from "../hooks";
-import type {
-  AllocationRequest,
-  BudgetBreakdownItem,
-} from "../types";
+import type { AllocationRequest, BudgetBreakdownItem } from "../types";
 import { PERIOD_AMOUNT_CATEGORY } from "../types";
 
 // Form validation schema
@@ -106,10 +103,20 @@ const MONTHLY_SHORT = [
 ];
 
 const createQuarterlyAmounts = () =>
-  QUARTERLY_SHORT.map((q) => ({ period: q.value, label: q.label, shortLabel: q.shortLabel, amount: 0 }));
+  QUARTERLY_SHORT.map((q) => ({
+    period: q.value,
+    label: q.label,
+    shortLabel: q.shortLabel,
+    amount: 0,
+  }));
 
 const createMonthlyAmounts = () =>
-  MONTHLY_SHORT.map((m) => ({ period: m.value, label: m.label, shortLabel: m.shortLabel, amount: 0 }));
+  MONTHLY_SHORT.map((m) => ({
+    period: m.value,
+    label: m.label,
+    shortLabel: m.shortLabel,
+    amount: 0,
+  }));
 
 export function AllocationRequestForm({
   open,
@@ -126,9 +133,8 @@ export function AllocationRequestForm({
   const { data: ministries, isLoading: ministriesLoading } = useMinistries(
     currentOrganization?.id
   );
-  const { data: activeFiscalYear, isLoading: fiscalYearLoading } = useActiveFiscalYear(
-    currentOrganization?.id
-  );
+  const { data: activeFiscalYear, isLoading: fiscalYearLoading } =
+    useActiveFiscalYear(currentOrganization?.id);
 
   const createRequest = useCreateAllocationRequest();
   const updateRequest = useUpdateAllocationRequest();
@@ -147,7 +153,11 @@ export function AllocationRequestForm({
     },
   });
 
-  const { fields: breakdownFields, append: appendBreakdown, remove: removeBreakdown } = useFieldArray({
+  const {
+    fields: breakdownFields,
+    append: appendBreakdown,
+    remove: removeBreakdown,
+  } = useFieldArray({
     control: form.control,
     name: "budget_breakdown",
   });
@@ -161,8 +171,12 @@ export function AllocationRequestForm({
   );
 
   // Calculate totals
-  const periodAmountsTotal = periodAmounts.reduce((sum, pa) => sum + Number(pa.amount || 0), 0);
-  const totalAmount = periodType === "annual" ? annualAmount : periodAmountsTotal;
+  const periodAmountsTotal = periodAmounts.reduce(
+    (sum, pa) => sum + Number(pa.amount || 0),
+    0
+  );
+  const totalAmount =
+    periodType === "annual" ? annualAmount : periodAmountsTotal;
 
   const breakdownTotal = breakdownFields.reduce((sum, _, index) => {
     const amount = form.watch(`budget_breakdown.${index}.amount`) || 0;
@@ -194,11 +208,15 @@ export function AllocationRequestForm({
           annual_amount: request.requested_amount,
           period_amounts: [],
           justification: request.justification,
-          budget_breakdown: breakdown.filter((item) => item.category !== PERIOD_AMOUNT_CATEGORY),
+          budget_breakdown: breakdown.filter(
+            (item) => item.category !== PERIOD_AMOUNT_CATEGORY
+          ),
         });
       } else if (request.period_type === "quarterly") {
         const quarterAmounts = createQuarterlyAmounts().map((q) => {
-          const found = periodAmountsFromBreakdown.find((p) => p.description === q.label);
+          const found = periodAmountsFromBreakdown.find(
+            (p) => p.description === q.label
+          );
           return { ...q, amount: found?.amount || 0 };
         });
         form.reset({
@@ -206,11 +224,15 @@ export function AllocationRequestForm({
           annual_amount: 0,
           period_amounts: quarterAmounts,
           justification: request.justification,
-          budget_breakdown: breakdown.filter((item) => item.category !== PERIOD_AMOUNT_CATEGORY),
+          budget_breakdown: breakdown.filter(
+            (item) => item.category !== PERIOD_AMOUNT_CATEGORY
+          ),
         });
       } else if (request.period_type === "monthly") {
         const monthAmounts = createMonthlyAmounts().map((m) => {
-          const found = periodAmountsFromBreakdown.find((p) => p.description === m.label);
+          const found = periodAmountsFromBreakdown.find(
+            (p) => p.description === m.label
+          );
           return { ...m, amount: found?.amount || 0 };
         });
         form.reset({
@@ -218,7 +240,9 @@ export function AllocationRequestForm({
           annual_amount: 0,
           period_amounts: monthAmounts,
           justification: request.justification,
-          budget_breakdown: breakdown.filter((item) => item.category !== PERIOD_AMOUNT_CATEGORY),
+          budget_breakdown: breakdown.filter(
+            (item) => item.category !== PERIOD_AMOUNT_CATEGORY
+          ),
         });
       }
     } else {
@@ -232,14 +256,25 @@ export function AllocationRequestForm({
     }
   }, [request, form]);
 
-  const handleSave = async (values: AllocationRequestFormValues, submit: boolean = false) => {
+  const handleSave = async (
+    values: AllocationRequestFormValues,
+    submit: boolean = false
+  ) => {
     if (!currentOrganization || !user || !activeFiscalYear) {
-      toast({ title: "Error", description: "Missing required data.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Missing required data.",
+        variant: "destructive",
+      });
       return;
     }
 
     if (!userMinistry) {
-      toast({ title: "Error", description: "You are not assigned to a ministry.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "You are not assigned to a ministry.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -247,19 +282,45 @@ export function AllocationRequestForm({
     if (values.period_type === "annual") {
       finalAmount = values.annual_amount || 0;
     } else {
-      finalAmount = (values.period_amounts || []).reduce((sum, pa) => sum + Number(pa.amount || 0), 0);
+      finalAmount = (values.period_amounts || []).reduce(
+        (sum, pa) => sum + Number(pa.amount || 0),
+        0
+      );
     }
 
     if (finalAmount <= 0) {
-      toast({ title: "Error", description: "Total amount must be greater than 0.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Total amount must be greater than 0.",
+        variant: "destructive",
+      });
       return;
     }
 
-    const periodAmountsAsBreakdown: BudgetBreakdownItem[] = (values.period_amounts || [])
+    // Prepare period amounts for quarterly/monthly requests
+    const periodAmountsData = (values.period_amounts || [])
       .filter((pa) => pa.amount > 0)
-      .map((pa) => ({ category: PERIOD_AMOUNT_CATEGORY, description: pa.label, amount: pa.amount }));
+      .map((pa) => ({
+        period_number: pa.period,
+        amount: pa.amount,
+        notes: pa.label,
+      }));
 
-    const combinedBreakdown = [...periodAmountsAsBreakdown, ...(values.budget_breakdown as BudgetBreakdownItem[] || [])];
+    // Keep a copy in budget_breakdown for backward compatibility and display
+    const periodAmountsAsBreakdown: BudgetBreakdownItem[] = (
+      values.period_amounts || []
+    )
+      .filter((pa) => pa.amount > 0)
+      .map((pa) => ({
+        category: PERIOD_AMOUNT_CATEGORY,
+        description: pa.label,
+        amount: pa.amount,
+      }));
+
+    const combinedBreakdown = [
+      ...periodAmountsAsBreakdown,
+      ...((values.budget_breakdown as BudgetBreakdownItem[]) || []),
+    ];
 
     setIsSubmitting(true);
 
@@ -269,7 +330,6 @@ export function AllocationRequestForm({
           requestId: request.id,
           data: {
             period_type: values.period_type,
-            period_number: null,
             requested_amount: finalAmount,
             justification: values.justification,
             budget_breakdown: combinedBreakdown,
@@ -286,7 +346,9 @@ export function AllocationRequestForm({
 
         toast({
           title: submit ? "Request submitted" : "Request updated",
-          description: submit ? "Your request has been submitted for review." : "Your request has been saved.",
+          description: submit
+            ? "Your request has been submitted for review."
+            : "Your request has been saved.",
         });
       } else {
         const newRequest = await createRequest.mutateAsync({
@@ -297,12 +359,13 @@ export function AllocationRequestForm({
             requester_id: user.id,
             requester_name: profile?.full_name || "Unknown",
             period_type: values.period_type,
-            period_number: null,
             requested_amount: finalAmount,
             justification: values.justification,
             budget_breakdown: combinedBreakdown,
             status: "draft",
           },
+          periodAmounts:
+            periodAmountsData.length > 0 ? periodAmountsData : undefined,
           actorId: user.id,
           actorName: profile?.full_name || "Unknown",
         });
@@ -317,7 +380,9 @@ export function AllocationRequestForm({
 
         toast({
           title: submit ? "Request submitted" : "Request created",
-          description: submit ? "Your request has been submitted for review." : "Your request has been saved as draft.",
+          description: submit
+            ? "Your request has been submitted for review."
+            : "Your request has been saved as draft.",
         });
       }
 
@@ -326,7 +391,8 @@ export function AllocationRequestForm({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save request",
+        description:
+          error instanceof Error ? error.message : "Failed to save request",
         variant: "destructive",
       });
     } finally {
@@ -346,7 +412,9 @@ export function AllocationRequestForm({
           <p className="text-muted-foreground text-sm">
             Please contact an administrator to set up a fiscal year.
           </p>
-          <Button onClick={() => onOpenChange(false)} className="mt-4">Close</Button>
+          <Button onClick={() => onOpenChange(false)} className="mt-4">
+            Close
+          </Button>
         </DialogContent>
       </Dialog>
     );
@@ -358,7 +426,9 @@ export function AllocationRequestForm({
         {/* Header */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-5 text-white">
           <DialogTitle className="text-xl font-semibold">
-            {isEditing ? "Edit Allocation Request" : "Budget Allocation Request"}
+            {isEditing
+              ? "Edit Allocation Request"
+              : "Budget Allocation Request"}
           </DialogTitle>
           <div className="flex items-center gap-2 mt-2 text-violet-100 text-sm">
             <Calendar className="h-4 w-4" />
@@ -374,8 +444,12 @@ export function AllocationRequestForm({
           </div>
         ) : !userMinistry ? (
           <div className="p-6 text-center">
-            <p className="text-muted-foreground">You are not assigned to a ministry.</p>
-            <Button className="mt-4" onClick={() => onOpenChange(false)}>Close</Button>
+            <p className="text-muted-foreground">
+              You are not assigned to a ministry.
+            </p>
+            <Button className="mt-4" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
           </div>
         ) : (
           <Form {...form}>
@@ -393,9 +467,10 @@ export function AllocationRequestForm({
                       onClick={() => form.setValue("period_type", type)}
                       className={`
                         py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all
-                        ${periodType === type
-                          ? "border-violet-500 bg-violet-50 text-violet-700"
-                          : "border-gray-200 hover:border-gray-300 text-gray-600"
+                        ${
+                          periodType === type
+                            ? "border-violet-500 bg-violet-50 text-violet-700"
+                            : "border-gray-200 hover:border-gray-300 text-gray-600"
                         }
                       `}
                     >
@@ -413,10 +488,14 @@ export function AllocationRequestForm({
                     name="annual_amount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-600">Annual Budget Amount</FormLabel>
+                        <FormLabel className="text-sm font-medium text-slate-600">
+                          Annual Budget Amount
+                        </FormLabel>
                         <FormControl>
                           <div className="relative mt-2">
-                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-medium">$</span>
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-medium">
+                              $
+                            </span>
                             <Input
                               type="number"
                               step="0.01"
@@ -434,10 +513,14 @@ export function AllocationRequestForm({
                 ) : periodType === "quarterly" ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-600">Quarterly Allocation</span>
+                      <span className="text-sm font-medium text-slate-600">
+                        Quarterly Allocation
+                      </span>
                       <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
                         <span className="text-xs text-slate-500">Total:</span>
-                        <span className="text-sm font-bold text-violet-600">${periodAmountsTotal.toLocaleString()}</span>
+                        <span className="text-sm font-bold text-violet-600">
+                          ${periodAmountsTotal.toLocaleString()}
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -454,12 +537,14 @@ export function AllocationRequestForm({
                                     {pa.shortLabel}
                                   </span>
                                   <span className="text-[10px] text-slate-400 font-medium">
-                                    {pa.label.replace(/Q\d\s/, '')}
+                                    {pa.label.replace(/Q\d\s/, "")}
                                   </span>
                                 </div>
                                 <FormControl>
                                   <div className="relative">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">$</span>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">
+                                      $
+                                    </span>
                                     <Input
                                       type="number"
                                       step="0.01"
@@ -479,53 +564,72 @@ export function AllocationRequestForm({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <span className="text-sm font-medium text-slate-600">Monthly Allocation</span>
+                    <span className="text-sm font-medium text-slate-600">
+                      Monthly Allocation
+                    </span>
                     {/* Clean 3-column layout with rows */}
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                       {[0, 1, 2, 3].map((rowIndex) => (
                         <div
                           key={rowIndex}
-                          className={`grid grid-cols-3 ${rowIndex > 0 ? 'border-t border-slate-100' : ''}`}
+                          className={`grid grid-cols-3 ${
+                            rowIndex > 0 ? "border-t border-slate-100" : ""
+                          }`}
                         >
-                          {periodAmounts.slice(rowIndex * 3, rowIndex * 3 + 3).map((pa, colIndex) => {
-                            const actualIndex = rowIndex * 3 + colIndex;
-                            return (
-                              <FormField
-                                key={pa.period}
-                                control={form.control}
-                                name={`period_amounts.${actualIndex}.amount`}
-                                render={({ field }) => (
-                                  <FormItem className={`p-3 ${colIndex > 0 ? 'border-l border-slate-100' : ''}`}>
-                                    <div className="flex items-center justify-between mb-1.5">
-                                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                                        {pa.shortLabel}
-                                      </span>
-                                    </div>
-                                    <FormControl>
-                                      <div className="relative flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 transition-all">
-                                        <span className="pl-3 pr-1 text-slate-400 text-sm font-medium select-none">$</span>
-                                        <Input
-                                          type="number"
-                                          step="0.01"
-                                          min="0"
-                                          placeholder="0.00"
-                                          className="h-10 pl-0 pr-3 text-right text-sm font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                          {...field}
-                                        />
+                          {periodAmounts
+                            .slice(rowIndex * 3, rowIndex * 3 + 3)
+                            .map((pa, colIndex) => {
+                              const actualIndex = rowIndex * 3 + colIndex;
+                              return (
+                                <FormField
+                                  key={pa.period}
+                                  control={form.control}
+                                  name={`period_amounts.${actualIndex}.amount`}
+                                  render={({ field }) => (
+                                    <FormItem
+                                      className={`p-3 ${
+                                        colIndex > 0
+                                          ? "border-l border-slate-100"
+                                          : ""
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                          {pa.shortLabel}
+                                        </span>
                                       </div>
-                                    </FormControl>
-                                  </FormItem>
-                                )}
-                              />
-                            );
-                          })}
+                                      <FormControl>
+                                        <div className="relative flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 transition-all">
+                                          <span className="pl-3 pr-1 text-slate-400 text-sm font-medium select-none">
+                                            $
+                                          </span>
+                                          <Input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            placeholder="0.00"
+                                            className="h-10 pl-0 pr-3 text-right text-sm font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            {...field}
+                                          />
+                                        </div>
+                                      </FormControl>
+                                    </FormItem>
+                                  )}
+                                />
+                              );
+                            })}
                         </div>
                       ))}
                       {/* Total row */}
                       <div className="border-t-2 border-slate-200 bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-3 flex items-center justify-between">
-                        <span className="text-sm font-medium text-slate-600">Total Annual Budget</span>
+                        <span className="text-sm font-medium text-slate-600">
+                          Total Annual Budget
+                        </span>
                         <span className="text-lg font-bold text-violet-700">
-                          ${periodAmountsTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          $
+                          {periodAmountsTotal.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                          })}
                         </span>
                       </div>
                     </div>
@@ -538,10 +642,15 @@ export function AllocationRequestForm({
                 <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-green-600" />
-                    <span className="text-sm font-medium text-green-800">Total Request</span>
+                    <span className="text-sm font-medium text-green-800">
+                      Total Request
+                    </span>
                   </div>
                   <span className="text-2xl font-bold text-green-700">
-                    ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    $
+                    {totalAmount.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               )}
@@ -570,13 +679,21 @@ export function AllocationRequestForm({
               {/* Budget Breakdown (Collapsible) */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Budget Categories</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Budget Categories
+                  </span>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="text-violet-600 hover:text-violet-700 hover:bg-violet-50"
-                    onClick={() => appendBreakdown({ category: "", description: "", amount: 0 })}
+                    onClick={() =>
+                      appendBreakdown({
+                        category: "",
+                        description: "",
+                        amount: 0,
+                      })
+                    }
                   >
                     <Plus className="h-4 w-4 mr-1" />
                     Add Category
@@ -590,22 +707,30 @@ export function AllocationRequestForm({
                         <Input
                           placeholder="Category"
                           className="flex-[1] h-9 text-sm"
-                          {...form.register(`budget_breakdown.${index}.category`)}
+                          {...form.register(
+                            `budget_breakdown.${index}.category`
+                          )}
                         />
                         <Input
                           placeholder="Description"
                           className="flex-[2] h-9 text-sm"
-                          {...form.register(`budget_breakdown.${index}.description`)}
+                          {...form.register(
+                            `budget_breakdown.${index}.description`
+                          )}
                         />
                         <div className="relative flex-[1]">
-                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+                            $
+                          </span>
                           <Input
                             type="number"
                             step="0.01"
                             min="0"
                             placeholder="0"
                             className="pl-5 h-9 text-sm"
-                            {...form.register(`budget_breakdown.${index}.amount`)}
+                            {...form.register(
+                              `budget_breakdown.${index}.amount`
+                            )}
                           />
                         </div>
                         <Button
@@ -621,7 +746,10 @@ export function AllocationRequestForm({
                     ))}
                     {breakdownTotal > 0 && (
                       <div className="text-right text-sm text-gray-500 pt-2 border-t">
-                        Category Total: <span className="font-medium">${breakdownTotal.toFixed(2)}</span>
+                        Category Total:{" "}
+                        <span className="font-medium">
+                          ${breakdownTotal.toFixed(2)}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -646,7 +774,11 @@ export function AllocationRequestForm({
                   onClick={form.handleSubmit((v) => handleSave(v, false))}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
                   Save Draft
                 </Button>
                 <Button
@@ -655,7 +787,11 @@ export function AllocationRequestForm({
                   onClick={form.handleSubmit((v) => handleSave(v, true))}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
                   Submit
                 </Button>
               </div>

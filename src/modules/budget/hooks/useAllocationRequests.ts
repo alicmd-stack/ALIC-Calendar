@@ -31,11 +31,13 @@ export function useAllocationRequests(fiscalYearId?: string) {
       let query = supabase
         .schema("budget")
         .from("allocation_requests")
-        .select(`
+        .select(
+          `
           *,
           ministry:ministries(*),
           fiscal_year:fiscal_years(*)
-        `)
+        `
+        )
         .order("created_at", { ascending: false });
 
       if (fiscalYearId) {
@@ -64,11 +66,13 @@ export function useMinistryAllocationRequests(
       let query = supabase
         .schema("budget")
         .from("allocation_requests")
-        .select(`
+        .select(
+          `
           *,
           ministry:ministries(*),
           fiscal_year:fiscal_years(*)
-        `)
+        `
+        )
         .order("created_at", { ascending: false });
 
       if (ministryId) {
@@ -97,11 +101,13 @@ export function usePendingAllocationRequests(organizationId?: string) {
       let query = supabase
         .schema("budget")
         .from("allocation_requests")
-        .select(`
+        .select(
+          `
           *,
           ministry:ministries(*),
           fiscal_year:fiscal_years(*)
-        `)
+        `
+        )
         .eq("status", "pending")
         .order("created_at", { ascending: true });
 
@@ -128,11 +134,13 @@ export function useAllocationRequest(requestId?: string) {
       const { data, error } = await supabase
         .schema("budget")
         .from("allocation_requests")
-        .select(`
+        .select(
+          `
           *,
           ministry:ministries(*),
           fiscal_year:fiscal_years(*)
-        `)
+        `
+        )
         .eq("id", requestId)
         .single();
 
@@ -177,10 +185,16 @@ export function useCreateAllocationRequest() {
   return useMutation({
     mutationFn: async ({
       requestData,
+      periodAmounts,
       actorId,
       actorName,
     }: {
       requestData: AllocationRequestInsert;
+      periodAmounts?: Array<{
+        period_number: number;
+        amount: number;
+        notes?: string;
+      }>;
       actorId: string;
       actorName: string;
     }) => {
@@ -193,6 +207,23 @@ export function useCreateAllocationRequest() {
         .single();
 
       if (requestError) throw requestError;
+
+      // Insert period amounts if provided (for quarterly/monthly requests)
+      if (periodAmounts && periodAmounts.length > 0) {
+        const periodRows = periodAmounts.map((pa) => ({
+          allocation_request_id: request.id,
+          period_number: pa.period_number,
+          amount: pa.amount,
+          notes: pa.notes || null,
+        }));
+
+        const { error: periodError } = await supabase
+          .schema("budget")
+          .from("allocation_period_amounts")
+          .insert(periodRows);
+
+        if (periodError) throw periodError;
+      }
 
       // Add history entry
       const { error: historyError } = await supabase
