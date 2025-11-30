@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/popover";
 import { Input } from "@/shared/components/ui/input";
 import { useSearch } from "@/shared/contexts/SearchContext";
+import { CHURCH_BRANDING, getLogoSrc } from "@/shared/constants/branding";
 import {
   LogOut,
   Users,
@@ -232,14 +233,23 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Logo */}
           <div className="p-6 border-b">
             <Link to="/dashboard" className="flex items-center gap-3">
-              <div className="bg-gradient-primary p-2.5 rounded-xl">
-                <Building className="h-6 w-6 text-primary-foreground" />
+              <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border shadow-sm">
+                <img 
+                  src={getLogoSrc(currentOrganization?.logo_url)}
+                  alt={currentOrganization?.name || CHURCH_BRANDING.name}
+                  className="h-10 w-10 object-contain"
+                  onError={(e) => {
+                    // Fallback to building icon if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
               </div>
-              <div>
-                <h1 className="font-bold text-lg truncate max-w-[180px]">
-                  {currentOrganization?.name || "Church CMS"}
+              <div className="flex-1 min-w-0">
+                <h1 className="font-bold text-lg truncate">
+                  {currentOrganization?.name || CHURCH_BRANDING.shortName}
                 </h1>
-                <p className="text-xs text-muted-foreground">Management System</p>
+                <p className="text-xs text-muted-foreground truncate">{CHURCH_BRANDING.app.title}</p>
               </div>
             </Link>
           </div>

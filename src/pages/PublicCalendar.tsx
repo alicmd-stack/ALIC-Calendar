@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CHURCH_BRANDING, getLogoSrc } from "@/shared/constants/branding";
 import {
   Dialog,
   DialogContent,
@@ -254,15 +255,18 @@ const PublicCalendar = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="bg-white/20 backdrop-blur-sm p-2 rounded-xl">
-                {organization.logo_url ? (
-                  <img
-                    src={organization.logo_url}
-                    alt={`${organization.name} Logo`}
-                    className="h-16 w-16 object-contain"
-                  />
-                ) : (
-                  <Church className="h-16 w-16 text-white" />
-                )}
+                <img
+                  src={getLogoSrc(organization.logo_url)}
+                  alt={`${organization.name} Logo`}
+                  className="h-16 w-16 object-contain"
+                  onError={(e) => {
+                    // Fallback to church icon if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <Church className="h-16 w-16 text-white hidden" />
               </div>
               <div>
                 <h1 className="text-3xl md:text-4xl font-bold">

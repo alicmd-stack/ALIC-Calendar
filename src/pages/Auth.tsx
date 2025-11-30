@@ -24,8 +24,10 @@ import {
   Lock,
   User,
   Sparkles,
+  Church,
 } from "lucide-react";
 import { z } from "zod";
+import { CHURCH_BRANDING } from "@/shared/constants/branding";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address").max(255, "Email too long"),
@@ -176,13 +178,17 @@ const Auth = () => {
         <div className="relative z-10 text-center text-primary-foreground max-w-lg">
           <div className="mb-8 flex justify-center">
             <div className="bg-white/20 backdrop-blur-sm p-6 rounded-3xl">
-              <Calendar className="h-16 w-16" />
+              <img 
+                src={CHURCH_BRANDING.logo.main} 
+                alt={CHURCH_BRANDING.logo.alt}
+                className="h-20 w-20 object-contain"
+              />
             </div>
           </div>
-          <h1 className="text-4xl font-bold mb-4">Addis Lidet International Church</h1>
-          <h2 className="text-2xl font-semibold mb-4">Church Management</h2>
+          <h1 className="text-4xl font-bold mb-4">{CHURCH_BRANDING.name}</h1>
+          <h2 className="text-2xl font-semibold mb-4">{CHURCH_BRANDING.app.title}</h2>
           <p className="text-xl opacity-90 mb-8">
-            Empowering ministry operations with faith and purpose, bringing our community together in worship and service
+            {CHURCH_BRANDING.tagline}, bringing our community together in worship and service
           </p>
           <div className="flex justify-center space-x-8 text-sm">
             <div className="flex items-center space-x-2">
@@ -211,7 +217,11 @@ const Auth = () => {
           <CardHeader className="space-y-6 pb-8">
             <div className="flex justify-center lg:hidden">
               <div className="bg-gradient-primary p-4 rounded-2xl">
-                <Calendar className="h-10 w-10 text-primary-foreground" />
+                <img 
+                  src={CHURCH_BRANDING.logo.main} 
+                  alt={CHURCH_BRANDING.logo.alt}
+                  className="h-12 w-12 object-contain"
+                />
               </div>
             </div>
             <div className="text-center">
@@ -220,7 +230,7 @@ const Auth = () => {
               </CardTitle>
               <CardDescription className="text-base mt-2">
                 {activeTab === "signin"
-                  ? "Sign in to manage your church operations"
+                  ? `Sign in to manage ${CHURCH_BRANDING.shortName} operations`
                   : "Join us to get started"}
               </CardDescription>
             </div>
