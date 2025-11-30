@@ -10,22 +10,20 @@ const NotFound = () => {
         {/* Church Logo */}
         <div className="flex justify-center mb-4">
           <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-lg">
-            <img 
+            <img
               src={CHURCH_BRANDING.logo.main}
               alt={CHURCH_BRANDING.logo.alt}
               className="h-20 w-20 object-contain"
             />
           </div>
         </div>
-        
+
         <h1 className="text-9xl font-bold text-primary">404</h1>
         <h2 className="text-3xl font-semibold">Page Not Found</h2>
         <p className="text-muted-foreground text-lg">
           The page you're looking for doesn't exist or may have been moved.
         </p>
-        <p className="text-sm text-muted-foreground">
-          {CHURCH_BRANDING.name}
-        </p>
+        <p className="text-sm text-muted-foreground">{CHURCH_BRANDING.name}</p>
         <Button asChild size="lg">
           <Link to="/public">
             <Home className="mr-2 h-4 w-4" />

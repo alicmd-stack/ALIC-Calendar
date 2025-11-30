@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import GoogleCalendarView from "@/modules/calendar/components/GoogleCalendarView";
-import CalendarViewSwitcher, { CalendarView } from "@/modules/calendar/components/CalendarViewSwitcher";
+import CalendarViewSwitcher, {
+  CalendarView,
+} from "@/modules/calendar/components/CalendarViewSwitcher";
 import {
   Calendar,
   Church,
@@ -59,7 +61,11 @@ const PublicCalendar = () => {
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
 
   // Fetch organization by slug or get the default one
-  const { data: organization, isLoading: orgLoading, error: orgError } = useQuery({
+  const {
+    data: organization,
+    isLoading: orgLoading,
+    error: orgError,
+  } = useQuery({
     queryKey: ["public-organization", slug],
     queryFn: async () => {
       let query = supabase
@@ -127,11 +133,11 @@ const PublicCalendar = () => {
   const escapeICalText = (text: string): string => {
     if (!text) return "";
     return text
-      .replace(/\\/g, "\\\\")  // Backslash
-      .replace(/;/g, "\\;")    // Semicolon
-      .replace(/,/g, "\\,")    // Comma
-      .replace(/\n/g, "\\n")   // Newline
-      .replace(/\r/g, "");     // Remove carriage return
+      .replace(/\\/g, "\\\\") // Backslash
+      .replace(/;/g, "\\;") // Semicolon
+      .replace(/,/g, "\\,") // Comma
+      .replace(/\n/g, "\\n") // Newline
+      .replace(/\r/g, ""); // Remove carriage return
   };
 
   const exportToICS = () => {
@@ -196,11 +202,16 @@ const PublicCalendar = () => {
 
       icsContent.push("END:VCALENDAR");
 
-      const blob = new Blob([icsContent.join("\r\n")], { type: "text/calendar;charset=utf-8" });
+      const blob = new Blob([icsContent.join("\r\n")], {
+        type: "text/calendar;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${organization?.slug || "events"}-${format(currentWeek, "yyyy-MM-dd")}.ics`;
+      link.download = `${organization?.slug || "events"}-${format(
+        currentWeek,
+        "yyyy-MM-dd"
+      )}.ics`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -208,13 +219,18 @@ const PublicCalendar = () => {
 
       toast({
         title: "Calendar exported successfully",
-        description: `Exported ${events.length} event${events.length !== 1 ? 's' : ''} to iCalendar format.`,
+        description: `Exported ${events.length} event${
+          events.length !== 1 ? "s" : ""
+        } to iCalendar format.`,
       });
     } catch (error) {
       console.error("Error exporting calendar:", error);
       toast({
         title: "Export failed",
-        description: error instanceof Error ? error.message : "An error occurred while exporting the calendar.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while exporting the calendar.",
         variant: "destructive",
       });
     }
@@ -236,11 +252,10 @@ const PublicCalendar = () => {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              The organization you're looking for doesn't exist or is not active.
+              The organization you're looking for doesn't exist or is not
+              active.
             </p>
-            <Button onClick={() => navigate("/auth")}>
-              Sign In
-            </Button>
+            <Button onClick={() => navigate("/auth")}>Sign In</Button>
           </CardContent>
         </Card>
       </div>
@@ -262,8 +277,8 @@ const PublicCalendar = () => {
                   onError={(e) => {
                     // Fallback to church icon if image fails to load
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.nextElementSibling?.classList.remove('hidden');
+                    target.style.display = "none";
+                    target.nextElementSibling?.classList.remove("hidden");
                   }}
                 />
                 <Church className="h-16 w-16 text-white hidden" />
@@ -313,11 +328,17 @@ const PublicCalendar = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">{organization.address}</p>
+                <p className="text-sm text-muted-foreground">
+                  {organization.address}
+                </p>
                 {(organization.city || organization.state) && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    {[organization.city, organization.state].filter(Boolean).join(", ")}
-                    {organization.country && organization.country !== "United States" && `, ${organization.country}`}
+                    {[organization.city, organization.state]
+                      .filter(Boolean)
+                      .join(", ")}
+                    {organization.country &&
+                      organization.country !== "United States" &&
+                      `, ${organization.country}`}
                   </p>
                 )}
               </CardContent>
@@ -337,7 +358,10 @@ const PublicCalendar = () => {
                   {organization.contact_email && (
                     <div className="flex items-center gap-2">
                       <Mail className="h-4 w-4 text-muted-foreground" />
-                      <a href={`mailto:${organization.contact_email}`} className="hover:underline">
+                      <a
+                        href={`mailto:${organization.contact_email}`}
+                        className="hover:underline"
+                      >
                         {organization.contact_email}
                       </a>
                     </div>
@@ -345,7 +369,10 @@ const PublicCalendar = () => {
                   {organization.contact_phone && (
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
-                      <a href={`tel:${organization.contact_phone}`} className="hover:underline">
+                      <a
+                        href={`tel:${organization.contact_phone}`}
+                        className="hover:underline"
+                      >
                         {organization.contact_phone}
                       </a>
                     </div>
@@ -590,7 +617,8 @@ const PublicCalendar = () => {
               )}
             </div>
             <p className="text-sm text-slate-400">
-              © {new Date().getFullYear()} {organization.name}. All rights reserved.
+              © {new Date().getFullYear()} {organization.name}. All rights
+              reserved.
             </p>
             {organization.website && (
               <div className="mt-4 flex items-center justify-center gap-4">

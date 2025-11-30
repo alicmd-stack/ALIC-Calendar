@@ -54,7 +54,13 @@ interface NavItem {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
   const { currentOrganization } = useOrganization();
-  const { searchQuery, setSearchQuery, isSearchOpen, setIsSearchOpen, clearSearch } = useSearch();
+  const {
+    searchQuery,
+    setSearchQuery,
+    isSearchOpen,
+    setIsSearchOpen,
+    clearSearch,
+  } = useSearch();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -139,7 +145,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ]
     : [];
 
-  const allNavigation = [...mainNavigation, ...contributorNavigation, ...adminNavigation, ...budgetNavigation, ...futureNavigation, ...adminFutureNavigation];
+  const allNavigation = [
+    ...mainNavigation,
+    ...contributorNavigation,
+    ...adminNavigation,
+    ...budgetNavigation,
+    ...futureNavigation,
+    ...adminFutureNavigation,
+  ];
 
   // Get user initials for avatar
   const getUserInitials = (name?: string) => {
@@ -154,7 +167,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Get page title based on current route
   const getPageTitle = () => {
-    const currentNav = allNavigation.find((nav) => nav.href === location.pathname);
+    const currentNav = allNavigation.find(
+      (nav) => nav.href === location.pathname
+    );
     return currentNav?.name || "Church Management";
   };
 
@@ -234,14 +249,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="p-6 border-b">
             <Link to="/dashboard" className="flex items-center gap-3">
               <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border shadow-sm">
-                <img 
+                <img
                   src={getLogoSrc(currentOrganization?.logo_url)}
                   alt={currentOrganization?.name || CHURCH_BRANDING.name}
                   className="h-10 w-10 object-contain"
                   onError={(e) => {
                     // Fallback to building icon if image fails to load
                     const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
+                    target.style.display = "none";
                   }}
                 />
               </div>
@@ -249,7 +264,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <h1 className="font-bold text-lg truncate">
                   {currentOrganization?.name || CHURCH_BRANDING.shortName}
                 </h1>
-                <p className="text-xs text-muted-foreground truncate">{CHURCH_BRANDING.app.title}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {CHURCH_BRANDING.app.title}
+                </p>
               </div>
             </Link>
           </div>
@@ -257,9 +274,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
             {/* Main Navigation */}
-            <div className="space-y-2">
-              {mainNavigation.map(renderNavItem)}
-            </div>
+            <div className="space-y-2">{mainNavigation.map(renderNavItem)}</div>
 
             {/* Administration Section - includes contributor items + admin-only items */}
             <div className="space-y-2">
@@ -279,7 +294,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
             </div>
 
             {/* Future Modules Section */}
-            {(futureNavigation.length > 0 || adminFutureNavigation.length > 0) && (
+            {(futureNavigation.length > 0 ||
+              adminFutureNavigation.length > 0) && (
               <div className="space-y-2">
                 <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Coming Soon
@@ -294,7 +310,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="p-4 border-t">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start p-3 h-auto">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start p-3 h-auto"
+                >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs">
                       {getUserInitials(user?.email)}
@@ -320,7 +339,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   Preferences
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} className="text-destructive">
+                <DropdownMenuItem
+                  onClick={signOut}
+                  className="text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
@@ -400,7 +422,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </Popover>
               <Button variant="ghost" size="sm" className="relative">
                 <Bell className="h-4 w-4" />
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">3</Badge>
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">
+                  3
+                </Badge>
               </Button>
               <div className="h-6 w-px bg-border" />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

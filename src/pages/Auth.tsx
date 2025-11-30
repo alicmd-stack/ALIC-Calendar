@@ -178,17 +178,20 @@ const Auth = () => {
         <div className="relative z-10 text-center text-primary-foreground max-w-lg">
           <div className="mb-8 flex justify-center">
             <div className="bg-white/20 backdrop-blur-sm p-6 rounded-3xl">
-              <img 
-                src={CHURCH_BRANDING.logo.main} 
+              <img
+                src={CHURCH_BRANDING.logo.main}
                 alt={CHURCH_BRANDING.logo.alt}
                 className="h-20 w-20 object-contain"
               />
             </div>
           </div>
           <h1 className="text-4xl font-bold mb-4">{CHURCH_BRANDING.name}</h1>
-          <h2 className="text-2xl font-semibold mb-4">{CHURCH_BRANDING.app.title}</h2>
+          <h2 className="text-2xl font-semibold mb-4">
+            {CHURCH_BRANDING.app.title}
+          </h2>
           <p className="text-xl opacity-90 mb-8">
-            {CHURCH_BRANDING.tagline}, bringing our community together in worship and service
+            {CHURCH_BRANDING.tagline}, bringing our community together in
+            worship and service
           </p>
           <div className="flex justify-center space-x-8 text-sm">
             <div className="flex items-center space-x-2">
@@ -217,8 +220,8 @@ const Auth = () => {
           <CardHeader className="space-y-6 pb-8">
             <div className="flex justify-center lg:hidden">
               <div className="bg-gradient-primary p-4 rounded-2xl">
-                <img 
-                  src={CHURCH_BRANDING.logo.main} 
+                <img
+                  src={CHURCH_BRANDING.logo.main}
                   alt={CHURCH_BRANDING.logo.alt}
                   className="h-12 w-12 object-contain"
                 />
