@@ -32,3 +32,5 @@ export { BudgetAlertsPanel, BudgetAlertsBadge } from "./BudgetAlertsPanel";
 export { default as BudgetOverviewCharts } from "./BudgetOverviewCharts";
 export { default as BudgetMetricsGrid } from "./BudgetMetricsGrid";
 export { BudgetReportExport } from "./BudgetReportExport";
+export { default as ContributorBudgetCharts } from "./ContributorBudgetCharts";
+export { ContributorReportExport } from "./ContributorReportExport";

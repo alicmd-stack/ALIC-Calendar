@@ -56,6 +56,8 @@ import {
   BudgetOverviewCharts,
   BudgetMetricsGrid,
   BudgetReportExport,
+  ContributorBudgetCharts,
+  ContributorReportExport,
 } from "../components";
 import { AllocationRequestForm } from "../components/AllocationRequestForm";
 import { AllocationRequestList } from "../components/AllocationRequestList";
@@ -72,6 +74,10 @@ const BudgetDashboard = () => {
   >(null);
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Determine if user has elevated permissions (can see all data)
+  const hasFullAccess = isAdmin || isTreasury || isFinance;
+  const isContributor = !hasFullAccess;
+
   // Fetch fiscal years
   const { data: fiscalYears, isLoading: fiscalYearsLoading } = useFiscalYears(
     currentOrganization?.id
@@ -83,17 +89,21 @@ const BudgetDashboard = () => {
   // Use active fiscal year if none selected
   const effectiveFiscalYearId = selectedFiscalYearId || activeFiscalYear?.id;
 
-  // Fetch expenses and statistics
+  // Fetch expenses - filter by requester for contributors
+  const expenseFilters = effectiveFiscalYearId
+    ? {
+        fiscal_year_id: effectiveFiscalYearId,
+        ...(isContributor && user?.id ? { requester_id: user.id } : {}),
+      }
+    : isContributor && user?.id
+    ? { requester_id: user.id }
+    : undefined;
+
   const {
     data: expenses,
     isLoading: expensesLoading,
     refetch: refetchExpenses,
-  } = useExpenses(
-    currentOrganization?.id,
-    effectiveFiscalYearId
-      ? { fiscal_year_id: effectiveFiscalYearId }
-      : undefined
-  );
+  } = useExpenses(currentOrganization?.id, expenseFilters);
 
   const { data: statistics, isLoading: statisticsLoading } =
     useExpenseStatistics(currentOrganization?.id, effectiveFiscalYearId);
@@ -177,7 +187,9 @@ const BudgetDashboard = () => {
               Budget Management
             </h1>
             <p className="text-muted-foreground mt-1">
-              Manage expenses, track budgets, and process payments
+              {hasFullAccess
+                ? "Manage expenses, track budgets, and process payments"
+                : "Submit and track your expense requests"}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -199,10 +211,18 @@ const BudgetDashboard = () => {
             </Select>
 
             {/* Export Report Button */}
-            {budgetSummary && expenses && (
+            {hasFullAccess && budgetSummary && expenses && (
               <BudgetReportExport
                 budgetSummary={budgetSummary}
                 expenses={expenses}
+                organizationName={currentOrganization.name}
+              />
+            )}
+            {/* Contributor Export */}
+            {isContributor && expenses && expenses.length > 0 && user && (
+              <ContributorReportExport
+                expenses={expenses}
+                userName={user.email || "User"}
                 organizationName={currentOrganization.name}
               />
             )}
@@ -230,8 +250,8 @@ const BudgetDashboard = () => {
           </div>
         </div>
 
-        {/* Metrics Grid - World Class KPIs */}
-        {!isLoading && budgetSummary && expenses && (
+        {/* Metrics Grid - World Class KPIs for Full Access Users */}
+        {!isLoading && budgetSummary && expenses && hasFullAccess && (
           <BudgetMetricsGrid
             budgetSummary={budgetSummary}
             expenses={expenses}
@@ -338,24 +358,65 @@ const BudgetDashboard = () => {
               </div>
             ) : (
               <>
-                {/* World-Class Charts and Visualizations */}
-                {budgetSummary && expenses && (
-                  <BudgetOverviewCharts
-                    budgetSummary={budgetSummary}
-                    expenses={expenses}
-                  />
+                {/* World-Class Charts for Admin/Treasury/Finance */}
+                {hasFullAccess && budgetSummary && expenses && (
+                  <>
+                    <BudgetOverviewCharts
+                      budgetSummary={budgetSummary}
+                      expenses={expenses}
+                    />
+                    {/* All Expenses for Full Access Users */}
+                    <div className="mt-8">
+                      <ExpenseList
+                        expenses={expenses}
+                        isLoading={expensesLoading}
+                        userRole={
+                          isAdmin
+                            ? "admin"
+                            : isTreasury
+                            ? "treasury"
+                            : "finance"
+                        }
+                        onRefresh={handleRefresh}
+                      />
+                    </div>
+                  </>
                 )}
 
-                {/* All Expenses for Admins */}
-                {isAdmin && expenses && (
-                  <div className="mt-8">
-                    <ExpenseList
-                      expenses={expenses}
-                      isLoading={expensesLoading}
-                      userRole="admin"
-                      onRefresh={handleRefresh}
-                    />
-                  </div>
+                {/* Contributor View - Show their personal charts and data */}
+                {isContributor && expenses && expenses.length > 0 && (
+                  <>
+                    <ContributorBudgetCharts expenses={expenses} />
+                    <div className="mt-8">
+                      <ExpenseList
+                        expenses={expenses}
+                        isLoading={expensesLoading}
+                        userRole="requester"
+                        onRefresh={handleRefresh}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Empty state for contributors with no expenses */}
+                {isContributor && expenses && expenses.length === 0 && (
+                  <Card>
+                    <CardContent className="pt-6">
+                      <div className="text-center py-12">
+                        <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          No Expenses Yet
+                        </h3>
+                        <p className="text-muted-foreground mb-4">
+                          Start by creating your first expense request.
+                        </p>
+                        <Button onClick={() => setIsExpenseFormOpen(true)}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Expense Request
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </>
             )}
