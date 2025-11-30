@@ -34,3 +34,6 @@ export { default as BudgetMetricsGrid } from "./BudgetMetricsGrid";
 export { BudgetReportExport } from "./BudgetReportExport";
 export { default as ContributorBudgetCharts } from "./ContributorBudgetCharts";
 export { ContributorReportExport } from "./ContributorReportExport";
+export { default as AllocationOverviewCharts } from "./AllocationOverviewCharts";
+export { default as BudgetSection } from "./BudgetSection";
+export { default as BudgetOverview } from "./BudgetOverview";

@@ -53,11 +53,10 @@ import { useAllocationRequests, usePendingAllocationRequests } from "../hooks";
 import {
   ExpenseRequestForm,
   ExpenseList,
-  BudgetOverviewCharts,
   BudgetMetricsGrid,
   BudgetReportExport,
-  ContributorBudgetCharts,
   ContributorReportExport,
+  BudgetOverview,
 } from "../components";
 import { AllocationRequestForm } from "../components/AllocationRequestForm";
 import { AllocationRequestList } from "../components/AllocationRequestList";
@@ -358,15 +357,21 @@ const BudgetDashboard = () => {
               </div>
             ) : (
               <>
-                {/* World-Class Charts for Admin/Treasury/Finance */}
+                {/* World-Class Overview for Admin/Treasury/Finance */}
                 {hasFullAccess && budgetSummary && expenses && (
                   <>
-                    <BudgetOverviewCharts
-                      budgetSummary={budgetSummary}
+                    <BudgetOverview
                       expenses={expenses}
+                      allocations={allocationRequests || []}
+                      title="Organization Overview"
+                      description="Comprehensive view of organizational expenses and budget allocations"
                     />
-                    {/* All Expenses for Full Access Users */}
-                    <div className="mt-8">
+
+                    {/* Detailed Expense List */}
+                    <div className="mt-12">
+                      <h3 className="text-xl font-semibold mb-4">
+                        All Expense Requests
+                      </h3>
                       <ExpenseList
                         expenses={expenses}
                         isLoading={expensesLoading}
@@ -383,11 +388,20 @@ const BudgetDashboard = () => {
                   </>
                 )}
 
-                {/* Contributor View - Show their personal charts and data */}
+                {/* Contributor View - Personal budget overview */}
                 {isContributor && expenses && expenses.length > 0 && (
                   <>
-                    <ContributorBudgetCharts expenses={expenses} />
-                    <div className="mt-8">
+                    <BudgetOverview
+                      expenses={expenses}
+                      allocations={myAllocationRequests}
+                      title="My Budget Overview"
+                      description="Your personal expense requests and budget allocations"
+                    />
+
+                    <div className="mt-12">
+                      <h3 className="text-xl font-semibold mb-4">
+                        My Expense Requests
+                      </h3>
                       <ExpenseList
                         expenses={expenses}
                         isLoading={expensesLoading}
@@ -400,23 +414,37 @@ const BudgetDashboard = () => {
 
                 {/* Empty state for contributors with no expenses */}
                 {isContributor && expenses && expenses.length === 0 && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <div className="text-center py-12">
-                        <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold mb-2">
-                          No Expenses Yet
-                        </h3>
-                        <p className="text-muted-foreground mb-4">
-                          Start by creating your first expense request.
-                        </p>
-                        <Button onClick={() => setIsExpenseFormOpen(true)}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Create Expense Request
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <>
+                    {/* Show unified overview even with no expenses if there are allocations */}
+                    {myAllocationRequests && myAllocationRequests.length > 0 ? (
+                      <BudgetOverview
+                        expenses={[]}
+                        allocations={myAllocationRequests}
+                        title="My Budget Overview"
+                        description="Your budget allocations"
+                      />
+                    ) : (
+                      /* Empty state card */
+                      <Card>
+                        <CardContent className="pt-6">
+                          <div className="text-center py-12">
+                            <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">
+                              No Budget Activity
+                            </h3>
+                            <p className="text-muted-foreground mb-4">
+                              Start by creating your first expense request or
+                              budget allocation.
+                            </p>
+                            <Button onClick={() => setIsExpenseFormOpen(true)}>
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create Expense Request
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </>
                 )}
               </>
             )}
