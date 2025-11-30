@@ -1,5 +1,6 @@
 /**
  * AllocationRequestForm - Form for ministry leaders to request budget allocations
+ * Supports annual (single amount), quarterly (Q1-Q4 amounts), or monthly (Jan-Dec amounts)
  */
 
 import { useState, useEffect } from "react";
@@ -41,7 +42,6 @@ import {
   Save,
   Plus,
   Trash2,
-  Calendar,
 } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useAuth } from "@/shared/contexts/AuthContext";
@@ -72,10 +72,17 @@ const breakdownItemSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
 });
 
+// Period amount for quarterly/monthly breakdown
+const periodAmountSchema = z.object({
+  period: z.number(),
+  label: z.string(),
+  amount: z.coerce.number().min(0, "Amount must be 0 or greater"),
+});
+
 const allocationRequestFormSchema = z.object({
   period_type: z.enum(["annual", "quarterly", "monthly"]),
-  period_number: z.coerce.number().nullable().optional(),
-  requested_amount: z.coerce.number().positive("Amount must be greater than 0"),
+  annual_amount: z.coerce.number().min(0).optional(), // For annual only
+  period_amounts: z.array(periodAmountSchema).optional(), // For quarterly/monthly
   justification: z.string().min(10, "Please provide a detailed justification (at least 10 characters)"),
   budget_breakdown: z.array(breakdownItemSchema).optional(),
 });
@@ -88,6 +95,13 @@ interface AllocationRequestFormProps {
   request?: AllocationRequest | null;
   onSuccess?: () => void;
 }
+
+// Helper to create initial period amounts
+const createQuarterlyAmounts = () =>
+  QUARTERLY_PERIODS.map((q) => ({ period: q.value, label: q.label, amount: 0 }));
+
+const createMonthlyAmounts = () =>
+  MONTHLY_PERIODS.map((m) => ({ period: m.value, label: m.label, amount: 0 }));
 
 export function AllocationRequestForm({
   open,
@@ -118,51 +132,102 @@ export function AllocationRequestForm({
     resolver: zodResolver(allocationRequestFormSchema),
     defaultValues: {
       period_type: "annual",
-      period_number: null,
-      requested_amount: 0,
+      annual_amount: 0,
+      period_amounts: [],
       justification: "",
       budget_breakdown: [],
     },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields: breakdownFields, append: appendBreakdown, remove: removeBreakdown } = useFieldArray({
     control: form.control,
     name: "budget_breakdown",
   });
 
   const periodType = form.watch("period_type");
+  const periodAmounts = form.watch("period_amounts") || [];
 
   // Get the user's ministry from their profile
   const userMinistry = ministries?.find(
     (m) => m.name.toLowerCase() === profile?.ministry_name?.toLowerCase()
   );
 
+  // Calculate total from period amounts
+  const periodAmountsTotal = periodAmounts.reduce((sum, pa) => sum + Number(pa.amount || 0), 0);
+
+  // Calculate total from breakdown
+  const breakdownTotal = breakdownFields.reduce((sum, _, index) => {
+    const amount = form.watch(`budget_breakdown.${index}.amount`) || 0;
+    return sum + Number(amount);
+  }, 0);
+
+  // Update period amounts when period type changes
+  useEffect(() => {
+    if (periodType === "quarterly") {
+      form.setValue("period_amounts", createQuarterlyAmounts());
+    } else if (periodType === "monthly") {
+      form.setValue("period_amounts", createMonthlyAmounts());
+    } else {
+      form.setValue("period_amounts", []);
+    }
+  }, [periodType, form]);
+
   // Update form values when request changes (for editing)
   useEffect(() => {
     if (request) {
-      form.reset({
-        period_type: request.period_type,
-        period_number: request.period_number,
-        requested_amount: request.requested_amount,
-        justification: request.justification,
-        budget_breakdown: request.budget_breakdown || [],
-      });
+      // Parse the budget_breakdown to extract period amounts if they exist
+      const breakdown = request.budget_breakdown || [];
+      const periodAmountsFromBreakdown = breakdown.filter(
+        (item) => item.category === "__period_amount__"
+      );
+
+      if (request.period_type === "annual") {
+        form.reset({
+          period_type: request.period_type,
+          annual_amount: request.requested_amount,
+          period_amounts: [],
+          justification: request.justification,
+          budget_breakdown: breakdown.filter((item) => item.category !== "__period_amount__"),
+        });
+      } else if (request.period_type === "quarterly") {
+        const quarterAmounts = createQuarterlyAmounts().map((q) => {
+          const found = periodAmountsFromBreakdown.find(
+            (p) => p.description === q.label
+          );
+          return { ...q, amount: found?.amount || 0 };
+        });
+        form.reset({
+          period_type: request.period_type,
+          annual_amount: 0,
+          period_amounts: quarterAmounts,
+          justification: request.justification,
+          budget_breakdown: breakdown.filter((item) => item.category !== "__period_amount__"),
+        });
+      } else if (request.period_type === "monthly") {
+        const monthAmounts = createMonthlyAmounts().map((m) => {
+          const found = periodAmountsFromBreakdown.find(
+            (p) => p.description === m.label
+          );
+          return { ...m, amount: found?.amount || 0 };
+        });
+        form.reset({
+          period_type: request.period_type,
+          annual_amount: 0,
+          period_amounts: monthAmounts,
+          justification: request.justification,
+          budget_breakdown: breakdown.filter((item) => item.category !== "__period_amount__"),
+        });
+      }
     } else {
       form.reset({
         period_type: "annual",
-        period_number: null,
-        requested_amount: 0,
+        annual_amount: 0,
+        period_amounts: [],
         justification: "",
         budget_breakdown: [],
       });
     }
   }, [request, form]);
-
-  // Calculate total from breakdown
-  const breakdownTotal = fields.reduce((sum, _, index) => {
-    const amount = form.watch(`budget_breakdown.${index}.amount`) || 0;
-    return sum + Number(amount);
-  }, 0);
 
   const handleSave = async (values: AllocationRequestFormValues, submit: boolean = false) => {
     if (!currentOrganization || !user || !activeFiscalYear) {
@@ -183,23 +248,39 @@ export function AllocationRequestForm({
       return;
     }
 
-    // Validate period number for quarterly/monthly
-    if (values.period_type === "quarterly" && !values.period_number) {
+    // Calculate total requested amount based on period type
+    let totalAmount = 0;
+    if (values.period_type === "annual") {
+      totalAmount = values.annual_amount || 0;
+    } else {
+      totalAmount = (values.period_amounts || []).reduce(
+        (sum, pa) => sum + Number(pa.amount || 0),
+        0
+      );
+    }
+
+    if (totalAmount <= 0) {
       toast({
         title: "Error",
-        description: "Please select a quarter.",
+        description: "Total requested amount must be greater than 0.",
         variant: "destructive",
       });
       return;
     }
-    if (values.period_type === "monthly" && !values.period_number) {
-      toast({
-        title: "Error",
-        description: "Please select a month.",
-        variant: "destructive",
-      });
-      return;
-    }
+
+    // Store period amounts in budget_breakdown with special category
+    const periodAmountsAsBreakdown: BudgetBreakdownItem[] = (values.period_amounts || [])
+      .filter((pa) => pa.amount > 0)
+      .map((pa) => ({
+        category: "__period_amount__",
+        description: pa.label,
+        amount: pa.amount,
+      }));
+
+    const combinedBreakdown = [
+      ...periodAmountsAsBreakdown,
+      ...(values.budget_breakdown as BudgetBreakdownItem[] || []),
+    ];
 
     setIsSubmitting(true);
 
@@ -210,10 +291,10 @@ export function AllocationRequestForm({
           requestId: request.id,
           data: {
             period_type: values.period_type,
-            period_number: values.period_type === "annual" ? null : values.period_number,
-            requested_amount: values.requested_amount,
+            period_number: null, // No longer using single period number
+            requested_amount: totalAmount,
             justification: values.justification,
-            budget_breakdown: values.budget_breakdown as BudgetBreakdownItem[],
+            budget_breakdown: combinedBreakdown,
           },
         });
 
@@ -241,10 +322,10 @@ export function AllocationRequestForm({
             requester_id: user.id,
             requester_name: profile?.full_name || "Unknown",
             period_type: values.period_type,
-            period_number: values.period_type === "annual" ? null : values.period_number,
-            requested_amount: values.requested_amount,
+            period_number: null, // No longer using single period number
+            requested_amount: totalAmount,
             justification: values.justification,
-            budget_breakdown: values.budget_breakdown as BudgetBreakdownItem[],
+            budget_breakdown: combinedBreakdown,
             status: "draft",
           },
           actorId: user.id,
@@ -339,117 +420,166 @@ export function AllocationRequestForm({
         ) : (
           <Form {...form}>
             <form className="space-y-6">
-              {/* Period Selection */}
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="period_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Period Type *</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          // Reset period number when type changes
-                          form.setValue("period_number", null);
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select period type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(Object.entries(PERIOD_TYPE_LABELS) as [AllocationPeriodType, string][]).map(
-                            ([value, label]) => (
-                              <SelectItem key={value} value={value}>
-                                {label}
-                              </SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        How often do you need this allocation?
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {periodType !== "annual" && (
-                  <FormField
-                    control={form.control}
-                    name="period_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          {periodType === "quarterly" ? "Quarter" : "Month"} *
-                        </FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(parseInt(value))}
-                          value={field.value?.toString() || ""}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue
-                                placeholder={`Select ${periodType === "quarterly" ? "quarter" : "month"}`}
-                              />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(periodType === "quarterly"
-                              ? QUARTERLY_PERIODS
-                              : MONTHLY_PERIODS
-                            ).map((period) => (
-                              <SelectItem
-                                key={period.value}
-                                value={period.value.toString()}
-                              >
-                                {period.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-              </div>
-
-              {/* Amount */}
+              {/* Period Type Selection */}
               <FormField
                 control={form.control}
-                name="requested_amount"
+                name="period_type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Requested Amount (USD) *</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                          $
-                        </span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          className="pl-7"
-                          {...field}
-                        />
-                      </div>
-                    </FormControl>
-                    {breakdownTotal > 0 && breakdownTotal !== field.value && (
-                      <FormDescription className="text-yellow-600">
-                        Note: Breakdown total (${breakdownTotal.toFixed(2)}) differs from requested amount
-                      </FormDescription>
-                    )}
+                    <FormLabel>Period Type *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select period type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {(Object.entries(PERIOD_TYPE_LABELS) as [AllocationPeriodType, string][]).map(
+                          ([value, label]) => (
+                            <SelectItem key={value} value={value}>
+                              {label}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {periodType === "annual" && "Request a single amount for the entire fiscal year."}
+                      {periodType === "quarterly" && "Request amounts for each quarter (Q1, Q2, Q3, Q4)."}
+                      {periodType === "monthly" && "Request amounts for each month (January - December)."}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Annual Amount - Only shown for annual period type */}
+              {periodType === "annual" && (
+                <FormField
+                  control={form.control}
+                  name="annual_amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Annual Requested Amount (USD) *</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                            $
+                          </span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            placeholder="0.00"
+                            className="pl-7"
+                            {...field}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Quarterly Amounts */}
+              {periodType === "quarterly" && (
+                <div className="space-y-3">
+                  <FormLabel>Quarterly Amounts (USD) *</FormLabel>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        {periodAmounts.map((pa, index) => (
+                          <FormField
+                            key={pa.period}
+                            control={form.control}
+                            name={`period_amounts.${index}.amount`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm font-medium">
+                                  {pa.label}
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                                      $
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      placeholder="0.00"
+                                      className="pl-7"
+                                      {...field}
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex justify-end pt-4 mt-4 border-t">
+                        <span className="text-sm font-medium">
+                          Total: ${periodAmountsTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Monthly Amounts */}
+              {periodType === "monthly" && (
+                <div className="space-y-3">
+                  <FormLabel>Monthly Amounts (USD) *</FormLabel>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        {periodAmounts.map((pa, index) => (
+                          <FormField
+                            key={pa.period}
+                            control={form.control}
+                            name={`period_amounts.${index}.amount`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs font-medium">
+                                  {pa.label}
+                                </FormLabel>
+                                <FormControl>
+                                  <div className="relative">
+                                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                                      $
+                                    </span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      placeholder="0.00"
+                                      className="pl-5 text-sm"
+                                      {...field}
+                                    />
+                                  </div>
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex justify-end pt-4 mt-4 border-t">
+                        <span className="text-sm font-medium">
+                          Total: ${periodAmountsTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
               {/* Justification */}
               <FormField
@@ -477,13 +607,13 @@ export function AllocationRequestForm({
               {/* Budget Breakdown (Optional) */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <FormLabel>Budget Breakdown (Optional)</FormLabel>
+                  <FormLabel>Additional Budget Breakdown (Optional)</FormLabel>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() =>
-                      append({ category: "", description: "", amount: 0 })
+                      appendBreakdown({ category: "", description: "", amount: 0 })
                     }
                   >
                     <Plus className="h-4 w-4 mr-1" />
@@ -491,10 +621,10 @@ export function AllocationRequestForm({
                   </Button>
                 </div>
 
-                {fields.length > 0 && (
+                {breakdownFields.length > 0 && (
                   <Card>
                     <CardContent className="pt-4 space-y-4">
-                      {fields.map((field, index) => (
+                      {breakdownFields.map((field, index) => (
                         <div
                           key={field.id}
                           className="grid grid-cols-12 gap-2 items-start"
@@ -531,7 +661,7 @@ export function AllocationRequestForm({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => remove(index)}
+                              onClick={() => removeBreakdown(index)}
                               className="text-red-500 hover:text-red-700"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -540,10 +670,10 @@ export function AllocationRequestForm({
                         </div>
                       ))}
 
-                      {fields.length > 0 && (
+                      {breakdownFields.length > 0 && (
                         <div className="flex justify-end pt-2 border-t">
                           <span className="text-sm font-medium">
-                            Total: ${breakdownTotal.toFixed(2)}
+                            Breakdown Total: ${breakdownTotal.toFixed(2)}
                           </span>
                         </div>
                       )}
@@ -552,7 +682,7 @@ export function AllocationRequestForm({
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  Optionally break down how the budget will be allocated across different categories.
+                  Optionally add additional details about how the budget will be used.
                 </p>
               </div>
 
