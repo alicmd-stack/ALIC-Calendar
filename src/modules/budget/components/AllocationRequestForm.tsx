@@ -482,46 +482,55 @@ export function AllocationRequestForm({
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-600">Monthly Allocation</span>
-                      <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm">
-                        <span className="text-xs text-slate-500">Total:</span>
-                        <span className="text-sm font-bold text-violet-600">${periodAmountsTotal.toLocaleString()}</span>
-                      </div>
-                    </div>
-                    {/* Clean 4x3 grid layout */}
+                  <div className="space-y-3">
+                    <span className="text-sm font-medium text-slate-600">Monthly Allocation</span>
+                    {/* Clean 3-column layout with rows */}
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                      <div className="grid grid-cols-4 divide-x divide-slate-100">
-                        {periodAmounts.map((pa, index) => (
-                          <FormField
-                            key={pa.period}
-                            control={form.control}
-                            name={`period_amounts.${index}.amount`}
-                            render={({ field }) => (
-                              <FormItem className={`p-3 ${index >= 4 ? 'border-t border-slate-100' : ''}`}>
-                                <div className="text-center mb-2">
-                                  <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                                    {pa.shortLabel}
-                                  </span>
-                                </div>
-                                <FormControl>
-                                  <div className="relative">
-                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      placeholder="0"
-                                      className="pl-6 h-10 text-center text-sm font-semibold border border-slate-200 bg-slate-50 rounded-lg focus:bg-white focus:ring-2 focus:ring-violet-500/20 focus:border-violet-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                      {...field}
-                                    />
-                                  </div>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        ))}
+                      {[0, 1, 2, 3].map((rowIndex) => (
+                        <div
+                          key={rowIndex}
+                          className={`grid grid-cols-3 ${rowIndex > 0 ? 'border-t border-slate-100' : ''}`}
+                        >
+                          {periodAmounts.slice(rowIndex * 3, rowIndex * 3 + 3).map((pa, colIndex) => {
+                            const actualIndex = rowIndex * 3 + colIndex;
+                            return (
+                              <FormField
+                                key={pa.period}
+                                control={form.control}
+                                name={`period_amounts.${actualIndex}.amount`}
+                                render={({ field }) => (
+                                  <FormItem className={`p-3 ${colIndex > 0 ? 'border-l border-slate-100' : ''}`}>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                                        {pa.shortLabel}
+                                      </span>
+                                    </div>
+                                    <FormControl>
+                                      <div className="relative flex items-center bg-white border border-slate-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 transition-all">
+                                        <span className="pl-3 pr-1 text-slate-400 text-sm font-medium select-none">$</span>
+                                        <Input
+                                          type="number"
+                                          step="0.01"
+                                          min="0"
+                                          placeholder="0.00"
+                                          className="h-10 pl-0 pr-3 text-right text-sm font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                          {...field}
+                                        />
+                                      </div>
+                                    </FormControl>
+                                  </FormItem>
+                                )}
+                              />
+                            );
+                          })}
+                        </div>
+                      ))}
+                      {/* Total row */}
+                      <div className="border-t-2 border-slate-200 bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-3 flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-600">Total Annual Budget</span>
+                        <span className="text-lg font-bold text-violet-700">
+                          ${periodAmountsTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        </span>
                       </div>
                     </div>
                   </div>
