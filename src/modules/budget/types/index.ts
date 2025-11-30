@@ -458,22 +458,28 @@ export const MONTHLY_PERIODS = [
 
 export const getPeriodLabel = (
   periodType: AllocationPeriodType,
-  periodNumber: number | null
+  periodNumber?: number | null
 ): string => {
-  if (periodType === "annual") return "Annual";
-  if (periodType === "quarterly" && periodNumber) {
-    return (
-      QUARTERLY_PERIODS.find((p) => p.value === periodNumber)?.label ||
-      `Q${periodNumber}`
-    );
+  if (periodType === "annual") return "Annual Budget";
+  if (periodType === "quarterly") {
+    if (periodNumber) {
+      return (
+        QUARTERLY_PERIODS.find((p) => p.value === periodNumber)?.label ||
+        `Q${periodNumber}`
+      );
+    }
+    return "Quarterly Budget";
   }
-  if (periodType === "monthly" && periodNumber) {
-    return (
-      MONTHLY_PERIODS.find((p) => p.value === periodNumber)?.label ||
-      `Month ${periodNumber}`
-    );
+  if (periodType === "monthly") {
+    if (periodNumber) {
+      return (
+        MONTHLY_PERIODS.find((p) => p.value === periodNumber)?.label ||
+        `Month ${periodNumber}`
+      );
+    }
+    return "Monthly Budget";
   }
-  return "Unknown";
+  return "Budget Allocation";
 };
 
 // Allocation Request Status Config

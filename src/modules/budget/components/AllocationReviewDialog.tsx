@@ -50,7 +50,9 @@ const approveFormSchema = z.object({
 });
 
 const denyFormSchema = z.object({
-  admin_notes: z.string().min(10, "Please provide a reason for denial (at least 10 characters)"),
+  admin_notes: z
+    .string()
+    .min(10, "Please provide a reason for denial (at least 10 characters)"),
 });
 
 type ApproveFormValues = z.infer<typeof approveFormSchema>;
@@ -124,7 +126,9 @@ export function AllocationReviewDialog({
         description:
           values.approved_amount === request.requested_amount
             ? "The allocation request has been approved in full."
-            : `The allocation request has been partially approved for $${values.approved_amount.toFixed(2)}.`,
+            : `The allocation request has been partially approved for $${values.approved_amount.toFixed(
+                2
+              )}.`,
       });
 
       onOpenChange(false);
@@ -132,7 +136,8 @@ export function AllocationReviewDialog({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to approve request",
+        description:
+          error instanceof Error ? error.message : "Failed to approve request",
         variant: "destructive",
       });
     } finally {
@@ -162,7 +167,8 @@ export function AllocationReviewDialog({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to deny request",
+        description:
+          error instanceof Error ? error.message : "Failed to deny request",
         variant: "destructive",
       });
     } finally {
@@ -205,13 +211,15 @@ export function AllocationReviewDialog({
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>
-              {request.fiscal_year?.name} - {getPeriodLabel(request.period_type, request.period_number)}
+              {request.fiscal_year?.name} -{" "}
+              {getPeriodLabel(request.period_type)}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <span className="font-bold text-lg">
-              ${Number(request.requested_amount).toLocaleString("en-US", {
+              $
+              {Number(request.requested_amount).toLocaleString("en-US", {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}
@@ -224,7 +232,10 @@ export function AllocationReviewDialog({
 
         {action === "approve" ? (
           <Form {...approveForm}>
-            <form onSubmit={approveForm.handleSubmit(handleApprove)} className="space-y-4">
+            <form
+              onSubmit={approveForm.handleSubmit(handleApprove)}
+              className="space-y-4"
+            >
               <FormField
                 control={approveForm.control}
                 name="approved_amount"
@@ -249,8 +260,8 @@ export function AllocationReviewDialog({
                       {field.value === request.requested_amount
                         ? "Full amount will be approved"
                         : field.value < request.requested_amount
-                          ? "Partial approval - less than requested"
-                          : "More than requested amount"}
+                        ? "Partial approval - less than requested"
+                        : "More than requested amount"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -285,7 +296,11 @@ export function AllocationReviewDialog({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700"
+                >
                   {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
@@ -298,7 +313,10 @@ export function AllocationReviewDialog({
           </Form>
         ) : (
           <Form {...denyForm}>
-            <form onSubmit={denyForm.handleSubmit(handleDeny)} className="space-y-4">
+            <form
+              onSubmit={denyForm.handleSubmit(handleDeny)}
+              className="space-y-4"
+            >
               <FormField
                 control={denyForm.control}
                 name="admin_notes"
@@ -330,7 +348,11 @@ export function AllocationReviewDialog({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting} variant="destructive">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  variant="destructive"
+                >
                   {isSubmitting ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (

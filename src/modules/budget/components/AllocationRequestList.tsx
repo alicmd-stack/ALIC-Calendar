@@ -27,7 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
 import {
   MoreHorizontal,
   Search,
@@ -52,7 +57,10 @@ import {
   useSubmitAllocationRequest,
   useCancelAllocationRequest,
 } from "../hooks";
-import type { AllocationRequestWithRelations, AllocationRequestStatus } from "../types";
+import type {
+  AllocationRequestWithRelations,
+  AllocationRequestStatus,
+} from "../types";
 import { ALLOCATION_REQUEST_STATUS_CONFIG, getPeriodLabel } from "../types";
 
 interface AllocationRequestListProps {
@@ -72,15 +80,20 @@ export function AllocationRequestList({
   const { user, profile } = useAuth();
 
   // State for dialogs
-  const [selectedRequest, setSelectedRequest] = useState<AllocationRequestWithRelations | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<AllocationRequestWithRelations | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
-  const [reviewAction, setReviewAction] = useState<"approve" | "deny">("approve");
+  const [reviewAction, setReviewAction] = useState<"approve" | "deny">(
+    "approve"
+  );
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<AllocationRequestStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    AllocationRequestStatus | "all"
+  >("all");
 
   // Mutations
   const deleteRequest = useDeleteAllocationRequest();
@@ -91,7 +104,9 @@ export function AllocationRequestList({
   const filteredRequests = requests.filter((request) => {
     const matchesSearch =
       request.justification.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.ministry?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      request.ministry?.name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
       request.requester_name.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
@@ -101,7 +116,8 @@ export function AllocationRequestList({
   });
 
   const handleDelete = async (request: AllocationRequestWithRelations) => {
-    if (!confirm("Are you sure you want to delete this allocation request?")) return;
+    if (!confirm("Are you sure you want to delete this allocation request?"))
+      return;
 
     try {
       await deleteRequest.mutateAsync(request.id);
@@ -113,7 +129,8 @@ export function AllocationRequestList({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete request",
+        description:
+          error instanceof Error ? error.message : "Failed to delete request",
         variant: "destructive",
       });
     }
@@ -136,7 +153,8 @@ export function AllocationRequestList({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit request",
+        description:
+          error instanceof Error ? error.message : "Failed to submit request",
         variant: "destructive",
       });
     }
@@ -144,7 +162,8 @@ export function AllocationRequestList({
 
   const handleCancel = async (request: AllocationRequestWithRelations) => {
     if (!user || !profile) return;
-    if (!confirm("Are you sure you want to cancel this allocation request?")) return;
+    if (!confirm("Are you sure you want to cancel this allocation request?"))
+      return;
 
     try {
       await cancelRequest.mutateAsync({
@@ -160,23 +179,27 @@ export function AllocationRequestList({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to cancel request",
+        description:
+          error instanceof Error ? error.message : "Failed to cancel request",
         variant: "destructive",
       });
     }
   };
 
   const canEdit = (request: AllocationRequestWithRelations) =>
-    request.status === "draft" && (request.requester_id === user?.id || isAdmin);
+    request.status === "draft" &&
+    (request.requester_id === user?.id || isAdmin);
 
   const canDelete = (request: AllocationRequestWithRelations) =>
-    request.status === "draft" && (request.requester_id === user?.id || isAdmin);
+    request.status === "draft" &&
+    (request.requester_id === user?.id || isAdmin);
 
   const canSubmit = (request: AllocationRequestWithRelations) =>
     request.status === "draft" && request.requester_id === user?.id;
 
   const canCancel = (request: AllocationRequestWithRelations) =>
-    request.status === "pending" && (request.requester_id === user?.id || isAdmin);
+    request.status === "pending" &&
+    (request.requester_id === user?.id || isAdmin);
 
   const canReview = (request: AllocationRequestWithRelations) =>
     request.status === "pending" && isAdmin;
@@ -214,18 +237,22 @@ export function AllocationRequestList({
             </div>
             <Select
               value={statusFilter}
-              onValueChange={(value) => setStatusFilter(value as AllocationRequestStatus | "all")}
+              onValueChange={(value) =>
+                setStatusFilter(value as AllocationRequestStatus | "all")
+              }
             >
               <SelectTrigger className="w-full md:w-[200px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                {Object.entries(ALLOCATION_REQUEST_STATUS_CONFIG).map(([status, config]) => (
-                  <SelectItem key={status} value={status}>
-                    {config.label}
-                  </SelectItem>
-                ))}
+                {Object.entries(ALLOCATION_REQUEST_STATUS_CONFIG).map(
+                  ([status, config]) => (
+                    <SelectItem key={status} value={status}>
+                      {config.label}
+                    </SelectItem>
+                  )
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -257,21 +284,31 @@ export function AllocationRequestList({
                         {request.ministry?.name || "-"}
                       </TableCell>
                       <TableCell>
-                        {getPeriodLabel(request.period_type, request.period_number)}
+                        {getPeriodLabel(request.period_type)}
                       </TableCell>
                       <TableCell className="font-medium">
-                        ${Number(request.requested_amount).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                        {request.approved_amount && request.approved_amount !== request.requested_amount && (
-                          <span className="block text-xs text-green-600">
-                            Approved: ${Number(request.approved_amount).toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}
-                          </span>
+                        $
+                        {Number(request.requested_amount).toLocaleString(
+                          "en-US",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
                         )}
+                        {request.approved_amount &&
+                          request.approved_amount !==
+                            request.requested_amount && (
+                            <span className="block text-xs text-green-600">
+                              Approved: $
+                              {Number(request.approved_amount).toLocaleString(
+                                "en-US",
+                                {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                }
+                              )}
+                            </span>
+                          )}
                       </TableCell>
                       <TableCell>{request.requester_name}</TableCell>
                       <TableCell>
@@ -311,7 +348,9 @@ export function AllocationRequestList({
                             )}
 
                             {canSubmit(request) && (
-                              <DropdownMenuItem onClick={() => handleSubmit(request)}>
+                              <DropdownMenuItem
+                                onClick={() => handleSubmit(request)}
+                              >
                                 <Send className="mr-2 h-4 w-4" />
                                 Submit for Review
                               </DropdownMenuItem>
