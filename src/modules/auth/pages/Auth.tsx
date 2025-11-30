@@ -196,14 +196,10 @@ const Auth = () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold mb-4">{CHURCH_BRANDING.name}</h1>
-          <h2 className="text-2xl font-semibold mb-4">
+          <h2 className="text-2xl font-semibold mb-8">
             {CHURCH_BRANDING.app.title}
           </h2>
-          <p className="text-xl opacity-90 mb-8">
-            {CHURCH_BRANDING.tagline}, bringing our community together in
-            worship and service
-          </p>
-          <div className="flex justify-center space-x-8 text-sm">
+          <div className="flex flex-wrap justify-center gap-4 text-sm">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5" />
               <span>Event Scheduling</span>
@@ -214,7 +210,11 @@ const Auth = () => {
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-5 w-5" />
-              <span>Team Collaboration</span>
+              <span>User Management</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="h-5 w-5" />
+              <span>Budget Management</span>
             </div>
           </div>
         </div>
