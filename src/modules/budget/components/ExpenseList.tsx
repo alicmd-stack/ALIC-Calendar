@@ -44,6 +44,7 @@ import {
 import { format } from "date-fns";
 import { ExpenseStatusBadge } from "./ExpenseStatusBadge";
 import { ExpenseRequestForm } from "./ExpenseRequestForm";
+import { ExpenseDetailDialog } from "./ExpenseDetailDialog";
 import {
   LeaderApproveDialog,
   LeaderDenyDialog,
@@ -75,6 +76,7 @@ export function ExpenseList({
 
   // State for dialogs
   const [selectedExpense, setSelectedExpense] = useState<ExpenseRequestWithRelations | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLeaderApproveOpen, setIsLeaderApproveOpen] = useState(false);
   const [isLeaderDenyOpen, setIsLeaderDenyOpen] = useState(false);
@@ -260,7 +262,12 @@ export function ExpenseList({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedExpense(expense);
+                                setIsDetailDialogOpen(true);
+                              }}
+                            >
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
@@ -375,6 +382,13 @@ export function ExpenseList({
           )}
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <ExpenseDetailDialog
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        expense={selectedExpense}
+      />
 
       {/* Edit Dialog */}
       {selectedExpense && (
