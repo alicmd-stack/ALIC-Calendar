@@ -12,6 +12,267 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  // Budget schema for financial management
+  budget: {
+    Tables: {
+      ministries: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          description: string | null
+          leader_id: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          description?: string | null
+          leader_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          name?: string
+          description?: string | null
+          leader_id?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fiscal_years: {
+        Row: {
+          id: string
+          organization_id: string
+          name: string
+          year: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          name: string
+          year: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          name?: string
+          year?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      budget_allocations: {
+        Row: {
+          id: string
+          organization_id: string
+          fiscal_year_id: string
+          ministry_id: string
+          allocated_amount: number
+          notes: string | null
+          approved_by: string | null
+          approved_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          fiscal_year_id: string
+          ministry_id: string
+          allocated_amount?: number
+          notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          fiscal_year_id?: string
+          ministry_id?: string
+          allocated_amount?: number
+          notes?: string | null
+          approved_by?: string | null
+          approved_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expense_requests: {
+        Row: {
+          id: string
+          organization_id: string
+          fiscal_year_id: string
+          ministry_id: string
+          title: string
+          description: string | null
+          amount: number
+          reimbursement_type: Database["budget"]["Enums"]["reimbursement_type"]
+          requester_id: string
+          requester_name: string
+          requester_phone: string | null
+          requester_email: string | null
+          status: Database["budget"]["Enums"]["expense_status"]
+          leader_reviewer_id: string | null
+          leader_reviewed_at: string | null
+          leader_notes: string | null
+          treasury_reviewer_id: string | null
+          treasury_reviewed_at: string | null
+          treasury_notes: string | null
+          finance_processor_id: string | null
+          finance_processed_at: string | null
+          finance_notes: string | null
+          payment_reference: string | null
+          attachments: Record<string, unknown>[]
+          submitted_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          fiscal_year_id: string
+          ministry_id: string
+          title: string
+          description?: string | null
+          amount: number
+          reimbursement_type?: Database["budget"]["Enums"]["reimbursement_type"]
+          requester_id: string
+          requester_name: string
+          requester_phone?: string | null
+          requester_email?: string | null
+          status?: Database["budget"]["Enums"]["expense_status"]
+          leader_reviewer_id?: string | null
+          leader_reviewed_at?: string | null
+          leader_notes?: string | null
+          treasury_reviewer_id?: string | null
+          treasury_reviewed_at?: string | null
+          treasury_notes?: string | null
+          finance_processor_id?: string | null
+          finance_processed_at?: string | null
+          finance_notes?: string | null
+          payment_reference?: string | null
+          attachments?: Record<string, unknown>[]
+          submitted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          fiscal_year_id?: string
+          ministry_id?: string
+          title?: string
+          description?: string | null
+          amount?: number
+          reimbursement_type?: Database["budget"]["Enums"]["reimbursement_type"]
+          requester_id?: string
+          requester_name?: string
+          requester_phone?: string | null
+          requester_email?: string | null
+          status?: Database["budget"]["Enums"]["expense_status"]
+          leader_reviewer_id?: string | null
+          leader_reviewed_at?: string | null
+          leader_notes?: string | null
+          treasury_reviewer_id?: string | null
+          treasury_reviewed_at?: string | null
+          treasury_notes?: string | null
+          finance_processor_id?: string | null
+          finance_processed_at?: string | null
+          finance_notes?: string | null
+          payment_reference?: string | null
+          attachments?: Record<string, unknown>[]
+          submitted_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      expense_history: {
+        Row: {
+          id: string
+          expense_request_id: string
+          action: string
+          previous_status: Database["budget"]["Enums"]["expense_status"] | null
+          new_status: Database["budget"]["Enums"]["expense_status"]
+          actor_id: string
+          actor_name: string
+          notes: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          expense_request_id: string
+          action: string
+          previous_status?: Database["budget"]["Enums"]["expense_status"] | null
+          new_status: Database["budget"]["Enums"]["expense_status"]
+          actor_id: string
+          actor_name: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          expense_request_id?: string
+          action?: string
+          previous_status?: Database["budget"]["Enums"]["expense_status"] | null
+          new_status?: Database["budget"]["Enums"]["expense_status"]
+          actor_id?: string
+          actor_name?: string
+          notes?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      expense_status:
+        | "draft"
+        | "pending_leader"
+        | "leader_approved"
+        | "leader_denied"
+        | "pending_treasury"
+        | "treasury_approved"
+        | "treasury_denied"
+        | "pending_finance"
+        | "completed"
+        | "cancelled"
+      reimbursement_type:
+        | "cash"
+        | "check"
+        | "bank_transfer"
+        | "zelle"
+        | "other"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       organizations: {
@@ -314,7 +575,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "contributor"
+      app_role: "admin" | "contributor" | "treasury" | "finance"
       event_status:
         | "draft"
         | "pending_review"
@@ -448,13 +709,36 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "contributor"],
+      app_role: ["admin", "contributor", "treasury", "finance"],
       event_status: [
         "draft",
         "pending_review",
         "approved",
         "rejected",
         "published",
+      ],
+    },
+  },
+  budget: {
+    Enums: {
+      expense_status: [
+        "draft",
+        "pending_leader",
+        "leader_approved",
+        "leader_denied",
+        "pending_treasury",
+        "treasury_approved",
+        "treasury_denied",
+        "pending_finance",
+        "completed",
+        "cancelled",
+      ],
+      reimbursement_type: [
+        "cash",
+        "check",
+        "bank_transfer",
+        "zelle",
+        "other",
       ],
     },
   },

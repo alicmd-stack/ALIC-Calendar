@@ -10,7 +10,8 @@
       "Bash(npx tsc:*)",
       "Bash(supabase db push:*)",
       "Bash(lsof:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(timeout 60 npx tsc:*)"
     ],
     "deny": [],
     "ask": []

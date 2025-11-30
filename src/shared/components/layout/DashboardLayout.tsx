@@ -100,6 +100,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ]
     : [];
 
+  // Budget module (now available)
+  const budgetNavigation: NavItem[] = [
+    {
+      name: "Budget",
+      href: "/budget",
+      icon: DollarSign,
+      description: isAdmin ? "Financial management" : "My expenses",
+      comingSoon: false,
+      module: "budget",
+    },
+  ];
+
   // Future modules (accessible to both admins and contributors)
   const futureNavigation: NavItem[] = [
     {
@@ -109,14 +121,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       description: isAdmin ? "Asset tracking" : "My requests",
       comingSoon: true,
       module: "inventory",
-    },
-    {
-      name: "Budget",
-      href: "/budget",
-      icon: DollarSign,
-      description: isAdmin ? "Financial management" : "My requests",
-      comingSoon: true,
-      module: "budget",
     },
   ];
 
@@ -134,7 +138,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ]
     : [];
 
-  const allNavigation = [...mainNavigation, ...contributorNavigation, ...adminNavigation, ...futureNavigation, ...adminFutureNavigation];
+  const allNavigation = [...mainNavigation, ...contributorNavigation, ...adminNavigation, ...budgetNavigation, ...futureNavigation, ...adminFutureNavigation];
 
   // Get user initials for avatar
   const getUserInitials = (name?: string) => {
@@ -256,8 +260,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               {adminNavigation.map(renderNavItem)}
             </div>
 
+            {/* Financial Section */}
+            <div className="space-y-2">
+              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Financial
+              </div>
+              {budgetNavigation.map(renderNavItem)}
+            </div>
+
             {/* Future Modules Section */}
-            {futureNavigation.length > 0 && (
+            {(futureNavigation.length > 0 || adminFutureNavigation.length > 0) && (
               <div className="space-y-2">
                 <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Coming Soon

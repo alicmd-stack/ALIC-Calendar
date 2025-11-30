@@ -7,6 +7,8 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isTreasury: boolean;
+  isFinance: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
@@ -19,6 +21,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTreasury, setIsTreasury] = useState(false);
+  const [isFinance, setIsFinance] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -32,10 +36,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (currentSession?.user) {
         setTimeout(() => {
-          checkAdminStatus(currentSession.user.id);
+          checkRoleStatus(currentSession.user.id);
         }, 0);
       } else {
         setIsAdmin(false);
+        setIsTreasury(false);
+        setIsFinance(false);
       }
     });
 
@@ -45,7 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(currentSession?.user ?? null);
 
       if (currentSession?.user) {
-        checkAdminStatus(currentSession.user.id);
+        checkRoleStatus(currentSession.user.id);
       } else {
         setLoading(false);
       }
@@ -54,19 +60,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAdminStatus = async (userId: string) => {
+  const checkRoleStatus = async (userId: string) => {
     try {
+      // Check all roles for the user
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", userId)
-        .eq("role", "admin")
-        .maybeSingle();
+        .eq("user_id", userId);
 
-      setIsAdmin(!!data && !error);
+      if (error) {
+        console.error("Error checking role status:", error);
+        setIsAdmin(false);
+        setIsTreasury(false);
+        setIsFinance(false);
+        return;
+      }
+
+      const roles = data?.map((r) => r.role) || [];
+      setIsAdmin(roles.includes("admin"));
+      setIsTreasury(roles.includes("treasury"));
+      setIsFinance(roles.includes("finance"));
     } catch (error) {
-      console.error("Error checking admin status:", error);
+      console.error("Error checking role status:", error);
       setIsAdmin(false);
+      setIsTreasury(false);
+      setIsFinance(false);
     } finally {
       setLoading(false);
     }
@@ -77,6 +95,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setSession(null);
     setIsAdmin(false);
+    setIsTreasury(false);
+    setIsFinance(false);
     navigate("/auth");
   };
 
@@ -115,6 +135,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         session,
         isAdmin,
+        isTreasury,
+        isFinance,
         loading,
         signOut,
         requestPasswordReset,
