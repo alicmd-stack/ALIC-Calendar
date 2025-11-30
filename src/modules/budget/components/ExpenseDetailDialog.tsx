@@ -52,7 +52,9 @@ export function ExpenseDetailDialog({
   onOpenChange,
   expense,
 }: ExpenseDetailDialogProps) {
-  const [attachmentsWithUrls, setAttachmentsWithUrls] = useState<AttachmentWithSignedUrl[]>([]);
+  const [attachmentsWithUrls, setAttachmentsWithUrls] = useState<
+    AttachmentWithSignedUrl[]
+  >([]);
   const [loadingUrls, setLoadingUrls] = useState(false);
 
   // Generate signed URLs when dialog opens
@@ -94,7 +96,10 @@ export function ExpenseDetailDialog({
             console.error("Error creating signed URL:", error);
             updatedAttachments.push({ ...attachment, urlError: true });
           } else {
-            updatedAttachments.push({ ...attachment, signedUrl: data.signedUrl });
+            updatedAttachments.push({
+              ...attachment,
+              signedUrl: data.signedUrl,
+            });
           }
         } catch (error) {
           console.error("Error generating signed URL:", error);
@@ -149,9 +154,12 @@ export function ExpenseDetailDialog({
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground mb-1">Expense Amount</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Expense Amount
+                  </p>
                   <p className="text-3xl font-bold text-primary">
-                    ${Number(expense.amount).toLocaleString("en-US", {
+                    $
+                    {Number(expense.amount).toLocaleString("en-US", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -169,9 +177,13 @@ export function ExpenseDetailDialog({
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-2">{expense.title}</h3>
+                  <h3 className="font-semibold text-lg mb-2">
+                    {expense.title}
+                  </h3>
                   {expense.description && (
-                    <p className="text-muted-foreground leading-relaxed">{expense.description}</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {expense.description}
+                    </p>
                   )}
                 </div>
               </div>
@@ -189,8 +201,12 @@ export function ExpenseDetailDialog({
                     <Building2 className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Ministry</p>
-                    <p className="font-semibold text-foreground mt-1">{expense.ministry?.name || "-"}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Ministry
+                    </p>
+                    <p className="font-semibold text-foreground mt-1">
+                      {expense.ministry?.name || "-"}
+                    </p>
                   </div>
                 </div>
 
@@ -199,8 +215,12 @@ export function ExpenseDetailDialog({
                     <Calendar className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fiscal Year</p>
-                    <p className="font-semibold text-foreground mt-1">{expense.fiscal_year?.name || "-"}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Fiscal Year
+                    </p>
+                    <p className="font-semibold text-foreground mt-1">
+                      {expense.fiscal_year?.name || "-"}
+                    </p>
                   </div>
                 </div>
 
@@ -209,10 +229,16 @@ export function ExpenseDetailDialog({
                     <User className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Requester</p>
-                    <p className="font-semibold text-foreground mt-1">{expense.requester_name}</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Requester
+                    </p>
+                    <p className="font-semibold text-foreground mt-1">
+                      {expense.requester_name}
+                    </p>
                     {expense.requester_email && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{expense.requester_email}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {expense.requester_email}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -222,7 +248,9 @@ export function ExpenseDetailDialog({
                     <CreditCard className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment Method</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Payment Method
+                    </p>
                     <p className="font-semibold text-foreground mt-1">
                       {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
                     </p>
@@ -234,7 +262,9 @@ export function ExpenseDetailDialog({
                     <Clock className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Submitted</p>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Submitted
+                    </p>
                     <p className="font-semibold text-foreground mt-1">
                       {format(new Date(expense.created_at), "MMM d, yyyy")}
                     </p>
@@ -250,8 +280,12 @@ export function ExpenseDetailDialog({
                       <Receipt className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Payment Reference</p>
-                      <p className="font-semibold text-foreground mt-1">{expense.payment_reference}</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Payment Reference
+                      </p>
+                      <p className="font-semibold text-foreground mt-1">
+                        {expense.payment_reference}
+                      </p>
                     </div>
                   </div>
                 )}
@@ -260,7 +294,9 @@ export function ExpenseDetailDialog({
           </Card>
 
           {/* Workflow Notes - Enhanced */}
-          {(expense.leader_notes || expense.treasury_notes || expense.finance_notes) && (
+          {(expense.leader_notes ||
+            expense.treasury_notes ||
+            expense.finance_notes) && (
             <>
               <Separator />
               <div className="space-y-3">
@@ -274,11 +310,16 @@ export function ExpenseDetailDialog({
                     <Card className="border-blue-200 bg-blue-50/50">
                       <CardContent className="pt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-100 text-blue-700 border-blue-300"
+                          >
                             Leader Review
                           </Badge>
                         </div>
-                        <p className="text-foreground leading-relaxed">{expense.leader_notes}</p>
+                        <p className="text-foreground leading-relaxed">
+                          {expense.leader_notes}
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -287,11 +328,16 @@ export function ExpenseDetailDialog({
                     <Card className="border-purple-200 bg-purple-50/50">
                       <CardContent className="pt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="bg-purple-100 text-purple-700 border-purple-300">
+                          <Badge
+                            variant="outline"
+                            className="bg-purple-100 text-purple-700 border-purple-300"
+                          >
                             Treasury Review
                           </Badge>
                         </div>
-                        <p className="text-foreground leading-relaxed">{expense.treasury_notes}</p>
+                        <p className="text-foreground leading-relaxed">
+                          {expense.treasury_notes}
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -300,11 +346,16 @@ export function ExpenseDetailDialog({
                     <Card className="border-green-200 bg-green-50/50">
                       <CardContent className="pt-4">
                         <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                          <Badge
+                            variant="outline"
+                            className="bg-green-100 text-green-700 border-green-300"
+                          >
                             Finance Processing
                           </Badge>
                         </div>
-                        <p className="text-foreground leading-relaxed">{expense.finance_notes}</p>
+                        <p className="text-foreground leading-relaxed">
+                          {expense.finance_notes}
+                        </p>
                       </CardContent>
                     </Card>
                   )}
@@ -324,7 +375,8 @@ export function ExpenseDetailDialog({
                     Attachments
                   </h4>
                   <Badge variant="secondary" className="font-semibold">
-                    {rawAttachments.length} {rawAttachments.length === 1 ? 'file' : 'files'}
+                    {rawAttachments.length}{" "}
+                    {rawAttachments.length === 1 ? "file" : "files"}
                   </Badge>
                 </div>
 
@@ -333,25 +385,29 @@ export function ExpenseDetailDialog({
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                        <span className="ml-3 text-sm text-muted-foreground">Loading attachments...</span>
+                        <span className="ml-3 text-sm text-muted-foreground">
+                          Loading attachments...
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
                 ) : (
                   <div className="space-y-3">
                     {attachmentsWithUrls.map((attachment) => (
-                      <Card 
-                        key={attachment.id} 
+                      <Card
+                        key={attachment.id}
                         className="hover:shadow-md transition-shadow"
                       >
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4 min-w-0 flex-1">
-                              <div className={`p-3 rounded-lg flex-shrink-0 ${
-                                isImageFile(attachment.type) 
-                                  ? 'bg-blue-100' 
-                                  : 'bg-orange-100'
-                              }`}>
+                              <div
+                                className={`p-3 rounded-lg flex-shrink-0 ${
+                                  isImageFile(attachment.type)
+                                    ? "bg-blue-100"
+                                    : "bg-orange-100"
+                                }`}
+                              >
                                 {isImageFile(attachment.type) ? (
                                   <ImageIcon className="h-6 w-6 text-blue-600" />
                                 ) : (
@@ -367,7 +423,10 @@ export function ExpenseDetailDialog({
                                     {formatFileSize(attachment.size)}
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(attachment.uploaded_at), "MMM d, yyyy")}
+                                    {format(
+                                      new Date(attachment.uploaded_at),
+                                      "MMM d, yyyy"
+                                    )}
                                   </span>
                                 </div>
                               </div>
@@ -383,7 +442,12 @@ export function ExpenseDetailDialog({
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => window.open(attachment.signedUrl, "_blank")}
+                                    onClick={() =>
+                                      window.open(
+                                        attachment.signedUrl,
+                                        "_blank"
+                                      )
+                                    }
                                     className="h-9 w-9 p-0"
                                   >
                                     <ExternalLink className="h-4 w-4" />
@@ -394,7 +458,10 @@ export function ExpenseDetailDialog({
                                     className="h-9 w-9 p-0"
                                     asChild
                                   >
-                                    <a href={attachment.signedUrl} download={attachment.name}>
+                                    <a
+                                      href={attachment.signedUrl}
+                                      download={attachment.name}
+                                    >
                                       <Download className="h-4 w-4" />
                                     </a>
                                   </Button>
