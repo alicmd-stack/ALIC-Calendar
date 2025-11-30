@@ -17,7 +17,6 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -33,7 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { Loader2, DollarSign, Send, Save, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react";
+import { Loader2, Send, Save, Paperclip, X, FileText, Image as ImageIcon, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { AttachmentData } from "../types";
 import { useToast } from "@/shared/hooks/use-toast";
@@ -356,140 +355,135 @@ export function ExpenseRequestForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            {isEditing ? "Edit Expense Request" : "New Expense Request"}
+      <DialogContent className="sm:max-w-[580px] max-h-[90vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-white">
+          <DialogTitle className="text-xl font-semibold">
+            {isEditing ? "Edit Expense Request" : "Expense Request"}
           </DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Update your expense request details."
-              : "Fill out the form to submit a new expense request."}
-            <span className="block mt-1 text-xs">
-              {activeFiscalYear && <>Fiscal Year: {activeFiscalYear.name}</>}
-              {activeFiscalYear && userMinistry && <> • </>}
-              {userMinistry && <>Ministry: {userMinistry.name}</>}
-            </span>
-          </DialogDescription>
-        </DialogHeader>
+          <div className="flex items-center gap-2 mt-2 text-emerald-100 text-sm">
+            <Calendar className="h-4 w-4" />
+            <span>{activeFiscalYear?.name}</span>
+            <span className="opacity-50">•</span>
+            <span>{userMinistry?.name || "No Ministry"}</span>
+          </div>
+        </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : !userMinistry ? (
-          <div className="py-8 text-center">
-            <p className="text-muted-foreground">
-              You are not assigned to a ministry. Please contact an administrator to be assigned to a ministry before submitting expense requests.
-            </p>
-            <Button className="mt-4" onClick={() => onOpenChange(false)}>
-              Close
-            </Button>
+          <div className="p-6 text-center">
+            <p className="text-muted-foreground">You are not assigned to a ministry.</p>
+            <Button className="mt-4" onClick={() => onOpenChange(false)}>Close</Button>
           </div>
         ) : (
           <Form {...form}>
-            <form className="space-y-4">
+            <form className="p-6 space-y-5">
+              {/* Title */}
               <FormField
                 control={form.control}
                 name="title"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Title / Purpose *</FormLabel>
+                    <FormLabel className="text-sm font-medium text-slate-700">Title / Purpose</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Youth Ministry Supplies" {...field} />
+                      <Input
+                        placeholder="e.g., Youth Ministry Supplies"
+                        className="h-11 border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Amount Section */}
+              <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl p-5 border border-slate-200/60">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-600">Amount (USD)</FormLabel>
+                        <FormControl>
+                          <div className="relative flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/20 focus-within:border-emerald-400 transition-all">
+                            <span className="pl-4 pr-1 text-slate-400 text-lg font-medium select-none">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0.00"
+                              className="h-12 pl-1 pr-4 text-right text-xl font-semibold border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              {...field}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="reimbursement_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-slate-600">Payment Method</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="h-12 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
+                              <SelectValue placeholder="Select method" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(
+                              Object.entries(REIMBURSEMENT_TYPE_LABELS) as [
+                                ReimbursementType,
+                                string,
+                              ][]
+                            ).map(([value, label]) => (
+                              <SelectItem key={value} value={value}>
+                                {label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Description */}
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel className="text-sm font-medium text-slate-700">Description</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Provide details about the expense..."
-                        className="resize-none"
-                        rows={3}
+                        placeholder="Explain what this expense is for and why it's needed..."
+                        className="resize-none min-h-[80px] border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Describe what the expense is for and why it's needed.
-                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Amount (USD) *</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                            $
-                          </span>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            className="pl-7"
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="reimbursement_type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Reimbursement Method *</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select method" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(
-                            Object.entries(REIMBURSEMENT_TYPE_LABELS) as [
-                              ReimbursementType,
-                              string,
-                            ][]
-                          ).map(([value, label]) => (
-                            <SelectItem key={value} value={value}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               {/* Attachments Section */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <FormLabel>Attachments</FormLabel>
-                  <span className="text-xs text-muted-foreground">
-                    Max 10MB per file. Supports images, PDFs, Word, Excel.
+                  <span className="text-sm font-medium text-slate-700">Attachments</span>
+                  <span className="text-xs text-slate-400">
+                    Max 10MB per file
                   </span>
                 </div>
 
@@ -507,7 +501,7 @@ export function ExpenseRequestForm({
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border-dashed !bg-blue-50 hover:!bg-blue-100 border-blue-200 text-blue-700 transition-colors"
+                  className="w-full h-11 border-dashed border-2 bg-emerald-50/50 hover:bg-emerald-50 border-emerald-200 text-emerald-700 hover:text-emerald-800 hover:border-emerald-300 transition-all rounded-xl"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
                 >
@@ -516,28 +510,30 @@ export function ExpenseRequestForm({
                   ) : (
                     <Paperclip className="mr-2 h-4 w-4" />
                   )}
-                  {isUploading ? "Uploading..." : "Add Attachments"}
+                  {isUploading ? "Uploading..." : "Add Receipts or Documents"}
                 </Button>
 
                 {/* Attachment list */}
                 {attachments.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="space-y-2 bg-slate-50 rounded-xl p-3">
                     {attachments.map((attachment) => (
                       <div
                         key={attachment.id}
-                        className="flex items-center justify-between p-2 bg-muted rounded-md"
+                        className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200 shadow-sm"
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          {isImageFile(attachment.type) ? (
-                            <ImageIcon className="h-4 w-4 text-blue-500 flex-shrink-0" />
-                          ) : (
-                            <FileText className="h-4 w-4 text-orange-500 flex-shrink-0" />
-                          )}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-2 rounded-lg ${isImageFile(attachment.type) ? 'bg-blue-50' : 'bg-orange-50'}`}>
+                            {isImageFile(attachment.type) ? (
+                              <ImageIcon className="h-4 w-4 text-blue-500" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-orange-500" />
+                            )}
+                          </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
+                            <p className="text-sm font-medium text-slate-700 truncate">
                               {attachment.name}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-slate-400">
                               {formatFileSize(attachment.size)}
                             </p>
                           </div>
@@ -547,7 +543,7 @@ export function ExpenseRequestForm({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveAttachment(attachment)}
-                          className="flex-shrink-0"
+                          className="h-8 w-8 p-0 text-slate-400 hover:text-red-500 hover:bg-red-50"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -557,10 +553,12 @@ export function ExpenseRequestForm({
                 )}
               </div>
 
-              <DialogFooter className="flex-col sm:flex-row gap-2 pt-4">
+              {/* Actions */}
+              <div className="flex items-center gap-3 pt-4">
                 <Button
                   type="button"
                   variant="outline"
+                  className="flex-1"
                   onClick={() => onOpenChange(false)}
                   disabled={isSubmitting}
                 >
@@ -569,29 +567,23 @@ export function ExpenseRequestForm({
                 <Button
                   type="button"
                   variant="secondary"
+                  className="flex-1"
                   onClick={form.handleSubmit((values) => handleSave(values, false))}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Save as Draft
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                  Save Draft
                 </Button>
                 <Button
                   type="button"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
                   onClick={form.handleSubmit((values) => handleSave(values, true))}
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
-                  Submit for Review
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                  Submit
                 </Button>
-              </DialogFooter>
+              </div>
             </form>
           </Form>
         )}
