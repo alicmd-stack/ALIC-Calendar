@@ -425,11 +425,7 @@ export const EnhancedReportExport = ({
           bodyStyles: {
             fontSize: 10,
           },
-          columnStyles: {
-            0: { cellWidth: 80 },
-            1: { cellWidth: 40, halign: "center" },
-            2: { cellWidth: 60, halign: "right" },
-          },
+          tableWidth: "auto",
           margin: { left: margin, right: margin },
           didParseCell: (data) => {
             // Style the TOTAL row
@@ -488,11 +484,7 @@ export const EnhancedReportExport = ({
           bodyStyles: {
             fontSize: 10,
           },
-          columnStyles: {
-            0: { cellWidth: 80 },
-            1: { cellWidth: 40, halign: "center" },
-            2: { cellWidth: 60, halign: "right" },
-          },
+          tableWidth: "auto",
           margin: { left: margin, right: margin },
           didParseCell: (data) => {
             // Style the TOTAL row
@@ -540,10 +532,7 @@ export const EnhancedReportExport = ({
           bodyStyles: {
             fontSize: 10,
           },
-          columnStyles: {
-            0: { cellWidth: 100 },
-            1: { cellWidth: 80, halign: "right" },
-          },
+          tableWidth: "auto",
           margin: { left: margin, right: margin },
         });
 
@@ -599,9 +588,6 @@ export const EnhancedReportExport = ({
               textColor: [255, 255, 255],
               fontStyle: "bold",
             },
-            columnStyles: {
-              3: { halign: "right" }, // Amount
-            },
             tableWidth: "auto",
             margin: { left: margin, right: margin },
           });
@@ -652,10 +638,6 @@ export const EnhancedReportExport = ({
               fillColor: [139, 92, 246],
               textColor: [255, 255, 255],
               fontStyle: "bold",
-            },
-            columnStyles: {
-              2: { halign: "right" }, // Requested
-              3: { halign: "right" }, // Approved
             },
             tableWidth: "auto",
             margin: { left: margin, right: margin },
