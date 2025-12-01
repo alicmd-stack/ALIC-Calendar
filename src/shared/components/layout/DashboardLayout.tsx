@@ -50,10 +50,19 @@ interface NavItem {
   module: string;
 }
 
+const INVENTORY_APP_URL = window.location.origin;
+// import.meta.env.VITE_INVENTORY_APP_URL || "http://localhost:3000";
+
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
   const { currentOrganization } = useOrganization();
-  const { searchQuery, setSearchQuery, isSearchOpen, setIsSearchOpen, clearSearch } = useSearch();
+  const {
+    searchQuery,
+    setSearchQuery,
+    isSearchOpen,
+    setIsSearchOpen,
+    clearSearch,
+  } = useSearch();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +86,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       icon: Settings,
       description: isAdmin ? "Approve events" : "View my requests",
       module: "admin",
+    },
+    {
+      name: "Inventory",
+      href: "/inventory",
+      icon: Package,
+      description: "",
+      module: "inventory",
     },
   ];
 
@@ -103,14 +119,6 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   // Future modules (accessible to both admins and contributors)
   const futureNavigation: NavItem[] = [
     {
-      name: "Inventory",
-      href: "/inventory",
-      icon: Package,
-      description: isAdmin ? "Asset tracking" : "My requests",
-      comingSoon: true,
-      module: "inventory",
-    },
-    {
       name: "Budget",
       href: "/budget",
       icon: DollarSign,
@@ -134,7 +142,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ]
     : [];
 
-  const allNavigation = [...mainNavigation, ...contributorNavigation, ...adminNavigation, ...futureNavigation, ...adminFutureNavigation];
+  const allNavigation = [
+    ...mainNavigation,
+    ...contributorNavigation,
+    ...adminNavigation,
+    ...futureNavigation,
+    ...adminFutureNavigation,
+  ];
 
   // Get user initials for avatar
   const getUserInitials = (name?: string) => {
@@ -149,7 +163,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Get page title based on current route
   const getPageTitle = () => {
-    const currentNav = allNavigation.find((nav) => nav.href === location.pathname);
+    const currentNav = allNavigation.find(
+      (nav) => nav.href === location.pathname
+    );
     return currentNav?.name || "Church Management";
   };
 
@@ -170,6 +186,34 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.href;
+
+    // Special handling for Inventory: redirect to external Inventory app
+    if (item.module === "inventory") {
+      return (
+        <button
+          key={item.name}
+          type="button"
+          onClick={() => {
+            window.location.href = `${INVENTORY_APP_URL}/inventory`;
+          }}
+          className={cn(
+            "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-all group text-muted-foreground hover:text-foreground hover:bg-secondary"
+          )}
+        >
+          <Icon className="h-5 w-5" />
+          <div className="flex-1">
+            <div className="font-medium text-sm flex items-center gap-2">
+              {item.name}
+            </div>
+            {item.description && (
+              <div className="text-xs text-muted-foreground">
+                {item.description}
+              </div>
+            )}
+          </div>
+        </button>
+      );
+    }
 
     return (
       <Link
@@ -193,14 +237,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </Badge>
             )}
           </div>
-          <div
-            className={cn(
-              "text-xs",
-              isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-            )}
-          >
-            {item.description}
-          </div>
+          {item.description && (
+            <div
+              className={cn(
+                "text-xs",
+                isActive
+                  ? "text-primary-foreground/80"
+                  : "text-muted-foreground"
+              )}
+            >
+              {item.description}
+            </div>
+          )}
         </div>
         {isActive && <ChevronRight className="h-4 w-4" />}
       </Link>
@@ -235,7 +283,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <h1 className="font-bold text-lg truncate max-w-[180px]">
                   {currentOrganization?.name || "Church CMS"}
                 </h1>
-                <p className="text-xs text-muted-foreground">Management System</p>
+                <p className="text-xs text-muted-foreground">
+                  Management System
+                </p>
               </div>
             </Link>
           </div>
@@ -243,9 +293,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
             {/* Main Navigation */}
-            <div className="space-y-2">
-              {mainNavigation.map(renderNavItem)}
-            </div>
+            <div className="space-y-2">{mainNavigation.map(renderNavItem)}</div>
 
             {/* Administration Section - includes contributor items + admin-only items */}
             <div className="space-y-2">
@@ -272,7 +320,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="p-4 border-t">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="w-full justify-start p-3 h-auto">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start p-3 h-auto"
+                >
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs">
                       {getUserInitials(user?.email)}
@@ -298,7 +349,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   Preferences
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} className="text-destructive">
+                <DropdownMenuItem
+                  onClick={signOut}
+                  className="text-destructive"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sign Out
                 </DropdownMenuItem>
@@ -378,7 +432,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </Popover>
               <Button variant="ghost" size="sm" className="relative">
                 <Bell className="h-4 w-4" />
-                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">3</Badge>
+                <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs">
+                  3
+                </Badge>
               </Button>
               <div className="h-6 w-px bg-border" />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
