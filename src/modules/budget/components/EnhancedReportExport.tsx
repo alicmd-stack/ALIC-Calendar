@@ -270,120 +270,108 @@ export const EnhancedReportExport = ({
       const stats = calculateStats();
       const chartData = prepareChartData();
 
+      // Modern gradient header background
+      doc.setFillColor(30, 64, 175); // Blue-800
+      doc.rect(0, 0, pageWidth, 45, "F");
+
+      // Subtle accent stripe
+      doc.setFillColor(59, 130, 246); // Blue-500
+      doc.rect(0, 42, pageWidth, 3, "F");
+
       // Add church logo
       try {
         const logoImg = await loadImage("/church-logo.png");
-        doc.addImage(logoImg, "PNG", margin, 10, 25, 25);
+        doc.addImage(logoImg, "PNG", margin, 8, 28, 28);
       } catch (error) {
-        console.log("Logo not loaded, continuing without it");
+        // Add placeholder icon if no logo
+        doc.setFillColor(255, 255, 255);
+        doc.circle(margin + 14, 22, 12, "F");
+        doc.setFontSize(16);
+        doc.setTextColor(30, 64, 175);
+        doc.text("$", margin + 11, 26);
       }
 
-      // Header
-      doc.setFontSize(24);
+      // Header text
+      doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 58, 138); // Blue-900
-      doc.text(`${ministryName} Budget Report`, 45, 20);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`${ministryName} Budget Report`, 50, 18);
 
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(100, 100, 100);
-      doc.text(`${organizationName}`, 45, 28);
-      doc.text(`Submitted by: ${userName}`, 45, 35);
-      if (fiscalYearName) {
-        doc.text(`Fiscal Year: ${fiscalYearName}`, 45, 42);
-      }
+      doc.setTextColor(191, 219, 254); // Blue-200
+      doc.text(`${organizationName}  •  ${userName}  •  ${fiscalYearName || "All Periods"}`, 50, 28);
       doc.text(
         `Generated: ${new Date().toLocaleDateString("en-US", {
+          weekday: "long",
           year: "numeric",
           month: "long",
           day: "numeric",
         })}`,
-        45,
-        fiscalYearName ? 49 : 42
+        50,
+        36
       );
 
-      currentY = fiscalYearName ? 60 : 53;
+      currentY = 55;
 
-      // Executive Summary Section
-      doc.setFillColor(239, 246, 255); // Blue-50
-      doc.rect(margin, currentY, pageWidth - 2 * margin, 50, "F");
+      // Executive Summary Section - Modern Card Design
+      const cardWidth = (pageWidth - 2 * margin - 10) / 3;
+      const cardHeight = 38;
 
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(30, 64, 175); // Blue-800
-      doc.text("Executive Summary", margin + 5, currentY + 8);
-
-      doc.setFontSize(10);
+      // Card 1: Total Budget
+      doc.setFillColor(16, 185, 129); // Emerald-500
+      doc.roundedRect(margin, currentY, cardWidth, cardHeight, 3, 3, "F");
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(60, 60, 60);
+      doc.setTextColor(209, 250, 229); // Emerald-100
+      doc.text("TOTAL BUDGET", margin + 8, currentY + 12);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`$${stats.combined.total.toLocaleString()}`, margin + 8, currentY + 26);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(209, 250, 229);
+      doc.text(`${stats.expenses.count + stats.allocations.count} total requests`, margin + 8, currentY + 34);
 
-      const summaryItems = [
-        {
-          label: "Total Budget Activity:",
-          value: `$${stats.combined.total.toLocaleString()}`,
-          x: margin + 5,
-          y: currentY + 18,
-        },
-        {
-          label: "Total Approved:",
-          value: `$${stats.combined.approved.toLocaleString()}`,
-          x: margin + 5,
-          y: currentY + 26,
-        },
-        {
-          label: "Total Pending:",
-          value: `$${stats.combined.pending.toLocaleString()}`,
-          x: margin + 5,
-          y: currentY + 34,
-        },
-        {
-          label: "Expense Requests:",
-          value: `${
-            stats.expenses.count
-          } ($${stats.expenses.total.toLocaleString()})`,
-          x: pageWidth / 2 + 5,
-          y: currentY + 18,
-        },
-        {
-          label: "Allocation Requests:",
-          value: `${
-            stats.allocations.count
-          } ($${stats.allocations.total.toLocaleString()})`,
-          x: pageWidth / 2 + 5,
-          y: currentY + 26,
-        },
-        {
-          label: "Overall Approval Rate:",
-          value: `${
-            stats.expenses.count + stats.allocations.count > 0
-              ? (
-                  ((expenses.filter((e) =>
-                    [
-                      "treasury_approved",
-                      "leader_approved",
-                      "completed",
-                    ].includes(e.status)
-                  ).length +
-                    allocations.filter((a) => a.status === "approved").length) /
-                    (stats.expenses.count + stats.allocations.count)) *
-                  100
-                ).toFixed(1)
-              : 0
-          }%`,
-          x: pageWidth / 2 + 5,
-          y: currentY + 34,
-        },
-      ];
+      // Card 2: Approved
+      doc.setFillColor(59, 130, 246); // Blue-500
+      doc.roundedRect(margin + cardWidth + 5, currentY, cardWidth, cardHeight, 3, 3, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(191, 219, 254);
+      doc.text("APPROVED", margin + cardWidth + 13, currentY + 12);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`$${stats.combined.approved.toLocaleString()}`, margin + cardWidth + 13, currentY + 26);
+      const approvalRate = stats.expenses.count + stats.allocations.count > 0
+        ? (((expenses.filter((e) => ["treasury_approved", "leader_approved", "completed"].includes(e.status)).length +
+            allocations.filter((a) => a.status === "approved").length) /
+            (stats.expenses.count + stats.allocations.count)) * 100).toFixed(0)
+        : "0";
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(191, 219, 254);
+      doc.text(`${approvalRate}% approval rate`, margin + cardWidth + 13, currentY + 34);
 
-      summaryItems.forEach((item) => {
-        doc.setFont("helvetica", "bold");
-        doc.text(item.label, item.x, item.y);
-        doc.setFont("helvetica", "normal");
-        const labelWidth = doc.getTextWidth(item.label);
-        doc.text(item.value, item.x + labelWidth + 5, item.y);
-      });
+      // Card 3: Pending
+      doc.setFillColor(245, 158, 11); // Amber-500
+      doc.roundedRect(margin + (cardWidth + 5) * 2, currentY, cardWidth, cardHeight, 3, 3, "F");
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(254, 243, 199);
+      doc.text("PENDING", margin + (cardWidth + 5) * 2 + 8, currentY + 12);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(255, 255, 255);
+      doc.text(`$${stats.combined.pending.toLocaleString()}`, margin + (cardWidth + 5) * 2 + 8, currentY + 26);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(254, 243, 199);
+      doc.text("awaiting review", margin + (cardWidth + 5) * 2 + 8, currentY + 34);
 
-      currentY += 60;
+      currentY += cardHeight + 15;
 
       // Expense Details Section
       if (expenses.length > 0) {
@@ -393,11 +381,20 @@ export const EnhancedReportExport = ({
           currentY = 20;
         }
 
-        doc.setFontSize(14);
+        // Section header with icon-like styling
+        doc.setFillColor(239, 246, 255); // Blue-50
+        doc.roundedRect(margin, currentY, pageWidth - 2 * margin, 12, 2, 2, "F");
+        doc.setFillColor(59, 130, 246); // Blue-500
+        doc.rect(margin, currentY, 4, 12, "F");
+        doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 64, 175);
-        doc.text("Expense Analysis", margin, currentY);
-        currentY += 8;
+        doc.text("Expense Analysis", margin + 10, currentY + 8);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(`${stats.expenses.count} requests  •  $${stats.expenses.total.toLocaleString()} total`, pageWidth - margin - 60, currentY + 8);
+        currentY += 18;
 
         // Combined expense data in single table
         const expenseStatusBreakdown = chartData.expenseChartData.map(
@@ -419,14 +416,20 @@ export const EnhancedReportExport = ({
           startY: currentY,
           head: [["Status", "Count", "Amount"]],
           body: expenseStatusBreakdown,
-          theme: "striped",
+          theme: "plain",
           headStyles: {
-            fillColor: [59, 130, 246],
+            fillColor: [30, 64, 175],
             textColor: [255, 255, 255],
             fontStyle: "bold",
+            fontSize: 9,
+            cellPadding: 4,
           },
           bodyStyles: {
-            fontSize: 10,
+            fontSize: 9,
+            cellPadding: 4,
+          },
+          alternateRowStyles: {
+            fillColor: [248, 250, 252],
           },
           tableWidth: "auto",
           margin: { left: margin, right: margin },
@@ -434,7 +437,8 @@ export const EnhancedReportExport = ({
             // Style the TOTAL row
             if (data.row.index === expenseStatusBreakdown.length - 1) {
               data.cell.styles.fontStyle = "bold";
-              data.cell.styles.fillColor = [239, 246, 255];
+              data.cell.styles.fillColor = [219, 234, 254];
+              data.cell.styles.textColor = [30, 64, 175];
             }
           },
         });
@@ -452,11 +456,20 @@ export const EnhancedReportExport = ({
           currentY = 20;
         }
 
-        doc.setFontSize(14);
+        // Section header with icon-like styling
+        doc.setFillColor(243, 232, 255); // Violet-100
+        doc.roundedRect(margin, currentY, pageWidth - 2 * margin, 12, 2, 2, "F");
+        doc.setFillColor(139, 92, 246); // Violet-500
+        doc.rect(margin, currentY, 4, 12, "F");
+        doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 64, 175);
-        doc.text("Budget Allocation Analysis", margin, currentY);
-        currentY += 8;
+        doc.setTextColor(109, 40, 217);
+        doc.text("Budget Allocation Analysis", margin + 10, currentY + 8);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(`${stats.allocations.count} requests  •  $${stats.allocations.total.toLocaleString()} total`, pageWidth - margin - 60, currentY + 8);
+        currentY += 18;
 
         // Combined allocation data in single table
         const allocationStatusBreakdown = chartData.allocationChartData.map(
@@ -478,14 +491,20 @@ export const EnhancedReportExport = ({
           startY: currentY,
           head: [["Status", "Count", "Amount"]],
           body: allocationStatusBreakdown,
-          theme: "striped",
+          theme: "plain",
           headStyles: {
-            fillColor: [139, 92, 246],
+            fillColor: [109, 40, 217],
             textColor: [255, 255, 255],
             fontStyle: "bold",
+            fontSize: 9,
+            cellPadding: 4,
           },
           bodyStyles: {
-            fontSize: 10,
+            fontSize: 9,
+            cellPadding: 4,
+          },
+          alternateRowStyles: {
+            fillColor: [250, 245, 255],
           },
           tableWidth: "auto",
           margin: { left: margin, right: margin },
@@ -493,7 +512,8 @@ export const EnhancedReportExport = ({
             // Style the TOTAL row
             if (data.row.index === allocationStatusBreakdown.length - 1) {
               data.cell.styles.fontStyle = "bold";
-              data.cell.styles.fillColor = [243, 232, 255];
+              data.cell.styles.fillColor = [233, 213, 255];
+              data.cell.styles.textColor = [109, 40, 217];
             }
           },
         });
@@ -511,11 +531,16 @@ export const EnhancedReportExport = ({
           currentY = 20;
         }
 
-        doc.setFontSize(14);
+        // Section header with icon-like styling
+        doc.setFillColor(220, 252, 231); // Emerald-100
+        doc.roundedRect(margin, currentY, pageWidth - 2 * margin, 12, 2, 2, "F");
+        doc.setFillColor(16, 185, 129); // Emerald-500
+        doc.rect(margin, currentY, 4, 12, "F");
+        doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 64, 175);
-        doc.text("Top Ministries by Budget Activity", margin, currentY);
-        currentY += 8;
+        doc.setTextColor(5, 150, 105);
+        doc.text("Top Ministries by Budget Activity", margin + 10, currentY + 8);
+        currentY += 18;
 
         const ministryTableData = chartData.ministryChartData.map((item) => [
           item.name,
@@ -526,14 +551,20 @@ export const EnhancedReportExport = ({
           startY: currentY,
           head: [["Ministry", "Total Amount"]],
           body: ministryTableData,
-          theme: "striped",
+          theme: "plain",
           headStyles: {
-            fillColor: [16, 185, 129],
+            fillColor: [5, 150, 105],
             textColor: [255, 255, 255],
             fontStyle: "bold",
+            fontSize: 9,
+            cellPadding: 4,
           },
           bodyStyles: {
-            fontSize: 10,
+            fontSize: 9,
+            cellPadding: 4,
+          },
+          alternateRowStyles: {
+            fillColor: [240, 253, 244],
           },
           tableWidth: "auto",
           margin: { left: margin, right: margin },
@@ -550,18 +581,41 @@ export const EnhancedReportExport = ({
         doc.addPage();
         currentY = 20;
 
-        doc.setFontSize(14);
+        // Page header for new page
+        doc.setFillColor(30, 64, 175);
+        doc.rect(0, 0, pageWidth, 18, "F");
+        doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 64, 175);
-        doc.text("Recent Transactions", margin, currentY);
-        currentY += 15;
+        doc.setTextColor(255, 255, 255);
+        doc.text("Recent Transactions", margin, 12);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(191, 219, 254);
+        doc.text(`${ministryName}  •  ${organizationName}`, pageWidth - margin, 12, { align: "right" });
+        currentY = 28;
 
         if (expenses.length > 0) {
-          doc.setFontSize(12);
+          // Expense section header
+          doc.setFillColor(239, 246, 255);
+          doc.roundedRect(margin, currentY, pageWidth - 2 * margin, 10, 2, 2, "F");
+          doc.setFillColor(59, 130, 246);
+          doc.rect(margin, currentY, 3, 10, "F");
+          doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
-          doc.setTextColor(60, 60, 60);
-          doc.text("Expense Requests", margin, currentY);
-          currentY += 5;
+          doc.setTextColor(30, 64, 175);
+          doc.text("Expense Requests", margin + 8, currentY + 7);
+          currentY += 14;
+
+          // Helper to get recipient info like in ExpenseList
+          const getRecipientInfo = (expense: ExpenseRequestWithRelations) => {
+            const isDifferent = expense.is_different_recipient;
+            return {
+              name: isDifferent && expense.recipient_name ? expense.recipient_name : expense.requester_name,
+              phone: isDifferent && expense.recipient_phone ? expense.recipient_phone : expense.requester_phone,
+              email: isDifferent && expense.recipient_email ? expense.recipient_email : expense.requester_email,
+              isDifferent,
+            };
+          };
 
           const recentExpenses = expenses
             .sort(
@@ -573,17 +627,18 @@ export const EnhancedReportExport = ({
             .map((expense) => {
               const attachments = expense.attachments as unknown as AttachmentData[] | undefined;
               const attachmentCount = attachments?.length || 0;
+              const recipient = getRecipientInfo(expense);
               return [
                 new Date(expense.created_at).toLocaleDateString(),
-                expense.title.substring(0, 25) +
-                  (expense.title.length > 25 ? "..." : ""),
+                expense.title.substring(0, 20) +
+                  (expense.title.length > 20 ? "..." : ""),
                 `$${expense.amount.toLocaleString()}`,
                 REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type,
                 expense.tin || "-",
                 expense.is_advance_payment ? "Yes" : "No",
-                expense.is_different_recipient && expense.recipient_name
-                  ? expense.recipient_name.substring(0, 15) + (expense.recipient_name.length > 15 ? "..." : "")
-                  : "Same",
+                recipient.name ? recipient.name.substring(0, 12) + (recipient.name.length > 12 ? "..." : "") : "-",
+                recipient.phone || "-",
+                recipient.email ? recipient.email.substring(0, 15) + (recipient.email.length > 15 ? "..." : "") : "-",
                 expense.status
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (l) => l.toUpperCase()),
@@ -593,16 +648,52 @@ export const EnhancedReportExport = ({
 
           autoTable(doc, {
             startY: currentY,
-            head: [["Date", "Justification", "Amount", "Reimb.", "TIN", "Adv.", "Recipient", "Status", "Files"]],
+            head: [["Date", "Justification", "Amount", "Reimb.", "TIN", "Adv.", "Recipient", "Phone", "Email", "Status", "Files"]],
             body: recentExpenses,
-            theme: "striped",
+            theme: "plain",
             headStyles: {
-              fillColor: [59, 130, 246],
+              fillColor: [30, 64, 175],
               textColor: [255, 255, 255],
               fontStyle: "bold",
+              fontSize: 7,
+              cellPadding: 2,
+            },
+            bodyStyles: {
+              fontSize: 7,
+              cellPadding: 2,
+            },
+            alternateRowStyles: {
+              fillColor: [248, 250, 252],
+            },
+            columnStyles: {
+              0: { cellWidth: 16 },
+              1: { cellWidth: 28 },
+              2: { cellWidth: 16, halign: "right" },
+              3: { cellWidth: 14 },
+              4: { cellWidth: 18 },
+              5: { cellWidth: 10 },
+              6: { cellWidth: 20 },
+              7: { cellWidth: 20 },
+              8: { cellWidth: 24 },
+              9: { cellWidth: 18 },
+              10: { cellWidth: 10 },
             },
             tableWidth: "auto",
             margin: { left: margin, right: margin },
+            didParseCell: (data) => {
+              // Style status column based on value
+              if (data.column.index === 9 && data.section === "body") {
+                const status = String(data.cell.raw).toLowerCase();
+                if (status.includes("approved") || status.includes("completed")) {
+                  data.cell.styles.textColor = [5, 150, 105];
+                  data.cell.styles.fontStyle = "bold";
+                } else if (status.includes("pending")) {
+                  data.cell.styles.textColor = [217, 119, 6];
+                } else if (status.includes("denied") || status.includes("rejected")) {
+                  data.cell.styles.textColor = [220, 38, 38];
+                }
+              }
+            },
           });
 
           const docWithTable = doc as jsPDF & {
@@ -617,11 +708,16 @@ export const EnhancedReportExport = ({
             currentY = 20;
           }
 
-          doc.setFontSize(12);
+          // Allocation section header
+          doc.setFillColor(243, 232, 255);
+          doc.roundedRect(margin, currentY, pageWidth - 2 * margin, 10, 2, 2, "F");
+          doc.setFillColor(139, 92, 246);
+          doc.rect(margin, currentY, 3, 10, "F");
+          doc.setFontSize(10);
           doc.setFont("helvetica", "bold");
-          doc.setTextColor(60, 60, 60);
-          doc.text("Budget Allocation Requests", margin, currentY);
-          currentY += 5;
+          doc.setTextColor(109, 40, 217);
+          doc.text("Budget Allocation Requests", margin + 8, currentY + 7);
+          currentY += 14;
 
           const recentAllocations = allocations
             .sort(
@@ -647,14 +743,37 @@ export const EnhancedReportExport = ({
             startY: currentY,
             head: [["Date", "Justification", "Requested", "Approved", "Status"]],
             body: recentAllocations,
-            theme: "striped",
+            theme: "plain",
             headStyles: {
-              fillColor: [139, 92, 246],
+              fillColor: [109, 40, 217],
               textColor: [255, 255, 255],
               fontStyle: "bold",
+              fontSize: 9,
+              cellPadding: 4,
+            },
+            bodyStyles: {
+              fontSize: 9,
+              cellPadding: 4,
+            },
+            alternateRowStyles: {
+              fillColor: [250, 245, 255],
             },
             tableWidth: "auto",
             margin: { left: margin, right: margin },
+            didParseCell: (data) => {
+              // Style status column based on value
+              if (data.column.index === 4 && data.section === "body") {
+                const status = String(data.cell.raw).toLowerCase();
+                if (status.includes("approved")) {
+                  data.cell.styles.textColor = [5, 150, 105];
+                  data.cell.styles.fontStyle = "bold";
+                } else if (status.includes("pending")) {
+                  data.cell.styles.textColor = [217, 119, 6];
+                } else if (status.includes("denied") || status.includes("rejected")) {
+                  data.cell.styles.textColor = [220, 38, 38];
+                }
+              }
+            },
           });
         }
       }
@@ -961,6 +1080,11 @@ export const EnhancedReportExport = ({
 
     const stats = calculateStats();
     const chartData = prepareChartData();
+    const approvalRate = stats.expenses.count + stats.allocations.count > 0
+      ? (((expenses.filter((e) => ["treasury_approved", "leader_approved", "completed"].includes(e.status)).length +
+          allocations.filter((a) => a.status === "approved").length) /
+          (stats.expenses.count + stats.allocations.count)) * 100).toFixed(0)
+      : "0";
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -974,118 +1098,211 @@ export const EnhancedReportExport = ({
               box-sizing: border-box;
             }
             body {
-              font-family: 'Segoe UI', Arial, sans-serif;
-              padding: 40px;
-              max-width: 1200px;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              padding: 0;
+              max-width: 1100px;
               margin: 0 auto;
               background: white;
+              color: #1e293b;
             }
             .header {
+              background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+              color: white;
+              padding: 30px 40px;
+              margin-bottom: 0;
+              position: relative;
+              overflow: hidden;
+            }
+            .header::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              right: 0;
+              width: 300px;
+              height: 100%;
+              background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            }
+            .header-content {
               display: flex;
               align-items: center;
-              gap: 20px;
-              padding-bottom: 20px;
-              border-bottom: 3px solid #3b82f6;
-              margin-bottom: 30px;
+              gap: 24px;
+              position: relative;
+              z-index: 1;
             }
             .header img {
-              width: 80px;
-              height: 80px;
+              width: 70px;
+              height: 70px;
+              border-radius: 12px;
+              background: white;
+              padding: 4px;
+            }
+            .logo-placeholder {
+              width: 70px;
+              height: 70px;
+              border-radius: 12px;
+              background: rgba(255,255,255,0.2);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 28px;
+              font-weight: bold;
             }
             .header-text h1 {
-              color: #1e3a8a;
-              font-size: 28px;
-              margin-bottom: 5px;
+              color: white;
+              font-size: 26px;
+              margin-bottom: 6px;
+              font-weight: 700;
             }
             .header-text p {
-              color: #666;
-              font-size: 14px;
-              margin: 2px 0;
+              color: rgba(255,255,255,0.85);
+              font-size: 13px;
+              margin: 3px 0;
+            }
+            .header-text p strong {
+              color: white;
             }
             .summary-grid {
               display: grid;
               grid-template-columns: repeat(3, 1fr);
-              gap: 20px;
-              margin: 30px 0;
+              gap: 0;
+              margin: 0;
             }
             .summary-card {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
-              padding: 20px;
-              border-radius: 10px;
-              box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+              padding: 24px 28px;
+              position: relative;
+              overflow: hidden;
             }
-            .summary-card.expenses {
-              background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-            }
-            .summary-card.allocations {
-              background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            .summary-card::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 3px;
+              background: rgba(0,0,0,0.1);
             }
             .summary-card.total {
-              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              background: linear-gradient(135deg, #059669 0%, #10b981 100%);
             }
-            .summary-card h3 {
-              font-size: 14px;
-              margin-bottom: 10px;
+            .summary-card.approved {
+              background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+            }
+            .summary-card.pending {
+              background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            }
+            .summary-card .label {
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
               opacity: 0.9;
+              margin-bottom: 8px;
+              font-weight: 600;
             }
             .summary-card .value {
-              font-size: 28px;
-              font-weight: bold;
-              margin-bottom: 5px;
+              font-size: 32px;
+              font-weight: 800;
+              margin-bottom: 4px;
+              letter-spacing: -1px;
             }
             .summary-card .subvalue {
               font-size: 12px;
-              opacity: 0.8;
+              opacity: 0.85;
             }
-            h2 {
+            .content {
+              padding: 30px 40px;
+            }
+            .section-header {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin: 30px 0 16px 0;
+              padding: 12px 16px;
+              background: #f8fafc;
+              border-radius: 8px;
+              border-left: 4px solid #3b82f6;
+            }
+            .section-header.violet {
+              border-left-color: #8b5cf6;
+            }
+            .section-header.emerald {
+              border-left-color: #10b981;
+            }
+            .section-header h2 {
               color: #1e40af;
-              margin: 40px 0 20px 0;
-              padding-bottom: 10px;
-              border-bottom: 2px solid #e5e7eb;
-              font-size: 20px;
+              font-size: 16px;
+              font-weight: 700;
+              margin: 0;
+              flex: 1;
+            }
+            .section-header.violet h2 {
+              color: #6d28d9;
+            }
+            .section-header.emerald h2 {
+              color: #059669;
+            }
+            .section-header .count {
+              font-size: 12px;
+              color: #64748b;
+              font-weight: 500;
             }
             table {
               width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            }
-            th, td {
-              border: 1px solid #e5e7eb;
-              padding: 12px;
-              text-align: left;
+              border-collapse: separate;
+              border-spacing: 0;
+              margin: 0 0 20px 0;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             }
             th {
-              background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+              background: #1e40af;
               color: white;
               font-weight: 600;
-              font-size: 13px;
+              font-size: 11px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
+              padding: 14px 12px;
+              text-align: left;
+            }
+            table.violet th {
+              background: #6d28d9;
+            }
+            table.emerald th {
+              background: #059669;
+            }
+            td {
+              padding: 12px;
+              text-align: left;
+              font-size: 13px;
+              border-bottom: 1px solid #e2e8f0;
             }
             tr:nth-child(even) {
-              background-color: #f9fafb;
+              background-color: #f8fafc;
             }
-            tr:hover {
-              background-color: #eff6ff;
+            tr:last-child td {
+              border-bottom: none;
             }
             .text-right {
               text-align: right;
             }
+            .amount {
+              font-weight: 600;
+              font-family: 'SF Mono', Monaco, monospace;
+            }
             .status-badge {
               display: inline-block;
-              padding: 4px 8px;
-              border-radius: 4px;
+              padding: 4px 10px;
+              border-radius: 12px;
               font-size: 11px;
               font-weight: 600;
             }
             .status-approved {
-              background: #d1fae5;
-              color: #065f46;
+              background: #dcfce7;
+              color: #166534;
             }
             .status-pending {
-              background: #fed7aa;
+              background: #fef3c7;
               color: #92400e;
             }
             .status-rejected {
@@ -1095,49 +1312,62 @@ export const EnhancedReportExport = ({
             .metrics-grid {
               display: grid;
               grid-template-columns: repeat(2, 1fr);
-              gap: 20px;
-              margin: 20px 0;
+              gap: 16px;
+              margin: 16px 0;
             }
             .metric-box {
-              background: #f9fafb;
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 15px;
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 10px;
+              padding: 16px;
             }
             .metric-box h4 {
-              color: #374151;
-              font-size: 14px;
-              margin-bottom: 10px;
+              color: #1e40af;
+              font-size: 13px;
+              margin-bottom: 12px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
             }
             .metric-row {
               display: flex;
               justify-content: space-between;
               padding: 8px 0;
-              border-bottom: 1px solid #e5e7eb;
+              border-bottom: 1px solid #e2e8f0;
             }
             .metric-row:last-child {
               border-bottom: none;
             }
             .metric-label {
-              color: #6b7280;
+              color: #64748b;
               font-size: 13px;
             }
             .metric-value {
               font-weight: 600;
-              color: #111827;
+              color: #0f172a;
               font-size: 13px;
             }
             .footer {
-              margin-top: 50px;
-              padding-top: 20px;
-              border-top: 2px solid #e5e7eb;
+              margin-top: 40px;
+              padding: 20px 40px;
+              background: #f8fafc;
               text-align: center;
-              color: #9ca3af;
-              font-size: 12px;
+              color: #64748b;
+              font-size: 11px;
+              border-top: 1px solid #e2e8f0;
+            }
+            .footer strong {
+              color: #1e40af;
             }
             @media print {
               body {
-                padding: 20px;
+                padding: 0;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .header {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
               .summary-grid {
                 page-break-inside: avoid;
@@ -1145,51 +1375,57 @@ export const EnhancedReportExport = ({
               table {
                 page-break-inside: avoid;
               }
+              .section-header {
+                page-break-after: avoid;
+              }
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <img src="/church-logo.png" alt="Church Logo" onerror="this.style.display='none'" />
-            <div class="header-text">
-              <h1>${ministryName} Budget Report</h1>
-              <p><strong>${organizationName}</strong></p>
-              <p>Submitted by: ${userName}</p>
-              ${fiscalYearName ? `<p>Fiscal Year: ${fiscalYearName}</p>` : ""}
-              <p>Generated: ${new Date().toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}</p>
+            <div class="header-content">
+              <img src="/church-logo.png" alt="Church Logo" onerror="this.parentElement.innerHTML='<div class=\\'logo-placeholder\\'>$</div>' + this.parentElement.innerHTML.replace(this.outerHTML, '')" />
+              <div class="header-text">
+                <h1>${ministryName} Budget Report</h1>
+                <p><strong>${organizationName}</strong></p>
+                <p>Submitted by: ${userName} ${fiscalYearName ? ` •  Fiscal Year: ${fiscalYearName}` : ""}</p>
+                <p>Generated: ${new Date().toLocaleDateString("en-US", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}</p>
+              </div>
             </div>
           </div>
 
           <div class="summary-grid">
-            <div class="summary-card expenses">
-              <h3>Total Expenses</h3>
-              <div class="value">$${stats.expenses.total.toLocaleString()}</div>
-              <div class="subvalue">${stats.expenses.count} requests • ${
-      stats.expenses.approvalRate
-    }% approved</div>
-            </div>
-            <div class="summary-card allocations">
-              <h3>Total Allocations</h3>
-              <div class="value">$${stats.allocations.total.toLocaleString()}</div>
-              <div class="subvalue">${stats.allocations.count} requests • ${
-      stats.allocations.approvalRate
-    }% approved</div>
-            </div>
             <div class="summary-card total">
-              <h3>Combined Budget Activity</h3>
+              <div class="label">Total Budget</div>
               <div class="value">$${stats.combined.total.toLocaleString()}</div>
-              <div class="subvalue">$${stats.combined.approved.toLocaleString()} approved • $${stats.combined.pending.toLocaleString()} pending</div>
+              <div class="subvalue">${stats.expenses.count + stats.allocations.count} total requests</div>
+            </div>
+            <div class="summary-card approved">
+              <div class="label">Approved</div>
+              <div class="value">$${stats.combined.approved.toLocaleString()}</div>
+              <div class="subvalue">${approvalRate}% approval rate</div>
+            </div>
+            <div class="summary-card pending">
+              <div class="label">Pending</div>
+              <div class="value">$${stats.combined.pending.toLocaleString()}</div>
+              <div class="subvalue">awaiting review</div>
             </div>
           </div>
+
+          <div class="content">
 
           ${
             expenses.length > 0
               ? `
-            <h2>Expense Analysis</h2>
+            <div class="section-header">
+              <h2>Expense Requests</h2>
+              <span class="count">${stats.expenses.count} requests  •  $${stats.expenses.total.toLocaleString()} total</span>
+            </div>
             <div class="metrics-grid">
               <div class="metric-box">
                 <h4>Expense Summary</h4>
@@ -1233,10 +1469,12 @@ export const EnhancedReportExport = ({
                   <th>Date</th>
                   <th>Justification</th>
                   <th class="text-right">Amount</th>
-                  <th>Reimb. Type</th>
+                  <th>Reimb.</th>
                   <th>TIN</th>
-                  <th>Advance</th>
+                  <th>Adv.</th>
                   <th>Recipient</th>
+                  <th>Phone</th>
+                  <th>Email</th>
                   <th>Status</th>
                   <th>Files</th>
                 </tr>
@@ -1254,17 +1492,24 @@ export const EnhancedReportExport = ({
                       const attachments = expense.attachments as unknown as AttachmentData[] | undefined;
                       const attachmentCount = attachments?.length || 0;
                       const reimbLabel = REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type;
+                      // Helper to get recipient info like in ExpenseList
+                      const isDifferent = expense.is_different_recipient;
+                      const recipientName = isDifferent && expense.recipient_name ? expense.recipient_name : expense.requester_name;
+                      const recipientPhone = isDifferent && expense.recipient_phone ? expense.recipient_phone : expense.requester_phone;
+                      const recipientEmail = isDifferent && expense.recipient_email ? expense.recipient_email : expense.requester_email;
                       return `
                     <tr>
                       <td>${new Date(
                         expense.created_at
                       ).toLocaleDateString()}</td>
                       <td>${expense.title}</td>
-                      <td class="text-right">$${expense.amount.toLocaleString()}</td>
+                      <td class="text-right amount">$${expense.amount.toLocaleString()}</td>
                       <td>${reimbLabel}</td>
                       <td>${expense.tin || "-"}</td>
                       <td>${expense.is_advance_payment ? "Yes" : "No"}</td>
-                      <td>${expense.is_different_recipient && expense.recipient_name ? expense.recipient_name : "Same"}</td>
+                      <td>${recipientName || "-"}</td>
+                      <td>${recipientPhone || "-"}</td>
+                      <td>${recipientEmail || "-"}</td>
                       <td><span class="status-badge status-${
                         [
                           "treasury_approved",
@@ -1297,7 +1542,10 @@ export const EnhancedReportExport = ({
           ${
             allocations.length > 0
               ? `
-            <h2>Budget Allocation Analysis</h2>
+            <div class="section-header violet">
+              <h2>Budget Allocation Requests</h2>
+              <span class="count">${stats.allocations.count} requests  •  $${stats.allocations.total.toLocaleString()} total</span>
+            </div>
             <div class="metrics-grid">
               <div class="metric-box">
                 <h4>Allocation Summary</h4>
@@ -1335,7 +1583,7 @@ export const EnhancedReportExport = ({
               </div>
             </div>
 
-            <table>
+            <table class="violet">
               <thead>
                 <tr>
                   <th>Date</th>
@@ -1360,8 +1608,8 @@ export const EnhancedReportExport = ({
                         allocation.created_at
                       ).toLocaleDateString()}</td>
                       <td>${allocation.justification || "N/A"}</td>
-                      <td class="text-right">$${allocation.requested_amount.toLocaleString()}</td>
-                      <td class="text-right">${
+                      <td class="text-right amount">$${allocation.requested_amount.toLocaleString()}</td>
+                      <td class="text-right amount">${
                         allocation.approved_amount
                           ? `$${allocation.approved_amount.toLocaleString()}`
                           : "N/A"
@@ -1389,8 +1637,10 @@ export const EnhancedReportExport = ({
           ${
             chartData.ministryChartData.length > 0
               ? `
-            <h2>Top Ministries by Budget Activity</h2>
-            <table>
+            <div class="section-header emerald">
+              <h2>Top Ministries by Budget Activity</h2>
+            </div>
+            <table class="emerald">
               <thead>
                 <tr>
                   <th>Ministry</th>
@@ -1403,7 +1653,7 @@ export const EnhancedReportExport = ({
                     (item) => `
                   <tr>
                     <td>${item.name}</td>
-                    <td class="text-right">$${item.value.toLocaleString()}</td>
+                    <td class="text-right amount">$${item.value.toLocaleString()}</td>
                   </tr>
                 `
                   )
@@ -1414,9 +1664,12 @@ export const EnhancedReportExport = ({
               : ""
           }
 
+          </div>
+
           <div class="footer">
-            <p><strong>${organizationName}</strong></p>
+            <p><strong>${organizationName}</strong> — Budget Report</p>
             <p>Generated on ${new Date().toLocaleDateString("en-US", {
+              weekday: "long",
               year: "numeric",
               month: "long",
               day: "numeric",
