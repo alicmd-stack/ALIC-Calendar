@@ -970,92 +970,284 @@ export const EnhancedReportExport = ({
     });
   };
 
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     const stats = calculateStats();
 
-    const rows = [
-      [`${ministryName} Budget Report`],
-      ["Organization:", organizationName],
-      ["Submitted by:", userName],
-      ...(fiscalYearName ? [["Fiscal Year:", fiscalYearName]] : []),
-      ["Generated:", new Date().toLocaleDateString()],
-      [],
-      ["SUMMARY"],
-      ["Total Budget Activity", `$${stats.combined.total}`],
-      ["Total Approved", `$${stats.combined.approved}`],
-      ["Total Pending", `$${stats.combined.pending}`],
-      [],
-      ["EXPENSES"],
-      ["Total Expense Requests", stats.expenses.count],
-      ["Total Expense Amount", `$${stats.expenses.total}`],
-      ["Approved Expense Amount", `$${stats.expenses.approved}`],
-      ["Pending Expense Amount", `$${stats.expenses.pending}`],
-      ["Expense Approval Rate", `${stats.expenses.approvalRate}%`],
-      [],
-      ["ALLOCATIONS"],
-      ["Total Allocation Requests", stats.allocations.count],
-      ["Total Allocation Amount", `$${stats.allocations.total}`],
-      ["Approved Allocation Amount", `$${stats.allocations.approved}`],
-      ["Pending Allocation Amount", `$${stats.allocations.pending}`],
-      ["Allocation Approval Rate", `${stats.allocations.approvalRate}%`],
-      [],
-      ["EXPENSE DETAILS"],
-      ["Date", "Justification", "Description", "Amount", "Reimbursement Type", "TIN", "Advance Payment", "Different Recipient", "Recipient Name", "Recipient Phone", "Recipient Email", "Status", "Fiscal Year", "Attachments"],
-      ...expenses.map((expense) => {
-        const attachments = expense.attachments as unknown as AttachmentData[] | undefined;
-        const attachmentNames = attachments?.map(a => a.name).join("; ") || "None";
-        return [
-          new Date(expense.created_at).toLocaleDateString(),
-          expense.title,
-          expense.description || "N/A",
-          expense.amount,
-          REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type,
-          expense.tin || "",
-          expense.is_advance_payment ? "Yes" : "No",
-          expense.is_different_recipient ? "Yes" : "No",
-          expense.recipient_name || "",
-          expense.recipient_phone || "",
-          expense.recipient_email || "",
-          expense.status,
-          expense.fiscal_year?.name || "N/A",
-          attachmentNames,
-        ];
-      }),
-      [],
-      ["ALLOCATION DETAILS"],
-      [
-        "Date",
-        "Justification",
-        "Requested Amount",
-        "Approved Amount",
-        "Status",
-        "Fiscal Year",
-      ],
-      ...allocations.map((allocation) => [
-        new Date(allocation.created_at).toLocaleDateString(),
-        allocation.justification || "N/A",
-        allocation.requested_amount,
-        allocation.approved_amount || "N/A",
-        allocation.status,
-        allocation.fiscal_year?.name || "N/A",
-      ]),
-    ];
+    // Helper to escape XML special characters
+    const escapeXML = (str: string | number | null | undefined): string => {
+      if (str === null || str === undefined) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    };
 
-    const csvContent = rows
-      .map((row) =>
-        row
-          .map((cell) => {
-            const cellStr = String(cell);
-            // Escape quotes and wrap in quotes if contains comma
-            return cellStr.includes(",") || cellStr.includes('"')
-              ? `"${cellStr.replace(/"/g, '""')}"`
-              : cellStr;
-          })
-          .join(",")
-      )
-      .join("\n");
+    // Helper to get recipient info
+    const getRecipientInfo = (expense: ExpenseRequestWithRelations) => {
+      const isDifferent = expense.is_different_recipient;
+      return {
+        name: isDifferent && expense.recipient_name ? expense.recipient_name : expense.requester_name,
+        phone: isDifferent && expense.recipient_phone ? expense.recipient_phone : expense.requester_phone,
+        email: isDifferent && expense.recipient_email ? expense.recipient_email : expense.requester_email,
+      };
+    };
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    // Build expense rows
+    const expenseRows = expenses.map((expense) => {
+      const attachments = expense.attachments as unknown as AttachmentData[] | undefined;
+      const attachmentCount = attachments?.length || 0;
+      const recipient = getRecipientInfo(expense);
+      const statusLabel = expense.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      return `
+        <Row>
+          <Cell><Data ss:Type="String">${escapeXML(new Date(expense.created_at).toLocaleDateString())}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(expense.title)}</Data></Cell>
+          <Cell ss:StyleID="Currency"><Data ss:Type="Number">${expense.amount}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type)}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(expense.tin || "-")}</Data></Cell>
+          <Cell><Data ss:Type="String">${expense.is_advance_payment ? "Yes" : "No"}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(recipient.name || "-")}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(recipient.phone || "-")}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(recipient.email || "-")}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(statusLabel)}</Data></Cell>
+          <Cell><Data ss:Type="Number">${attachmentCount}</Data></Cell>
+        </Row>`;
+    }).join("");
+
+    // Build allocation rows
+    const allocationRows = allocations.map((allocation) => {
+      const statusLabel = allocation.status.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+      return `
+        <Row>
+          <Cell><Data ss:Type="String">${escapeXML(new Date(allocation.created_at).toLocaleDateString())}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(allocation.justification || "-")}</Data></Cell>
+          <Cell ss:StyleID="Currency"><Data ss:Type="Number">${allocation.requested_amount}</Data></Cell>
+          <Cell ss:StyleID="Currency"><Data ss:Type="Number">${allocation.approved_amount || 0}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(statusLabel)}</Data></Cell>
+          <Cell><Data ss:Type="String">${escapeXML(allocation.fiscal_year?.name || "-")}</Data></Cell>
+        </Row>`;
+    }).join("");
+
+    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:x="urn:schemas-microsoft-com:office:excel"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+
+  <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+    <Title>${escapeXML(ministryName)} Budget Report</Title>
+    <Author>${escapeXML(userName)}</Author>
+    <Company>${escapeXML(organizationName)}</Company>
+    <Created>${new Date().toISOString()}</Created>
+  </DocumentProperties>
+
+  <Styles>
+    <Style ss:ID="Default" ss:Name="Normal">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Calibri" ss:Size="11"/>
+    </Style>
+    <Style ss:ID="Title">
+      <Font ss:FontName="Calibri" ss:Size="18" ss:Bold="1" ss:Color="#1E40AF"/>
+      <Alignment ss:Vertical="Center"/>
+    </Style>
+    <Style ss:ID="Subtitle">
+      <Font ss:FontName="Calibri" ss:Size="11" ss:Color="#64748B"/>
+      <Alignment ss:Vertical="Center"/>
+    </Style>
+    <Style ss:ID="SectionHeader">
+      <Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1" ss:Color="#1E40AF"/>
+      <Alignment ss:Vertical="Center"/>
+      <Interior ss:Color="#EFF6FF" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="TableHeader">
+      <Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+      <Interior ss:Color="#1E40AF" ss:Pattern="Solid"/>
+      <Borders>
+        <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#1E40AF"/>
+      </Borders>
+    </Style>
+    <Style ss:ID="TableHeaderViolet">
+      <Font ss:FontName="Calibri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+      <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+      <Interior ss:Color="#6D28D9" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="SummaryLabel">
+      <Font ss:FontName="Calibri" ss:Size="11" ss:Color="#475569"/>
+      <Alignment ss:Vertical="Center"/>
+    </Style>
+    <Style ss:ID="SummaryValue">
+      <Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1" ss:Color="#0F172A"/>
+      <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+    </Style>
+    <Style ss:ID="SummaryTotal">
+      <Font ss:FontName="Calibri" ss:Size="12" ss:Bold="1" ss:Color="#059669"/>
+      <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+      <Interior ss:Color="#ECFDF5" ss:Pattern="Solid"/>
+    </Style>
+    <Style ss:ID="Currency">
+      <NumberFormat ss:Format="&quot;$&quot;#,##0.00"/>
+      <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+    </Style>
+    <Style ss:ID="DataRow">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Calibri" ss:Size="10"/>
+    </Style>
+    <Style ss:ID="DataRowAlt">
+      <Alignment ss:Vertical="Center"/>
+      <Font ss:FontName="Calibri" ss:Size="10"/>
+      <Interior ss:Color="#F8FAFC" ss:Pattern="Solid"/>
+    </Style>
+  </Styles>
+
+  <!-- Summary Sheet -->
+  <Worksheet ss:Name="Summary">
+    <Table ss:DefaultColumnWidth="100">
+      <Column ss:Width="200"/>
+      <Column ss:Width="150"/>
+
+      <Row ss:Height="30">
+        <Cell ss:StyleID="Title"><Data ss:Type="String">${escapeXML(ministryName)} Budget Report</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="Subtitle"><Data ss:Type="String">${escapeXML(organizationName)}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Submitted by: ${escapeXML(userName)}</Data></Cell>
+      </Row>
+      ${fiscalYearName ? `<Row><Cell ss:StyleID="Subtitle"><Data ss:Type="String">Fiscal Year: ${escapeXML(fiscalYearName)}</Data></Cell></Row>` : ""}
+      <Row>
+        <Cell ss:StyleID="Subtitle"><Data ss:Type="String">Generated: ${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</Data></Cell>
+      </Row>
+      <Row></Row>
+
+      <Row ss:Height="25">
+        <Cell ss:StyleID="SectionHeader" ss:MergeAcross="1"><Data ss:Type="String">Overall Summary</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Budget Activity</Data></Cell>
+        <Cell ss:StyleID="SummaryTotal"><Data ss:Type="String">$${stats.combined.total.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Approved</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.combined.approved.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Pending</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.combined.pending.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row></Row>
+
+      <Row ss:Height="25">
+        <Cell ss:StyleID="SectionHeader" ss:MergeAcross="1"><Data ss:Type="String">Expense Summary</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Requests</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="Number">${stats.expenses.count}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Amount</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.expenses.total.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Approved Amount</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.expenses.approved.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Pending Amount</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.expenses.pending.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Approval Rate</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">${stats.expenses.approvalRate}%</Data></Cell>
+      </Row>
+      <Row></Row>
+
+      <Row ss:Height="25">
+        <Cell ss:StyleID="SectionHeader" ss:MergeAcross="1"><Data ss:Type="String">Allocation Summary</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Requests</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="Number">${stats.allocations.count}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Total Requested</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.allocations.total.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Approved Amount</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.allocations.approved.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Pending Amount</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">$${stats.allocations.pending.toLocaleString()}</Data></Cell>
+      </Row>
+      <Row>
+        <Cell ss:StyleID="SummaryLabel"><Data ss:Type="String">Approval Rate</Data></Cell>
+        <Cell ss:StyleID="SummaryValue"><Data ss:Type="String">${stats.allocations.approvalRate}%</Data></Cell>
+      </Row>
+    </Table>
+  </Worksheet>
+
+  <!-- Expenses Sheet -->
+  <Worksheet ss:Name="Expenses">
+    <Table ss:DefaultColumnWidth="100">
+      <Column ss:Width="85"/>
+      <Column ss:Width="200"/>
+      <Column ss:Width="90"/>
+      <Column ss:Width="80"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="50"/>
+      <Column ss:Width="120"/>
+      <Column ss:Width="110"/>
+      <Column ss:Width="150"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="50"/>
+
+      <Row ss:StyleID="TableHeader" ss:Height="35">
+        <Cell><Data ss:Type="String">Date</Data></Cell>
+        <Cell><Data ss:Type="String">Justification</Data></Cell>
+        <Cell><Data ss:Type="String">Amount</Data></Cell>
+        <Cell><Data ss:Type="String">Reimb. Type</Data></Cell>
+        <Cell><Data ss:Type="String">TIN</Data></Cell>
+        <Cell><Data ss:Type="String">Adv.</Data></Cell>
+        <Cell><Data ss:Type="String">Recipient</Data></Cell>
+        <Cell><Data ss:Type="String">Phone</Data></Cell>
+        <Cell><Data ss:Type="String">Email</Data></Cell>
+        <Cell><Data ss:Type="String">Status</Data></Cell>
+        <Cell><Data ss:Type="String">Files</Data></Cell>
+      </Row>
+      ${expenseRows}
+    </Table>
+  </Worksheet>
+
+  <!-- Allocations Sheet -->
+  <Worksheet ss:Name="Allocations">
+    <Table ss:DefaultColumnWidth="100">
+      <Column ss:Width="85"/>
+      <Column ss:Width="300"/>
+      <Column ss:Width="120"/>
+      <Column ss:Width="120"/>
+      <Column ss:Width="100"/>
+      <Column ss:Width="80"/>
+
+      <Row ss:StyleID="TableHeaderViolet" ss:Height="35">
+        <Cell><Data ss:Type="String">Date</Data></Cell>
+        <Cell><Data ss:Type="String">Justification</Data></Cell>
+        <Cell><Data ss:Type="String">Requested</Data></Cell>
+        <Cell><Data ss:Type="String">Approved</Data></Cell>
+        <Cell><Data ss:Type="String">Status</Data></Cell>
+        <Cell><Data ss:Type="String">Fiscal Year</Data></Cell>
+      </Row>
+      ${allocationRows}
+    </Table>
+  </Worksheet>
+</Workbook>`;
+
+    const blob = new Blob([xmlContent], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -1063,12 +1255,13 @@ export const EnhancedReportExport = ({
       "download",
       `${ministryName.replace(/ /g, "_")}_Budget_Report_${
         new Date().toISOString().split("T")[0]
-      }.csv`
+      }.xls`
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const printReport = () => {
@@ -1708,9 +1901,9 @@ export const EnhancedReportExport = ({
             <FileText className="mr-2 h-4 w-4" />
             Export as PDF
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={exportToCSV}>
+          <DropdownMenuItem onClick={exportToExcel}>
             <FileText className="mr-2 h-4 w-4" />
-            Export as CSV
+            Export as Excel
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={printReport}>
