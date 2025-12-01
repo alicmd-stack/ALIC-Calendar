@@ -302,11 +302,10 @@ export const EXPENSE_STATUS_CONFIG: Record<ExpenseStatus, StatusConfig> = {
 };
 
 export const REIMBURSEMENT_TYPE_LABELS: Record<ReimbursementType, string> = {
-  cash: "Cash",
-  check: "Check",
-  bank_transfer: "Bank Transfer",
   zelle: "Zelle",
-  other: "Other",
+  check: "Check",
+  ach: "ACH",
+  admin_online_purchase: "Admin Online Purchase",
 };
 
 // =====================================================

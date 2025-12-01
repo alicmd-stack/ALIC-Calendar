@@ -263,7 +263,7 @@ export function ExpenseDetailDialog({
                   </div>
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Payment Method
+                      Reimbursement Type
                     </p>
                     <p className="font-semibold text-foreground mt-1">
                       {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}

@@ -49,7 +49,7 @@ const expenseFormSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
   amount: z.coerce.number().positive("Amount must be greater than 0").multipleOf(0.01, "Amount can have at most 2 decimal places"),
-  reimbursement_type: z.enum(["cash", "check", "bank_transfer", "zelle", "other"]),
+  reimbursement_type: z.enum(["zelle", "check", "ach", "admin_online_purchase"]),
 });
 
 // File upload security constants
@@ -519,7 +519,7 @@ export function ExpenseRequestForm({
                     name="reimbursement_type"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-medium text-slate-600">Payment Method</FormLabel>
+                        <FormLabel className="text-sm font-medium text-slate-600">Reimbursement Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger className="h-12 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">

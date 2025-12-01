@@ -263,11 +263,10 @@ export type Database = {
         | "completed"
         | "cancelled"
       reimbursement_type:
-        | "cash"
-        | "check"
-        | "bank_transfer"
         | "zelle"
-        | "other"
+        | "check"
+        | "ach"
+        | "admin_online_purchase"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -734,11 +733,10 @@ export const Constants = {
         "cancelled",
       ],
       reimbursement_type: [
-        "cash",
-        "check",
-        "bank_transfer",
         "zelle",
-        "other",
+        "check",
+        "ach",
+        "admin_online_purchase",
       ],
     },
   },

@@ -28,6 +28,7 @@ import {
   useCancelExpense,
 } from "../hooks";
 import type { ExpenseRequestWithRelations } from "../types";
+import { REIMBURSEMENT_TYPE_LABELS } from "../types";
 import { ExpenseStatusBadge } from "./ExpenseStatusBadge";
 import {
   notifyExpenseLeaderApproved,
@@ -646,9 +647,9 @@ export function FinanceProcessDialog({
               <span className="text-sm font-medium">{expense.requester_name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Payment Method</span>
-              <span className="text-sm font-medium capitalize">
-                {expense.reimbursement_type.replace("_", " ")}
+              <span className="text-sm text-muted-foreground">Reimbursement Type</span>
+              <span className="text-sm font-medium">
+                {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
               </span>
             </div>
           </div>
