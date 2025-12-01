@@ -127,6 +127,7 @@ export type Database = {
           description: string | null
           amount: number
           reimbursement_type: Database["budget"]["Enums"]["reimbursement_type"]
+          tin: string | null
           requester_id: string
           requester_name: string
           requester_phone: string | null
@@ -156,6 +157,7 @@ export type Database = {
           description?: string | null
           amount: number
           reimbursement_type?: Database["budget"]["Enums"]["reimbursement_type"]
+          tin?: string | null
           requester_id: string
           requester_name: string
           requester_phone?: string | null
@@ -185,6 +187,7 @@ export type Database = {
           description?: string | null
           amount?: number
           reimbursement_type?: Database["budget"]["Enums"]["reimbursement_type"]
+          tin?: string | null
           requester_id?: string
           requester_name?: string
           requester_phone?: string | null

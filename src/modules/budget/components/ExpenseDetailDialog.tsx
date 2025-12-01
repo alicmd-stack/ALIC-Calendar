@@ -266,10 +266,26 @@ export function ExpenseDetailDialog({
                       Reimbursement Type
                     </p>
                     <p className="font-semibold text-foreground mt-1">
-                      {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
+                      {expense.reimbursement_type ? REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] : "-"}
                     </p>
                   </div>
                 </div>
+
+                {expense.tin && (
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        TIN
+                      </p>
+                      <p className="font-semibold text-foreground mt-1">
+                        {expense.tin}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-primary/10 rounded-lg">

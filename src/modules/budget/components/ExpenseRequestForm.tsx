@@ -50,6 +50,7 @@ const expenseFormSchema = z.object({
   description: z.string().optional(),
   amount: z.coerce.number().positive("Amount must be greater than 0").multipleOf(0.01, "Amount can have at most 2 decimal places"),
   reimbursement_type: z.enum(["zelle", "check", "ach", "admin_online_purchase"]),
+  tin: z.string().optional(),
 });
 
 // File upload security constants
@@ -126,6 +127,7 @@ export function ExpenseRequestForm({
       description: "",
       amount: 0,
       reimbursement_type: "check",
+      tin: "",
     },
   });
 
@@ -142,6 +144,7 @@ export function ExpenseRequestForm({
         description: expense.description || "",
         amount: expense.amount,
         reimbursement_type: expense.reimbursement_type,
+        tin: expense.tin || "",
       });
       // Load existing attachments with validation
       const existingAttachments = expense.attachments;
@@ -156,6 +159,7 @@ export function ExpenseRequestForm({
         description: "",
         amount: 0,
         reimbursement_type: "check",
+        tin: "",
       });
       setAttachments([]);
     }
@@ -324,6 +328,7 @@ export function ExpenseRequestForm({
             description: values.description || null,
             amount: values.amount,
             reimbursement_type: values.reimbursement_type,
+            tin: values.tin || null,
             requester_name: profile?.full_name || "Unknown",
             requester_phone: profile?.phone_number || null,
             requester_email: profile?.email || null,
@@ -356,6 +361,7 @@ export function ExpenseRequestForm({
             description: values.description || null,
             amount: values.amount,
             reimbursement_type: values.reimbursement_type,
+            tin: values.tin || null,
             requester_id: user.id,
             requester_name: profile?.full_name || "Unknown",
             requester_phone: profile?.phone_number || null,
@@ -544,6 +550,28 @@ export function ExpenseRequestForm({
                     )}
                   />
                 </div>
+
+                {/* TIN Field */}
+                <FormField
+                  control={form.control}
+                  name="tin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-slate-600">
+                        Taxpayer Identification Number (TIN)
+                        <span className="text-slate-400 font-normal ml-1">(Optional)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="e.g., 12-3456789"
+                          className="h-11 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Description */}

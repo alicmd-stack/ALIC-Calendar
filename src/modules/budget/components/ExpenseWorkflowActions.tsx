@@ -649,9 +649,15 @@ export function FinanceProcessDialog({
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Reimbursement Type</span>
               <span className="text-sm font-medium">
-                {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
+                {expense.reimbursement_type ? REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] : "-"}
               </span>
             </div>
+            {expense.tin && (
+              <div className="flex justify-between">
+                <span className="text-sm text-muted-foreground">TIN</span>
+                <span className="text-sm font-medium">{expense.tin}</span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
