@@ -295,15 +295,31 @@ export function ExpenseList({
                           Advance
                         </Badge>
                       )}
-                      {expense.is_different_recipient && expense.recipient_name && (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                          <User className="h-3 w-3 mr-1" />
-                          {expense.recipient_name}
-                        </Badge>
-                      )}
                       {expense.tin && (
                         <span className="text-muted-foreground">TIN: {expense.tin}</span>
                       )}
+                    </div>
+
+                    {/* Recipient Info */}
+                    <div className="text-xs space-y-1 pt-2 border-t border-dashed">
+                      <p className="text-muted-foreground font-medium">
+                        {expense.is_different_recipient ? "Payment Recipient:" : "Requester:"}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span>
+                          {expense.is_different_recipient && expense.recipient_name
+                            ? expense.recipient_name
+                            : expense.requester_name}
+                        </span>
+                      </div>
+                      <div className="text-muted-foreground">
+                        {expense.is_different_recipient && expense.recipient_phone
+                          ? expense.recipient_phone
+                          : expense.requester_phone || "-"} | {expense.is_different_recipient && expense.recipient_email
+                          ? expense.recipient_email
+                          : expense.requester_email || "-"}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 pt-2 border-t">
@@ -453,7 +469,9 @@ export function ExpenseList({
                       <TableHead>Reimbursement</TableHead>
                       <TableHead>TIN</TableHead>
                       <TableHead>Advance</TableHead>
-                      <TableHead>Recipient</TableHead>
+                      <TableHead>Recipient Name</TableHead>
+                      <TableHead>Recipient Phone</TableHead>
+                      <TableHead>Recipient Email</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead className="w-[80px]">View</TableHead>
@@ -501,8 +519,20 @@ export function ExpenseList({
                               </span>
                             </div>
                           ) : (
-                            <span className="text-muted-foreground text-sm">Same</span>
+                            <span className="text-sm truncate max-w-[100px]" title={expense.requester_name}>
+                              {expense.requester_name}
+                            </span>
                           )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {expense.is_different_recipient && expense.recipient_phone
+                            ? expense.recipient_phone
+                            : expense.requester_phone || "-"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {expense.is_different_recipient && expense.recipient_email
+                            ? expense.recipient_email
+                            : expense.requester_email || "-"}
                         </TableCell>
                         <TableCell>
                           <ExpenseStatusBadge status={expense.status} />
