@@ -1,5 +1,6 @@
 /**
  * ExpenseList - List of expense requests with filtering and actions
+ * World-class UI/UX with modern design patterns
  */
 
 import { useState } from "react";
@@ -33,6 +34,12 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
+import {
   MoreHorizontal,
   Eye,
   Edit,
@@ -45,6 +52,14 @@ import {
   FileText,
   User,
   Banknote,
+  Phone,
+  Mail,
+  Building2,
+  Calendar,
+  DollarSign,
+  Receipt,
+  UserCheck,
+  Hash,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ExpenseStatusBadge } from "./ExpenseStatusBadge";
@@ -200,377 +215,193 @@ export function ExpenseList({
       expense.status === "pending_finance") &&
     (userRole === "finance" || userRole === "admin");
 
+  // Helper to get recipient info
+  const getRecipientInfo = (expense: ExpenseRequestWithRelations) => {
+    const isDifferent = expense.is_different_recipient;
+    return {
+      name: isDifferent && expense.recipient_name ? expense.recipient_name : expense.requester_name,
+      phone: isDifferent && expense.recipient_phone ? expense.recipient_phone : expense.requester_phone,
+      email: isDifferent && expense.recipient_email ? expense.recipient_email : expense.requester_email,
+      isDifferent,
+    };
+  };
+
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <Card className="border-0 shadow-lg">
+        <CardContent className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-10 w-10 animate-spin text-primary/60" />
+            <p className="text-sm text-muted-foreground">Loading expenses...</p>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Expense Requests
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <Select
-              value={statusFilter}
-              onValueChange={(value) =>
-                setStatusFilter(value as ExpenseStatus | "all")
-              }
-            >
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {Object.entries(EXPENSE_STATUS_CONFIG).map(
-                  ([status, config]) => (
-                    <SelectItem key={status} value={status}>
-                      {config.label}
-                    </SelectItem>
-                  )
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Table / Cards */}
-          {filteredExpenses.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
-              <p>No expense requests found</p>
-            </div>
-          ) : (
-            <>
-              {/* Mobile Card View */}
-              <div className="md:hidden space-y-3">
-                {filteredExpenses.map((expense) => (
-                  <div
-                    key={expense.id}
-                    className="border rounded-lg p-4 space-y-3 bg-card"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm line-clamp-2">
-                          {expense.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {expense.ministry?.name || "-"}
-                        </p>
-                      </div>
-                      <ExpenseStatusBadge status={expense.status} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-semibold">
-                        ${Number(expense.amount).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(expense.created_at), "MMM d, yyyy")}
-                      </p>
-                    </div>
-
-                    {/* Additional Info Row */}
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      {expense.reimbursement_type && (
-                        <Badge variant="secondary" className="text-xs">
-                          {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
-                        </Badge>
-                      )}
-                      {expense.is_advance_payment && (
-                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                          <Banknote className="h-3 w-3 mr-1" />
-                          Advance
-                        </Badge>
-                      )}
-                      {expense.tin && (
-                        <span className="text-muted-foreground">TIN: {expense.tin}</span>
-                      )}
-                    </div>
-
-                    {/* Recipient Info */}
-                    <div className="text-xs space-y-1 pt-2 border-t border-dashed">
-                      <p className="text-muted-foreground font-medium">
-                        {expense.is_different_recipient ? "Payment Recipient:" : "Requester:"}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3 text-muted-foreground" />
-                        <span>
-                          {expense.is_different_recipient && expense.recipient_name
-                            ? expense.recipient_name
-                            : expense.requester_name}
-                        </span>
-                      </div>
-                      <div className="text-muted-foreground">
-                        {expense.is_different_recipient && expense.recipient_phone
-                          ? expense.recipient_phone
-                          : expense.requester_phone || "-"} | {expense.is_different_recipient && expense.recipient_email
-                          ? expense.recipient_email
-                          : expense.requester_email || "-"}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-2 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          setSelectedExpense(expense);
-                          setIsDetailDialogOpen(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {canEdit(expense) && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setSelectedExpense(expense);
-                                setIsEditDialogOpen(true);
-                              }}
-                            >
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                          )}
-                          {canSubmit(expense) && (
-                            <DropdownMenuItem onClick={() => handleSubmit(expense)}>
-                              <Send className="mr-2 h-4 w-4" />
-                              Submit for Review
-                            </DropdownMenuItem>
-                          )}
-                          {canCancel(expense) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsCancelDialogOpen(true);
-                                }}
-                                className="text-orange-600"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Cancel Request
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canLeaderReview(expense) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsLeaderApproveOpen(true);
-                                }}
-                                className="text-green-600"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsLeaderDenyOpen(true);
-                                }}
-                                className="text-red-600"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Deny
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canTreasuryReview(expense) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsTreasuryApproveOpen(true);
-                                }}
-                                className="text-green-600"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve Payment
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsTreasuryDenyOpen(true);
-                                }}
-                                className="text-red-600"
-                              >
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Deny Payment
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canFinanceProcess(expense) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsFinanceProcessOpen(true);
-                                }}
-                                className="text-purple-600"
-                              >
-                                <CreditCard className="mr-2 h-4 w-4" />
-                                Process Payment
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                          {canDelete(expense) && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(expense)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
+    <TooltipProvider delayDuration={200}>
+      <>
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-slate-50 to-slate-100/50 border-b">
+            <CardTitle className="flex items-center gap-2.5 text-lg">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Receipt className="h-5 w-5 text-primary" />
               </div>
+              Expense Requests
+              <Badge variant="secondary" className="ml-2 font-normal">
+                {filteredExpenses.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Filters */}
+            <div className="flex flex-col md:flex-row gap-4 p-4 bg-slate-50/50 border-b">
+              <Select
+                value={statusFilter}
+                onValueChange={(value) =>
+                  setStatusFilter(value as ExpenseStatus | "all")
+                }
+              >
+                <SelectTrigger className="w-full md:w-[220px] bg-white border-slate-200 shadow-sm">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {Object.entries(EXPENSE_STATUS_CONFIG).map(
+                    ([status, config]) => (
+                      <SelectItem key={status} value={status}>
+                        {config.label}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
 
-              {/* Desktop Table View */}
-              <div className="hidden md:block rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Justification</TableHead>
-                      <TableHead>Ministry</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Reimbursement</TableHead>
-                      <TableHead>TIN</TableHead>
-                      <TableHead>Advance</TableHead>
-                      <TableHead>Recipient Name</TableHead>
-                      <TableHead>Recipient Phone</TableHead>
-                      <TableHead>Recipient Email</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="w-[80px]">View</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell className="font-medium">
-                          {expense.title}
-                        </TableCell>
-                        <TableCell>{expense.ministry?.name || "-"}</TableCell>
-                        <TableCell className="font-medium">
-                          $
-                          {Number(expense.amount).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {expense.reimbursement_type
-                            ? REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]
-                            : "-"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {expense.tin || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {expense.is_advance_payment ? (
-                            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                              <Banknote className="h-3 w-3 mr-1" />
-                              Yes
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">No</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {expense.is_different_recipient && expense.recipient_name ? (
-                            <div className="flex items-center gap-1">
-                              <User className="h-3 w-3 text-blue-500" />
-                              <span className="text-sm truncate max-w-[100px]" title={expense.recipient_name}>
-                                {expense.recipient_name}
-                              </span>
+            {/* Table / Cards */}
+            {filteredExpenses.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
+                  <FileText className="h-8 w-8 text-slate-400" />
+                </div>
+                <p className="text-slate-600 font-medium">No expense requests found</p>
+                <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters</p>
+              </div>
+            ) : (
+              <>
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y">
+                  {filteredExpenses.map((expense) => {
+                    const recipient = getRecipientInfo(expense);
+                    return (
+                      <div
+                        key={expense.id}
+                        className="p-4 hover:bg-slate-50/50 transition-colors"
+                      >
+                        {/* Header Row */}
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-slate-900 line-clamp-2">
+                              {expense.title}
+                            </p>
+                            <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                              <Building2 className="h-3 w-3" />
+                              {expense.ministry?.name || "No Ministry"}
                             </div>
-                          ) : (
-                            <span className="text-sm truncate max-w-[100px]" title={expense.requester_name}>
-                              {expense.requester_name}
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {expense.is_different_recipient && expense.recipient_phone
-                            ? expense.recipient_phone
-                            : expense.requester_phone || "-"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {expense.is_different_recipient && expense.recipient_email
-                            ? expense.recipient_email
-                            : expense.requester_email || "-"}
-                        </TableCell>
-                        <TableCell>
+                          </div>
                           <ExpenseStatusBadge status={expense.status} />
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {format(new Date(expense.created_at), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell>
+                        </div>
+
+                        {/* Amount & Date Row */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-emerald-100 rounded-md">
+                              <DollarSign className="h-4 w-4 text-emerald-600" />
+                            </div>
+                            <span className="text-xl font-bold text-slate-900">
+                              ${Number(expense.amount).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            {format(new Date(expense.created_at), "MMM d, yyyy")}
+                          </div>
+                        </div>
+
+                        {/* Info Badges */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <Badge variant="outline" className="text-xs font-normal bg-white">
+                            <Receipt className="h-3 w-3 mr-1 text-slate-500" />
+                            {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
+                          </Badge>
+                          {expense.is_advance_payment && (
+                            <Badge className="text-xs font-medium bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
+                              <Banknote className="h-3 w-3 mr-1" />
+                              Advance
+                            </Badge>
+                          )}
+                          {expense.tin && (
+                            <Badge variant="outline" className="text-xs font-normal bg-white">
+                              <Hash className="h-3 w-3 mr-1 text-slate-500" />
+                              TIN: {expense.tin}
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Recipient Card */}
+                        <div className={`rounded-lg p-3 mb-3 ${recipient.isDifferent ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-100'}`}>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            {recipient.isDifferent ? (
+                              <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                            ) : (
+                              <User className="h-3.5 w-3.5 text-slate-500" />
+                            )}
+                            <span className={`text-xs font-medium ${recipient.isDifferent ? 'text-blue-700' : 'text-slate-600'}`}>
+                              {recipient.isDifferent ? "Payment Recipient" : "Requester"}
+                            </span>
+                          </div>
+                          <p className="font-medium text-sm text-slate-900 mb-1">{recipient.name}</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            {recipient.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {recipient.phone}
+                              </span>
+                            )}
+                            {recipient.email && (
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {recipient.email}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 pt-3 border-t">
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 shadow-sm"
                             onClick={() => {
                               setSelectedExpense(expense);
                               setIsDetailDialogOpen(true);
                             }}
-                            title="View Details"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
                           </Button>
-                        </TableCell>
-                        <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="outline" size="sm" className="shadow-sm">
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedExpense(expense);
-                                  setIsDetailDialogOpen(true);
-                                }}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Details
-                              </DropdownMenuItem>
-
+                            <DropdownMenuContent align="end" className="w-48">
                               {canEdit(expense) && (
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -582,16 +413,12 @@ export function ExpenseList({
                                   Edit
                                 </DropdownMenuItem>
                               )}
-
                               {canSubmit(expense) && (
-                                <DropdownMenuItem
-                                  onClick={() => handleSubmit(expense)}
-                                >
+                                <DropdownMenuItem onClick={() => handleSubmit(expense)}>
                                   <Send className="mr-2 h-4 w-4" />
                                   Submit for Review
                                 </DropdownMenuItem>
                               )}
-
                               {canCancel(expense) && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -607,7 +434,6 @@ export function ExpenseList({
                                   </DropdownMenuItem>
                                 </>
                               )}
-
                               {canLeaderReview(expense) && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -633,7 +459,6 @@ export function ExpenseList({
                                   </DropdownMenuItem>
                                 </>
                               )}
-
                               {canTreasuryReview(expense) && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -659,7 +484,6 @@ export function ExpenseList({
                                   </DropdownMenuItem>
                                 </>
                               )}
-
                               {canFinanceProcess(expense) && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -675,7 +499,6 @@ export function ExpenseList({
                                   </DropdownMenuItem>
                                 </>
                               )}
-
                               {canDelete(expense) && (
                                 <>
                                   <DropdownMenuSeparator />
@@ -690,91 +513,400 @@ export function ExpenseList({
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                        <TableHead className="font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5">
+                            <FileText className="h-3.5 w-3.5 text-slate-500" />
+                            Expense Details
+                          </div>
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5">
+                            <DollarSign className="h-3.5 w-3.5 text-slate-500" />
+                            Amount
+                          </div>
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5">
+                            <Receipt className="h-3.5 w-3.5 text-slate-500" />
+                            Payment Info
+                          </div>
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5">
+                            <User className="h-3.5 w-3.5 text-slate-500" />
+                            Recipient
+                          </div>
+                        </TableHead>
+                        <TableHead className="font-semibold text-slate-700">Status</TableHead>
+                        <TableHead className="font-semibold text-slate-700 text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredExpenses.map((expense) => {
+                        const recipient = getRecipientInfo(expense);
+                        return (
+                          <TableRow
+                            key={expense.id}
+                            className="group hover:bg-slate-50/50 transition-colors cursor-pointer"
+                            onClick={() => {
+                              setSelectedExpense(expense);
+                              setIsDetailDialogOpen(true);
+                            }}
+                          >
+                            {/* Expense Details Column */}
+                            <TableCell className="py-4">
+                              <div className="space-y-1">
+                                <p className="font-medium text-slate-900 line-clamp-1 group-hover:text-primary transition-colors">
+                                  {expense.title}
+                                </p>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3" />
+                                    {expense.ministry?.name || "-"}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(expense.created_at), "MMM d, yyyy")}
+                                  </span>
+                                </div>
+                              </div>
+                            </TableCell>
 
-      {/* Detail Dialog */}
-      <ExpenseDetailDialog
-        open={isDetailDialogOpen}
-        onOpenChange={setIsDetailDialogOpen}
-        expense={selectedExpense}
-        userRole={userRole}
-        onLeaderApprove={() => {
-          setIsLeaderApproveOpen(true);
-        }}
-        onLeaderDeny={() => {
-          setIsLeaderDenyOpen(true);
-        }}
-        onTreasuryApprove={() => {
-          setIsTreasuryApproveOpen(true);
-        }}
-        onTreasuryDeny={() => {
-          setIsTreasuryDenyOpen(true);
-        }}
-        onFinanceProcess={() => {
-          setIsFinanceProcessOpen(true);
-        }}
-      />
+                            {/* Amount Column */}
+                            <TableCell className="py-4">
+                              <div className="space-y-1">
+                                <p className="font-bold text-lg text-slate-900">
+                                  ${Number(expense.amount).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </p>
+                                {expense.is_advance_payment && (
+                                  <Badge className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-100">
+                                    <Banknote className="h-3 w-3 mr-1" />
+                                    Advance
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
 
-      {/* Edit Dialog */}
-      {selectedExpense && (
-        <ExpenseRequestForm
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
+                            {/* Payment Info Column */}
+                            <TableCell className="py-4">
+                              <div className="space-y-1.5">
+                                <Badge variant="outline" className="text-xs font-normal bg-white">
+                                  {REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type]}
+                                </Badge>
+                                {expense.tin && (
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Hash className="h-3 w-3" />
+                                    TIN: {expense.tin}
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* Recipient Column */}
+                            <TableCell className="py-4">
+                              <div className={`rounded-lg p-2.5 ${recipient.isDifferent ? 'bg-blue-50/70' : 'bg-slate-50/70'}`}>
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  {recipient.isDifferent ? (
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>Different from requester</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <User className="h-3.5 w-3.5 text-slate-400" />
+                                  )}
+                                  <span className={`text-sm font-medium truncate max-w-[140px] ${recipient.isDifferent ? 'text-blue-700' : 'text-slate-700'}`}>
+                                    {recipient.name}
+                                  </span>
+                                </div>
+                                <div className="space-y-0.5 text-xs text-muted-foreground">
+                                  {recipient.phone && (
+                                    <p className="flex items-center gap-1 truncate max-w-[160px]">
+                                      <Phone className="h-3 w-3 flex-shrink-0" />
+                                      {recipient.phone}
+                                    </p>
+                                  )}
+                                  {recipient.email && (
+                                    <p className="flex items-center gap-1 truncate max-w-[160px]">
+                                      <Mail className="h-3 w-3 flex-shrink-0" />
+                                      {recipient.email}
+                                    </p>
+                                  )}
+                                  {!recipient.phone && !recipient.email && (
+                                    <p className="text-slate-400 italic">No contact info</p>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+
+                            {/* Status Column */}
+                            <TableCell className="py-4">
+                              <ExpenseStatusBadge status={expense.status} />
+                            </TableCell>
+
+                            {/* Actions Column */}
+                            <TableCell className="py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end gap-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-slate-500 hover:text-primary hover:bg-primary/10"
+                                      onClick={() => {
+                                        setSelectedExpense(expense);
+                                        setIsDetailDialogOpen(true);
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>View Details</TooltipContent>
+                                </Tooltip>
+
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-slate-500 hover:text-slate-700"
+                                    >
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelectedExpense(expense);
+                                        setIsDetailDialogOpen(true);
+                                      }}
+                                    >
+                                      <Eye className="mr-2 h-4 w-4" />
+                                      View Details
+                                    </DropdownMenuItem>
+
+                                    {canEdit(expense) && (
+                                      <DropdownMenuItem
+                                        onClick={() => {
+                                          setSelectedExpense(expense);
+                                          setIsEditDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    {canSubmit(expense) && (
+                                      <DropdownMenuItem
+                                        onClick={() => handleSubmit(expense)}
+                                      >
+                                        <Send className="mr-2 h-4 w-4" />
+                                        Submit for Review
+                                      </DropdownMenuItem>
+                                    )}
+
+                                    {canCancel(expense) && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedExpense(expense);
+                                            setIsCancelDialogOpen(true);
+                                          }}
+                                          className="text-orange-600"
+                                        >
+                                          <XCircle className="mr-2 h-4 w-4" />
+                                          Cancel Request
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+
+                                    {canLeaderReview(expense) && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedExpense(expense);
+                                            setIsLeaderApproveOpen(true);
+                                          }}
+                                          className="text-green-600"
+                                        >
+                                          <CheckCircle className="mr-2 h-4 w-4" />
+                                          Approve
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedExpense(expense);
+                                            setIsLeaderDenyOpen(true);
+                                          }}
+                                          className="text-red-600"
+                                        >
+                                          <XCircle className="mr-2 h-4 w-4" />
+                                          Deny
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+
+                                    {canTreasuryReview(expense) && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedExpense(expense);
+                                            setIsTreasuryApproveOpen(true);
+                                          }}
+                                          className="text-green-600"
+                                        >
+                                          <CheckCircle className="mr-2 h-4 w-4" />
+                                          Approve Payment
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedExpense(expense);
+                                            setIsTreasuryDenyOpen(true);
+                                          }}
+                                          className="text-red-600"
+                                        >
+                                          <XCircle className="mr-2 h-4 w-4" />
+                                          Deny Payment
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+
+                                    {canFinanceProcess(expense) && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedExpense(expense);
+                                            setIsFinanceProcessOpen(true);
+                                          }}
+                                          className="text-purple-600"
+                                        >
+                                          <CreditCard className="mr-2 h-4 w-4" />
+                                          Process Payment
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+
+                                    {canDelete(expense) && (
+                                      <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          onClick={() => handleDelete(expense)}
+                                          className="text-red-600"
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Detail Dialog */}
+        <ExpenseDetailDialog
+          open={isDetailDialogOpen}
+          onOpenChange={setIsDetailDialogOpen}
           expense={selectedExpense}
-          onSuccess={onRefresh}
+          userRole={userRole}
+          onLeaderApprove={() => {
+            setIsLeaderApproveOpen(true);
+          }}
+          onLeaderDeny={() => {
+            setIsLeaderDenyOpen(true);
+          }}
+          onTreasuryApprove={() => {
+            setIsTreasuryApproveOpen(true);
+          }}
+          onTreasuryDeny={() => {
+            setIsTreasuryDenyOpen(true);
+          }}
+          onFinanceProcess={() => {
+            setIsFinanceProcessOpen(true);
+          }}
         />
-      )}
 
-      {/* Approval Dialogs */}
-      {selectedExpense && (
-        <>
-          <LeaderApproveDialog
-            open={isLeaderApproveOpen}
-            onOpenChange={setIsLeaderApproveOpen}
+        {/* Edit Dialog */}
+        {selectedExpense && (
+          <ExpenseRequestForm
+            open={isEditDialogOpen}
+            onOpenChange={setIsEditDialogOpen}
             expense={selectedExpense}
             onSuccess={onRefresh}
           />
-          <LeaderDenyDialog
-            open={isLeaderDenyOpen}
-            onOpenChange={setIsLeaderDenyOpen}
-            expense={selectedExpense}
-            onSuccess={onRefresh}
-          />
-          <TreasuryApproveDialog
-            open={isTreasuryApproveOpen}
-            onOpenChange={setIsTreasuryApproveOpen}
-            expense={selectedExpense}
-            onSuccess={onRefresh}
-          />
-          <TreasuryDenyDialog
-            open={isTreasuryDenyOpen}
-            onOpenChange={setIsTreasuryDenyOpen}
-            expense={selectedExpense}
-            onSuccess={onRefresh}
-          />
-          <FinanceProcessDialog
-            open={isFinanceProcessOpen}
-            onOpenChange={setIsFinanceProcessOpen}
-            expense={selectedExpense}
-            onSuccess={onRefresh}
-          />
-          <CancelExpenseDialog
-            open={isCancelDialogOpen}
-            onOpenChange={setIsCancelDialogOpen}
-            expense={selectedExpense}
-            onSuccess={onRefresh}
-          />
-        </>
-      )}
-    </>
+        )}
+
+        {/* Approval Dialogs */}
+        {selectedExpense && (
+          <>
+            <LeaderApproveDialog
+              open={isLeaderApproveOpen}
+              onOpenChange={setIsLeaderApproveOpen}
+              expense={selectedExpense}
+              onSuccess={onRefresh}
+            />
+            <LeaderDenyDialog
+              open={isLeaderDenyOpen}
+              onOpenChange={setIsLeaderDenyOpen}
+              expense={selectedExpense}
+              onSuccess={onRefresh}
+            />
+            <TreasuryApproveDialog
+              open={isTreasuryApproveOpen}
+              onOpenChange={setIsTreasuryApproveOpen}
+              expense={selectedExpense}
+              onSuccess={onRefresh}
+            />
+            <TreasuryDenyDialog
+              open={isTreasuryDenyOpen}
+              onOpenChange={setIsTreasuryDenyOpen}
+              expense={selectedExpense}
+              onSuccess={onRefresh}
+            />
+            <FinanceProcessDialog
+              open={isFinanceProcessOpen}
+              onOpenChange={setIsFinanceProcessOpen}
+              expense={selectedExpense}
+              onSuccess={onRefresh}
+            />
+            <CancelExpenseDialog
+              open={isCancelDialogOpen}
+              onOpenChange={setIsCancelDialogOpen}
+              expense={selectedExpense}
+              onSuccess={onRefresh}
+            />
+          </>
+        )}
+      </>
+    </TooltipProvider>
   );
 }
