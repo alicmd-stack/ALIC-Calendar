@@ -54,7 +54,13 @@ export const exportExpensesToCSV = (
     "Status",
     "Ministry",
     "Requester",
-    "Payment Method",
+    "Reimbursement Type",
+    "TIN",
+    "Advance Payment",
+    "Different Recipient",
+    "Recipient Name",
+    "Recipient Phone",
+    "Recipient Email",
     "Created Date",
     "Submitted Date",
     "Leader Reviewed",
@@ -72,6 +78,12 @@ export const exportExpensesToCSV = (
     expense.ministry?.name || "",
     expense.requester_name,
     REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type,
+    expense.tin || "",
+    expense.is_advance_payment ? "Yes" : "No",
+    expense.is_different_recipient ? "Yes" : "No",
+    expense.recipient_name || "",
+    expense.recipient_phone || "",
+    expense.recipient_email || "",
     formatDate(expense.created_at),
     formatDate(expense.submitted_at),
     formatDate(expense.leader_reviewed_at),
@@ -101,7 +113,13 @@ export const exportExpensesToExcel = (
     "Status",
     "Ministry",
     "Requester",
-    "Payment Method",
+    "Reimbursement Type",
+    "TIN",
+    "Advance Payment",
+    "Different Recipient",
+    "Recipient Name",
+    "Recipient Phone",
+    "Recipient Email",
     "Created Date",
     "Submitted Date",
     "Leader Reviewed",
@@ -119,6 +137,12 @@ export const exportExpensesToExcel = (
     expense.ministry?.name || "",
     expense.requester_name,
     REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type,
+    expense.tin || "",
+    expense.is_advance_payment ? "Yes" : "No",
+    expense.is_different_recipient ? "Yes" : "No",
+    expense.recipient_name || "",
+    expense.recipient_phone || "",
+    expense.recipient_email || "",
     formatDate(expense.created_at),
     formatDate(expense.submitted_at),
     formatDate(expense.leader_reviewed_at),
@@ -248,6 +272,10 @@ export const generatePrintableExpenseReport = (
             <th>Ministry</th>
             <th>Requester</th>
             <th>Amount</th>
+            <th>Reimbursement</th>
+            <th>TIN</th>
+            <th>Advance</th>
+            <th>Recipient</th>
             <th>Status</th>
             <th>Date</th>
           </tr>
@@ -259,6 +287,10 @@ export const generatePrintableExpenseReport = (
               <td>${escapeHTML(e.ministry?.name || "")}</td>
               <td>${escapeHTML(e.requester_name)}</td>
               <td class="amount">${formatCurrency(e.amount)}</td>
+              <td>${REIMBURSEMENT_TYPE_LABELS[e.reimbursement_type] || e.reimbursement_type}</td>
+              <td>${escapeHTML(e.tin || "-")}</td>
+              <td>${e.is_advance_payment ? "Yes" : "No"}</td>
+              <td>${e.is_different_recipient && e.recipient_name ? escapeHTML(e.recipient_name) : "Same"}</td>
               <td><span class="status">${EXPENSE_STATUS_CONFIG[e.status]?.label || e.status}</span></td>
               <td>${formatDate(e.created_at)}</td>
             </tr>

@@ -21,6 +21,7 @@ import type {
   AllocationRequestWithRelations,
   AttachmentData,
 } from "../types";
+import { REIMBURSEMENT_TYPE_LABELS } from "../types";
 import { supabase } from "@/integrations/supabase/client";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -574,21 +575,25 @@ export const EnhancedReportExport = ({
               const attachmentCount = attachments?.length || 0;
               return [
                 new Date(expense.created_at).toLocaleDateString(),
-                expense.title.substring(0, 30) +
-                  (expense.title.length > 30 ? "..." : ""),
-                (expense.description || "").substring(0, 30) +
-                  ((expense.description || "").length > 30 ? "..." : ""),
+                expense.title.substring(0, 25) +
+                  (expense.title.length > 25 ? "..." : ""),
                 `$${expense.amount.toLocaleString()}`,
+                REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type,
+                expense.tin || "-",
+                expense.is_advance_payment ? "Yes" : "No",
+                expense.is_different_recipient && expense.recipient_name
+                  ? expense.recipient_name.substring(0, 15) + (expense.recipient_name.length > 15 ? "..." : "")
+                  : "Same",
                 expense.status
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (l) => l.toUpperCase()),
-                attachmentCount > 0 ? `${attachmentCount} file${attachmentCount > 1 ? 's' : ''}` : '-',
+                attachmentCount > 0 ? `${attachmentCount}` : '-',
               ];
             });
 
           autoTable(doc, {
             startY: currentY,
-            head: [["Date", "Justification", "Description", "Amount", "Status", "Attachments"]],
+            head: [["Date", "Justification", "Amount", "Reimb.", "TIN", "Adv.", "Recipient", "Status", "Files"]],
             body: recentExpenses,
             theme: "striped",
             headStyles: {
@@ -876,7 +881,7 @@ export const EnhancedReportExport = ({
       ["Allocation Approval Rate", `${stats.allocations.approvalRate}%`],
       [],
       ["EXPENSE DETAILS"],
-      ["Date", "Justification", "Description", "Amount", "Status", "Fiscal Year", "Attachments"],
+      ["Date", "Justification", "Description", "Amount", "Reimbursement Type", "TIN", "Advance Payment", "Different Recipient", "Recipient Name", "Recipient Phone", "Recipient Email", "Status", "Fiscal Year", "Attachments"],
       ...expenses.map((expense) => {
         const attachments = expense.attachments as unknown as AttachmentData[] | undefined;
         const attachmentNames = attachments?.map(a => a.name).join("; ") || "None";
@@ -885,6 +890,13 @@ export const EnhancedReportExport = ({
           expense.title,
           expense.description || "N/A",
           expense.amount,
+          REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type,
+          expense.tin || "",
+          expense.is_advance_payment ? "Yes" : "No",
+          expense.is_different_recipient ? "Yes" : "No",
+          expense.recipient_name || "",
+          expense.recipient_phone || "",
+          expense.recipient_email || "",
           expense.status,
           expense.fiscal_year?.name || "N/A",
           attachmentNames,
@@ -1220,10 +1232,13 @@ export const EnhancedReportExport = ({
                 <tr>
                   <th>Date</th>
                   <th>Justification</th>
-                  <th>Description</th>
                   <th class="text-right">Amount</th>
+                  <th>Reimb. Type</th>
+                  <th>TIN</th>
+                  <th>Advance</th>
+                  <th>Recipient</th>
                   <th>Status</th>
-                  <th>Attachments</th>
+                  <th>Files</th>
                 </tr>
               </thead>
               <tbody>
@@ -1238,14 +1253,18 @@ export const EnhancedReportExport = ({
                     (expense) => {
                       const attachments = expense.attachments as unknown as AttachmentData[] | undefined;
                       const attachmentCount = attachments?.length || 0;
+                      const reimbLabel = REIMBURSEMENT_TYPE_LABELS[expense.reimbursement_type] || expense.reimbursement_type;
                       return `
                     <tr>
                       <td>${new Date(
                         expense.created_at
                       ).toLocaleDateString()}</td>
                       <td>${expense.title}</td>
-                      <td>${expense.description || "N/A"}</td>
                       <td class="text-right">$${expense.amount.toLocaleString()}</td>
+                      <td>${reimbLabel}</td>
+                      <td>${expense.tin || "-"}</td>
+                      <td>${expense.is_advance_payment ? "Yes" : "No"}</td>
+                      <td>${expense.is_different_recipient && expense.recipient_name ? expense.recipient_name : "Same"}</td>
                       <td><span class="status-badge status-${
                         [
                           "treasury_approved",
@@ -1263,7 +1282,7 @@ export const EnhancedReportExport = ({
                       }">${expense.status
                       .replace(/_/g, " ")
                       .replace(/\b\w/g, (l) => l.toUpperCase())}</span></td>
-                      <td>${attachmentCount > 0 ? `${attachmentCount} file${attachmentCount > 1 ? 's' : ''}` : '-'}</td>
+                      <td>${attachmentCount > 0 ? `${attachmentCount}` : '-'}</td>
                     </tr>
                   `;
                     }
