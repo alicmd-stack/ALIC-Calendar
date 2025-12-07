@@ -51,6 +51,8 @@ interface NavItem {
   module: string;
 }
 
+const INVENTORY_APP_URL = window.location.origin;
+
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
   const { currentOrganization } = useOrganization();
@@ -84,6 +86,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       icon: Settings,
       description: isAdmin ? "Approve events" : "View my requests",
       module: "admin",
+    },
+    {
+      name: "Inventory",
+      href: "/inventory",
+      icon: Package,
+      description: "",
+      module: "inventory",
     },
   ];
 
@@ -120,16 +129,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   ];
 
   // Future modules (accessible to both admins and contributors)
-  const futureNavigation: NavItem[] = [
-    {
-      name: "Inventory",
-      href: "/inventory",
-      icon: Package,
-      description: isAdmin ? "Asset tracking" : "My requests",
-      comingSoon: true,
-      module: "inventory",
-    },
-  ];
+  const futureNavigation: NavItem[] = [];
 
   // Admin-only future modules
   const adminFutureNavigation: NavItem[] = isAdmin
@@ -191,6 +191,34 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     const Icon = item.icon;
     const isActive = location.pathname === item.href;
 
+    // Special handling for Inventory: redirect to external Inventory app
+    if (item.module === "inventory") {
+      return (
+        <button
+          key={item.name}
+          type="button"
+          onClick={() => {
+            window.location.href = `${INVENTORY_APP_URL}/inventory`;
+          }}
+          className={cn(
+            "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-all group text-muted-foreground hover:text-foreground hover:bg-secondary"
+          )}
+        >
+          <Icon className="h-5 w-5" />
+          <div className="flex-1">
+            <div className="font-medium text-sm flex items-center gap-2">
+              {item.name}
+            </div>
+            {item.description && (
+              <div className="text-xs text-muted-foreground">
+                {item.description}
+              </div>
+            )}
+          </div>
+        </button>
+      );
+    }
+
     return (
       <Link
         key={item.name}
@@ -213,14 +241,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </Badge>
             )}
           </div>
-          <div
-            className={cn(
-              "text-xs",
-              isActive ? "text-primary-foreground/80" : "text-muted-foreground"
-            )}
-          >
-            {item.description}
-          </div>
+          {item.description && (
+            <div
+              className={cn(
+                "text-xs",
+                isActive
+                  ? "text-primary-foreground/80"
+                  : "text-muted-foreground"
+              )}
+            >
+              {item.description}
+            </div>
+          )}
         </div>
         {isActive && <ChevronRight className="h-4 w-4" />}
       </Link>
@@ -300,7 +332,8 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Coming Soon
                 </div>
-                {futureNavigation.map(renderNavItem)}
+                {futureNavigation.length > 0 &&
+                  futureNavigation.map(renderNavItem)}
                 {adminFutureNavigation.map(renderNavItem)}
               </div>
             )}
@@ -387,7 +420,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 p-3" align="end">
+                <PopoverContent
+                  className="w-[calc(100vw-2rem)] sm:w-80 p-3"
+                  align="end"
+                >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
