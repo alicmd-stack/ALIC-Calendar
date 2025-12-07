@@ -16,7 +16,7 @@ import { z } from "zod";
 import { Badge } from "@/shared/components/ui/badge";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Clock, MapPin, User, Repeat } from "lucide-react";
+import { Clock, MapPin, User, Repeat, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/shared/lib/utils";
 import { RecurrenceSelector, RecurrenceConfig, recurrenceConfigToRRule, rruleToRecurrenceConfig } from "@/modules/calendar/components/RecurrenceSelector";
@@ -1046,212 +1046,244 @@ const EventDialog = ({ open, onOpenChange, eventId, initialDate, onSuccess, allE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh]" aria-describedby="event-dialog-description">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6">
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden" aria-describedby="event-dialog-description">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px]">
           {/* Left side - Event Form */}
           <div className="flex flex-col h-full max-h-[calc(90vh-2rem)]">
-            <DialogHeader>
-              <DialogTitle>{eventId ? "Edit Event" : "Create Event"}</DialogTitle>
-            </DialogHeader>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 text-white">
+              <DialogTitle className="text-xl font-semibold">
+                {eventId ? "Edit Event" : "Create Event"}
+              </DialogTitle>
+              <div className="flex items-center gap-2 mt-2 text-blue-100 text-sm">
+                <Calendar className="h-4 w-4" />
+                <span>{filterDate ? format(filterDate, "EEEE, MMMM d, yyyy") : "Select a date"}</span>
+              </div>
+            </div>
             <p id="event-dialog-description" className="sr-only">
               {eventId ? "Edit event details including title, description, room, and timing" : "Create a new event by filling in the details below"}
             </p>
 
-            <ScrollArea className="flex-1 pr-4 -mr-4">
-            <form onSubmit={handleSubmit} className="space-y-4 pb-4">
-          {validationError && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {validationError}
-              </AlertDescription>
-            </Alert>
-          )}
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <ScrollArea className="flex-1">
+                <div className="p-6 space-y-5">
+                {validationError && (
+                  <Alert variant="destructive" className="rounded-xl">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{validationError}</AlertDescription>
+                  </Alert>
+                )}
 
-          {roomConflict.hasConflict && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                This room is already booked for "{roomConflict.conflictingEvent?.title}"
-                {roomConflict.creatorName && ` by ${roomConflict.creatorName}`}
-                {roomConflict.conflictingEvent?.status === 'pending_review' && ' (pending review)'}
-                {roomConflict.conflictingEvent?.status === 'approved' && ' (approved)'}
-                {roomConflict.conflictingEvent?.status === 'published' && ' (published)'} during this time. Please choose a different time or room.
-              </AlertDescription>
-            </Alert>
-          )}
+                {roomConflict.hasConflict && (
+                  <Alert variant="destructive" className="rounded-xl">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      This room is already booked for "{roomConflict.conflictingEvent?.title}"
+                      {roomConflict.creatorName && ` by ${roomConflict.creatorName}`}
+                      {roomConflict.conflictingEvent?.status === 'pending_review' && ' (pending review)'}
+                      {roomConflict.conflictingEvent?.status === 'approved' && ' (approved)'}
+                      {roomConflict.conflictingEvent?.status === 'published' && ' (published)'} during this time.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-          {!isAdmin && !eventId && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Your event will be automatically submitted for admin review after creation.
-              </AlertDescription>
-            </Alert>
-          )}
+                {!isAdmin && !eventId && (
+                  <Alert className="rounded-xl bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      Your event will be automatically submitted for admin review after creation.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
-          {!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review') && (
-            <Alert>
-              <Info className="h-4 w-4" />
-              <AlertDescription>
-                Any changes will be automatically submitted for admin review.
-              </AlertDescription>
-            </Alert>
-          )}
+                {!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review') && (
+                  <Alert className="rounded-xl bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      Any changes will be automatically submitted for admin review.
+                    </AlertDescription>
+                  </Alert>
+                )}
 
+                {/* Title */}
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-sm font-medium text-slate-700">Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    disabled={!canEdit || loading}
+                    maxLength={200}
+                    required
+                    placeholder="Enter event title..."
+                    className="h-11 border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 rounded-xl"
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              disabled={!canEdit || loading}
-              maxLength={200}
-              required
-              className="border-2 border-gray-300"
-            />
-          </div>
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-sm font-medium text-slate-700">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    disabled={!canEdit || loading}
+                    maxLength={1000}
+                    placeholder="Add a description..."
+                    className="min-h-[80px] resize-none border-slate-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 rounded-xl"
+                  />
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              disabled={!canEdit || loading}
-              maxLength={1000}
-              className="border-2 border-gray-300"
-            />
-          </div>
+                {/* Room Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="room" className="text-sm font-medium text-slate-700">Room</Label>
+                  <Select
+                    value={formData.room_id}
+                    onValueChange={(value) => setFormData({ ...formData, room_id: value })}
+                    disabled={!canEdit || loading}
+                  >
+                    <SelectTrigger className="h-11 border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400">
+                      <SelectValue placeholder="Select a room" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rooms?.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="room">Room *</Label>
-            <Select
-              value={formData.room_id}
-              onValueChange={(value) => setFormData({ ...formData, room_id: value })}
-              disabled={!canEdit || loading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a room" />
-              </SelectTrigger>
-              <SelectContent>
-                {rooms?.map((room) => (
-                  <SelectItem key={room.id} value={room.id}>
-                    {room.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                {/* Time Section */}
+                <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl p-5 border border-slate-200/60">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="starts_at" className="text-sm font-medium text-slate-600">Start Time</Label>
+                      <Input
+                        id="starts_at"
+                        type="datetime-local"
+                        value={formData.starts_at}
+                        onChange={(e) => handleStartTimeChange(e.target.value)}
+                        disabled={!canEdit || loading}
+                        required
+                        className="h-11 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400"
+                      />
+                    </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="starts_at">Start Time *</Label>
-              <Input
-                id="starts_at"
-                type="datetime-local"
-                value={formData.starts_at}
-                onChange={(e) => handleStartTimeChange(e.target.value)}
-                disabled={!canEdit || loading}
-                required
-              />
-            </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="ends_at" className={cn("text-sm font-medium", validationError ? "text-destructive" : "text-slate-600")}>
+                        End Time
+                      </Label>
+                      <Input
+                        id="ends_at"
+                        type="datetime-local"
+                        value={formData.ends_at}
+                        onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
+                        disabled={!canEdit || loading}
+                        className={cn(
+                          "h-11 bg-white border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400",
+                          validationError && "border-destructive"
+                        )}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="ends_at" className={validationError ? "text-destructive" : ""}>
-                End Time *
-              </Label>
-              <Input
-                id="ends_at"
-                type="datetime-local"
-                value={formData.ends_at}
-                onChange={(e) => setFormData({ ...formData, ends_at: e.target.value })}
-                disabled={!canEdit || loading}
-                className={validationError ? "border-destructive" : ""}
-                required
-              />
-              {validationError && (
-                <p className="text-sm text-destructive">{validationError}</p>
-              )}
-            </div>
-          </div>
+                {/* Recurrence Selector */}
+                <RecurrenceSelector
+                  value={recurrence}
+                  onChange={setRecurrence}
+                  startDate={formData.starts_at}
+                />
+                </div>
+              </ScrollArea>
 
-          {/* Recurrence Selector */}
-          <RecurrenceSelector
-            value={recurrence}
-            onChange={setRecurrence}
-            startDate={formData.starts_at}
-          />
+              {/* Fixed Action Buttons Footer */}
+              <div className="flex-shrink-0 border-t bg-slate-50 px-6 py-4 space-y-3">
+                {canEdit && (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => onOpenChange(false)}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
+                    {eventId && event && (isAdmin || event.created_by === user?.id) && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={handleDelete}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
+                    )}
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      disabled={loading || !!validationError || roomConflict.hasConflict}
+                    >
+                      {eventId
+                        ? (!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review')
+                            ? "Update & Submit"
+                            : "Update")
+                        : (!isAdmin ? "Create & Submit" : "Create")
+                      }
+                    </Button>
+                  </div>
+                )}
 
-          {canEdit && (
-            <div className="flex gap-2">
-              <Button type="submit" disabled={loading || !!validationError || roomConflict.hasConflict}>
-                {eventId
-                  ? (!isAdmin && event && (event.status === 'draft' || event.status === 'pending_review')
-                      ? "Update & Submit for Review"
-                      : "Update")
-                  : (!isAdmin ? "Create & Submit for Review" : "Create")
-                }
-              </Button>
-              {eventId && event && (isAdmin || event.created_by === user?.id) && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleDelete}
-                  disabled={loading}
-                >
-                  Delete
-                </Button>
-              )}
-            </div>
-          )}
+                {isAdmin && event && event.status === "pending_review" && (
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleStatusChange("approved")}
+                      disabled={loading}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => setRejectionDialogOpen(true)}
+                      disabled={loading}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                )}
 
-          {isAdmin && event && event.status === "pending_review" && (
-            <div className="flex gap-2 pt-4 border-t">
-              <Button
-                type="button"
-                variant="default"
-                onClick={() => handleStatusChange("approved")}
-                disabled={loading}
-              >
-                Approve
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => setRejectionDialogOpen(true)}
-                disabled={loading}
-              >
-                Reject
-              </Button>
-            </div>
-          )}
-
-          {isAdmin && event && event.status === "approved" && (
-            <div className="flex gap-2 pt-4 border-t">
-              <Button
-                type="button"
-                onClick={() => handleStatusChange("published")}
-                disabled={loading}
-              >
-                Publish Event
-              </Button>
-            </div>
-          )}
-        </form>
-            </ScrollArea>
+                {isAdmin && event && event.status === "approved" && (
+                  <Button
+                    type="button"
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    onClick={() => handleStatusChange("published")}
+                    disabled={loading}
+                  >
+                    Publish Event
+                  </Button>
+                )}
+              </div>
+            </form>
           </div>
 
           {/* Right side - Event Sidebar */}
-          <div className="hidden lg:block border-l pl-6">
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-lg font-semibold">Events</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {format(filterDate, "EEEE, MMMM d, yyyy")}
-                </p>
-              </div>
+          <div className="hidden lg:flex lg:flex-col border-l bg-slate-50/50">
+            <div className="p-5 border-b bg-white">
+              <h3 className="text-lg font-semibold text-slate-800">Events</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                {format(filterDate, "MMMM d, yyyy")}
+              </p>
+            </div>
+            <div className="p-4 flex-1 overflow-auto">
               <Tabs defaultValue="pending" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="pending" className="text-xs relative">

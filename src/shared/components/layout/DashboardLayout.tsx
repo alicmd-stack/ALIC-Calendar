@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/popover";
 import { Input } from "@/shared/components/ui/input";
 import { useSearch } from "@/shared/contexts/SearchContext";
+import { CHURCH_BRANDING, getLogoSrc } from "@/shared/constants/branding";
 import {
   LogOut,
   Users,
@@ -116,16 +117,28 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       ]
     : [];
 
-  // Future modules (accessible to both admins and contributors)
-  const futureNavigation: NavItem[] = [
+  // Budget module (now available)
+  const budgetNavigation: NavItem[] = [
     {
       name: "Budget",
       href: "/budget",
       icon: DollarSign,
-      description: isAdmin ? "Financial management" : "My requests",
-      comingSoon: true,
+      description: isAdmin ? "Financial management" : "My expenses",
+      comingSoon: false,
       module: "budget",
     },
+  ];
+
+  // Future modules (accessible to both admins and contributors)
+  const futureNavigation: NavItem[] = [
+    // {
+    //   name: "Inventory",
+    //   href: "/inventory",
+    //   icon: Package,
+    //   description: isAdmin ? "Asset tracking" : "My requests",
+    //   comingSoon: true,
+    //   module: "inventory",
+    // },
   ];
 
   // Admin-only future modules
@@ -146,6 +159,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     ...mainNavigation,
     ...contributorNavigation,
     ...adminNavigation,
+    ...budgetNavigation,
     ...futureNavigation,
     ...adminFutureNavigation,
   ];
@@ -276,15 +290,24 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Logo */}
           <div className="p-6 border-b">
             <Link to="/dashboard" className="flex items-center gap-3">
-              <div className="bg-gradient-primary p-2.5 rounded-xl">
-                <Building className="h-6 w-6 text-primary-foreground" />
+              <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border shadow-sm">
+                <img
+                  src={getLogoSrc(currentOrganization?.logo_url)}
+                  alt={currentOrganization?.name || CHURCH_BRANDING.name}
+                  className="h-10 w-10 object-contain"
+                  onError={(e) => {
+                    // Fallback to building icon if image fails to load
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                  }}
+                />
               </div>
-              <div>
-                <h1 className="font-bold text-lg truncate max-w-[180px]">
-                  {currentOrganization?.name || "Church CMS"}
+              <div className="flex-1 min-w-0">
+                <h1 className="font-bold text-lg truncate">
+                  {currentOrganization?.name || CHURCH_BRANDING.shortName}
                 </h1>
-                <p className="text-xs text-muted-foreground">
-                  Management System
+                <p className="text-xs text-muted-foreground truncate">
+                  {CHURCH_BRANDING.app.title}
                 </p>
               </div>
             </Link>
@@ -304,13 +327,23 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               {adminNavigation.map(renderNavItem)}
             </div>
 
+            {/* Financial Section */}
+            <div className="space-y-2">
+              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Financial
+              </div>
+              {budgetNavigation.map(renderNavItem)}
+            </div>
+
             {/* Future Modules Section */}
-            {futureNavigation.length > 0 && (
+            {(futureNavigation.length > 0 ||
+              adminFutureNavigation.length > 0) && (
               <div className="space-y-2">
                 <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Coming Soon
                 </div>
-                {futureNavigation.map(renderNavItem)}
+                {futureNavigation.length > 0 &&
+                  futureNavigation.map(renderNavItem)}
                 {adminFutureNavigation.map(renderNavItem)}
               </div>
             )}
@@ -381,29 +414,32 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={searchQuery ? "default" : "ghost"}
                     size="sm"
-                    className="hidden sm:flex"
+                    className="flex"
                   >
                     <Search className="h-4 w-4" />
                     {searchQuery && (
-                      <span className="ml-1 max-w-[100px] truncate text-xs">
+                      <span className="ml-1 max-w-[60px] sm:max-w-[100px] truncate text-xs hidden xs:inline">
                         {searchQuery}
                       </span>
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-3" align="end">
+                <PopoverContent
+                  className="w-[calc(100vw-2rem)] sm:w-80 p-3"
+                  align="end"
+                >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
-                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <Input
                         ref={searchInputRef}
-                        placeholder="Search events..."
+                        placeholder="Search events and budget..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="h-8"
@@ -417,7 +453,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 w-8 p-0"
+                          className="h-8 w-8 p-0 flex-shrink-0"
                           onClick={clearSearch}
                         >
                           <X className="h-4 w-4" />
@@ -425,7 +461,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Search by event title, description, room, or requester
+                      Search events, expenses, and allocations
                     </p>
                   </div>
                 </PopoverContent>
@@ -436,12 +472,12 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                   3
                 </Badge>
               </Button>
-              <div className="h-6 w-px bg-border" />
+              <div className="h-6 w-px bg-border hidden sm:block" />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="hidden sm:block">
                   {isAdmin && <Badge variant="secondary">Admin</Badge>}
                 </div>
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 hidden sm:flex">
                   <AvatarFallback className="text-xs">
                     {getUserInitials(user?.email)}
                   </AvatarFallback>

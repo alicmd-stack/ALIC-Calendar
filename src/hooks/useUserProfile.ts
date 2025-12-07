@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/shared/contexts/AuthContext";
 
 interface UserProfile {
   id: string;
   full_name: string;
   email: string;
+  phone_number: string | null;
+  ministry_name: string | null;
 }
 
 export const useUserProfile = () => {
@@ -24,7 +26,7 @@ export const useUserProfile = () => {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("id, full_name, email")
+          .select("id, full_name, email, phone_number, ministry_name")
           .eq("id", user.id)
           .single();
 
@@ -35,6 +37,8 @@ export const useUserProfile = () => {
             id: user.id,
             full_name: user.email?.split("@")[0] || "User",
             email: user.email || "",
+            phone_number: null,
+            ministry_name: null,
           });
         } else {
           setProfile(data);
@@ -45,6 +49,8 @@ export const useUserProfile = () => {
           id: user.id,
           full_name: user.email?.split("@")[0] || "User",
           email: user.email || "",
+          phone_number: null,
+          ministry_name: null,
         });
       } finally {
         setLoading(false);

@@ -186,41 +186,42 @@ const Rooms = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Room Management</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold">Room Management</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
               Create and manage event rooms
             </p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)} size="lg" className="gap-2">
-            <Plus className="h-5 w-5" />
+          <Button onClick={() => setIsDialogOpen(true)} size="sm" className="gap-2 w-full sm:w-auto">
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             Add Room
           </Button>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="flex items-center justify-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-8 w-8 sm:h-12 sm:w-12 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
             {rooms?.map((room) => (
               <Card key={room.id} className="relative">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
+                <CardHeader className="p-4 sm:p-6">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div
-                        className="w-4 h-4 rounded-full"
+                        className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
                         style={{ backgroundColor: room.color }}
                       />
-                      <CardTitle>{room.name}</CardTitle>
+                      <CardTitle className="text-base sm:text-lg truncate">{room.name}</CardTitle>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8"
                         onClick={() => handleEdit(room)}
                       >
                         <Edit className="h-4 w-4" />
@@ -228,26 +229,27 @@ const Rooms = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8"
                         onClick={() => setDeleteRoomId(room.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm line-clamp-2">
                     {room.description || "No description"}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <DoorOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-xs sm:text-sm text-muted-foreground">
                         Status
                       </span>
                     </div>
                     <span
-                      className={`text-sm font-medium ${
+                      className={`text-xs sm:text-sm font-medium ${
                         room.is_active ? "text-green-600" : "text-red-600"
                       }`}
                     >

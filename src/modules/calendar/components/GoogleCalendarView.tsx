@@ -25,6 +25,7 @@ import {
 import { Clock, Plus } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useMemo, useRef, useEffect } from "react";
+import { useIsMobile } from "@/shared/hooks/use-mobile";
 
 interface Event {
   id: string;
@@ -80,6 +81,7 @@ const GoogleCalendarView = ({
   readOnly = false,
 }: GoogleCalendarViewProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
   const weekDays = view === "day" && selectedDate
     ? [selectedDate]
@@ -241,7 +243,7 @@ const GoogleCalendarView = ({
         <div className="border rounded-lg bg-background overflow-hidden">
           {/* Sticky Header Row */}
           <div className="sticky top-0 z-30 bg-background border-b">
-            <div className="grid overflow-x-auto" style={{ gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "800px" : "400px" }}>
+            <div className="grid overflow-x-auto" style={{ gridTemplateColumns: `48px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "700px" : "300px" }}>
               <div className="bg-background border-r"></div>
               {weekDays.map((day) => {
                 const isCurrentDay = isToday(day);
@@ -251,13 +253,13 @@ const GoogleCalendarView = ({
                   <div
                     key={day.toString()}
                     className={cn(
-                      "bg-background text-center py-3 px-2",
+                      "bg-background text-center py-2 sm:py-3 px-1 sm:px-2",
                       isCurrentDay && "bg-blue-50 dark:bg-blue-950"
                     )}
                   >
                     <div
                       className={cn(
-                        "text-xs font-medium uppercase tracking-wide",
+                        "text-[10px] sm:text-xs font-medium uppercase tracking-wide",
                         isCurrentDay
                           ? "text-blue-600"
                           : isPastDay
@@ -265,11 +267,11 @@ const GoogleCalendarView = ({
                           : "text-foreground"
                       )}
                     >
-                      {format(day, "EEE")}
+                      {format(day, view === "week" ? "EEE" : "EEEE")}
                     </div>
                     <div
                       className={cn(
-                        "text-2xl font-bold mt-1",
+                        "text-lg sm:text-2xl font-bold mt-0.5 sm:mt-1",
                         isCurrentDay
                           ? "text-blue-600"
                           : isPastDay
@@ -280,7 +282,7 @@ const GoogleCalendarView = ({
                       {format(day, "d")}
                     </div>
                     {isCurrentDay && (
-                      <Badge className="mt-1 text-xs bg-blue-600">Today</Badge>
+                      <Badge className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs bg-blue-600 px-1 sm:px-2">Today</Badge>
                     )}
                   </div>
                 );
@@ -294,7 +296,7 @@ const GoogleCalendarView = ({
             className="overflow-y-auto overflow-x-auto"
             style={{ height: `${containerHeight}px` }}
           >
-            <div className="grid relative" style={{ gridTemplateColumns: `60px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "800px" : "400px" }}>
+            <div className="grid relative" style={{ gridTemplateColumns: `48px repeat(${weekDays.length}, 1fr)`, minWidth: view === "week" ? "700px" : "300px" }}>
 
               {/* Time Slots */}
               {hours.map((hour) => (
@@ -302,10 +304,10 @@ const GoogleCalendarView = ({
                   {/* Hour Label */}
                   <div
                     key={`label-${hour}`}
-                    className="border-r border-b py-2 px-2 text-xs text-muted-foreground text-right bg-background"
+                    className="border-r border-b py-1 sm:py-2 px-1 sm:px-2 text-[10px] sm:text-xs text-muted-foreground text-right bg-background"
                     style={{ height: `${HOUR_HEIGHT}px` }}
                   >
-                    {format(setHours(new Date(), hour), "h a")}
+                    {format(setHours(new Date(), hour), "ha")}
                   </div>
 
                   {/* Day Columns */}
@@ -431,12 +433,13 @@ const GoogleCalendarView = ({
           {/* Month Grid */}
           <div className="grid grid-cols-7">
             {/* Day headers */}
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => (
               <div
-                key={day}
-                className="border-b bg-muted/30 py-3 text-center text-sm font-semibold"
+                key={idx}
+                className="border-b bg-muted/30 py-2 sm:py-3 text-center text-[10px] sm:text-sm font-semibold"
               >
-                {day}
+                <span className="sm:hidden">{day}</span>
+                <span className="hidden sm:inline">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][idx]}</span>
               </div>
             ))}
 
@@ -452,17 +455,17 @@ const GoogleCalendarView = ({
                   <div
                     key={`${weekIndex}-${dayIndex}`}
                     className={cn(
-                      "min-h-[120px] border-b border-r p-2 relative group/day cursor-pointer hover:bg-accent/20 transition-colors",
+                      "min-h-[60px] sm:min-h-[100px] md:min-h-[120px] border-b border-r p-1 sm:p-2 relative group/day cursor-pointer hover:bg-accent/20 transition-colors",
                       !isCurrentMonth && "bg-muted/20",
                       isCurrentDay && "bg-blue-50/50 dark:bg-blue-950/30"
                     )}
                     onClick={() => onDateClick && !isPastDay && onDateClick(day)}
                   >
                     {/* Date number */}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-1 sm:mb-2">
                       <div
                         className={cn(
-                          "flex items-center justify-center w-7 h-7 rounded-full text-sm font-semibold",
+                          "flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded-full text-xs sm:text-sm font-semibold",
                           isCurrentDay &&
                             "bg-blue-600 text-white",
                           !isCurrentDay && isCurrentMonth && "text-foreground",
@@ -472,12 +475,12 @@ const GoogleCalendarView = ({
                         {format(day, "d")}
                       </div>
 
-                      {/* Add event button on hover */}
+                      {/* Add event button on hover - hidden on mobile */}
                       {onDateClick && !isPastDay && !readOnly && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 opacity-0 group-hover/day:opacity-100 transition-opacity"
+                          className="h-5 w-5 sm:h-6 sm:w-6 p-0 opacity-0 group-hover/day:opacity-100 transition-opacity hidden sm:flex"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDateClick(day);
@@ -488,9 +491,9 @@ const GoogleCalendarView = ({
                       )}
                     </div>
 
-                    {/* Events list */}
-                    <div className="space-y-1">
-                      {dayEvents.slice(0, 3).map((event) => {
+                    {/* Events list - show fewer on mobile */}
+                    <div className="space-y-0.5 sm:space-y-1">
+                      {dayEvents.slice(0, isMobile ? 2 : 3).map((event) => {
                         const isOwnEvent =
                           currentUserId && event.created_by === currentUserId;
                         const isPendingFromOther =
@@ -500,7 +503,7 @@ const GoogleCalendarView = ({
                           <div
                             key={event.id}
                             className={cn(
-                              "text-xs px-1.5 py-0.5 rounded truncate border-l-2 cursor-pointer hover:shadow-sm transition-shadow",
+                              "text-[9px] sm:text-xs px-1 sm:px-1.5 py-0.5 rounded truncate border-l-2 cursor-pointer hover:shadow-sm transition-shadow",
                               isPendingFromOther && "border-dashed opacity-80"
                             )}
                             style={{
@@ -512,8 +515,8 @@ const GoogleCalendarView = ({
                               onEventClick(event.id);
                             }}
                           >
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium truncate">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
+                              <span className="font-medium truncate hidden sm:inline">
                                 {format(parseISO(event.starts_at), "h:mm a")}
                               </span>
                               <span className="truncate">{event.title}</span>
@@ -523,20 +526,20 @@ const GoogleCalendarView = ({
                       })}
 
                       {/* More events indicator */}
-                      {dayEvents.length > 3 && (
-                        <div className="text-xs text-muted-foreground font-medium px-1.5">
-                          +{dayEvents.length - 3} more
+                      {dayEvents.length > (isMobile ? 2 : 3) && (
+                        <div className="text-[9px] sm:text-xs text-muted-foreground font-medium px-1 sm:px-1.5">
+                          +{dayEvents.length - (isMobile ? 2 : 3)} more
                         </div>
                       )}
                     </div>
 
-                    {/* Event count dots for days with few events */}
-                    {dayEvents.length > 0 && dayEvents.length <= 3 && (
-                      <div className="absolute bottom-1 right-1 flex gap-0.5">
+                    {/* Event count dots - shown on mobile when no room for events */}
+                    {dayEvents.length > 0 && (
+                      <div className="absolute bottom-0.5 sm:bottom-1 right-0.5 sm:right-1 flex gap-0.5 sm:hidden">
                         {dayEvents.slice(0, 3).map((event, idx) => (
                           <div
                             key={idx}
-                            className="w-1.5 h-1.5 rounded-full"
+                            className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full"
                             style={{ backgroundColor: event.room?.color || "#888" }}
                           />
                         ))}
@@ -549,28 +552,28 @@ const GoogleCalendarView = ({
           </div>
         </div>
 
-        {/* Legend */}
+        {/* Legend - smaller on mobile */}
         {!hideStatus && (
-          <Card className="p-3">
-            <div className="flex flex-wrap items-center gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-gray-500" />
+          <Card className="p-2 sm:p-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-gray-500" />
                 <span>Draft</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-amber-500" />
-                <span>Pending Review</span>
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-amber-500" />
+                <span>Pending</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-green-500" />
                 <span>Approved</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-red-500" />
                 <span>Rejected</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
+              <div className="flex items-center gap-1 sm:gap-2">
+                <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-blue-500" />
                 <span>Published</span>
               </div>
             </div>

@@ -6,9 +6,10 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Check, X, Eye, User } from "lucide-react";
+import { Check, X, Eye, User, Download } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import EventDialog from "@/modules/calendar/components/EventDialog";
+import { ExportDialog } from "@/modules/calendar/components";
 import { RejectionReasonDialog } from "@/shared/components/RejectionReasonDialog";
 import { RecurringEventActionDialog, RecurringActionScope } from "@/shared/components/RecurringEventActionDialog";
 import { formatDistance, format } from "date-fns";
@@ -51,6 +52,7 @@ const Admin = () => {
   const { user, isAdmin } = useAuth();
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
   const [eventToReject, setEventToReject] = useState<{ id: string; title: string; is_recurring?: boolean; parent_event_id?: string | null } | null>(null);
   const [rejectionLoading, setRejectionLoading] = useState(false);
@@ -626,26 +628,39 @@ const Admin = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">{isAdmin ? "Admin Panel" : "My Requests"}</h1>
-          <p className="text-muted-foreground mt-1">
-            {isAdmin ? "Review and manage event submissions" : "Track the status of your event requests"}
-          </p>
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">{isAdmin ? "Event Review" : "My Requests"}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">
+              {isAdmin ? "Review and manage event submissions" : "Track the status of your event requests"}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsExportDialogOpen(true)}
+            className="gap-2 self-start"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
         </div>
 
         <Tabs defaultValue="pending" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="pending">
-              Pending Review ({filteredPendingEvents.length})
+          <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full sm:w-auto h-auto gap-1 p-1">
+            <TabsTrigger value="pending" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">
+              <span className="hidden sm:inline">Pending Review</span>
+              <span className="sm:hidden">Pending</span>
+              <span className="ml-1">({filteredPendingEvents.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="approved">
+            <TabsTrigger value="approved" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">
               Approved ({filteredApprovedEvents.length})
             </TabsTrigger>
-            <TabsTrigger value="published">
+            <TabsTrigger value="published" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">
               Published ({filteredPublishedEvents.length})
             </TabsTrigger>
-            <TabsTrigger value="rejected">
+            <TabsTrigger value="rejected" className="text-xs sm:text-sm px-2 sm:px-4 py-1.5 sm:py-2">
               Rejected ({filteredRejectedEvents.length})
             </TabsTrigger>
           </TabsList>
@@ -662,35 +677,38 @@ const Admin = () => {
             ) : (
               filteredPendingEvents.map((event) => (
                 <Card key={event.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl">{event.title}</CardTitle>
-                        <CardDescription className="mt-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base sm:text-xl line-clamp-2">{event.title}</CardTitle>
+                        <CardDescription className="mt-2 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                            <Badge variant="secondary" className={`${statusColors[event.status]} text-[10px] sm:text-xs`}>
                               {event.status.replace("_", " ")}
                             </Badge>
-                            <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                            <span className="text-xs sm:text-sm">
+                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy")}
+                            </span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">
+                              {format(new Date(event.starts_at), "h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
-                            <p className="mt-2 text-sm">{event.description}</p>
+                            <p className="text-xs sm:text-sm line-clamp-2">{event.description}</p>
                           )}
-                          <div className="flex items-center gap-4 mt-2 text-xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs">
                             {event.creator && (
                               <div className="flex flex-col gap-0.5 text-muted-foreground">
                                 <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                  <User className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
                                 </div>
                                 {event.creator.ministry_name && (
-                                  <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                  <span className="text-xs ml-4 truncate">{event.creator.ministry_name}</span>
                                 )}
                               </div>
                             )}
-                            <span className="text-muted-foreground">
+                            <span className="text-muted-foreground text-[10px] sm:text-xs">
                               Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
                             </span>
                           </div>
@@ -698,31 +716,33 @@ const Admin = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-2">
                       {isAdmin && (
                         <>
                           <Button
                             variant="default"
                             size="sm"
+                            className="text-xs sm:text-sm"
                             onClick={() => handleStatusChange(event.id, "approved")}
                           >
-                            <Check className="h-4 w-4 mr-1" />
+                            <Check className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Approve
                           </Button>
                           <Button
                             variant="destructive"
                             size="sm"
+                            className="text-xs sm:text-sm"
                             onClick={() => handleOpenRejectionDialog(event.id, event.title, event.is_recurring, event.parent_event_id)}
                           >
-                            <X className="h-4 w-4 mr-1" />
+                            <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Reject
                           </Button>
                         </>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
+                      <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => handleViewEvent(event.id)}>
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden xs:inline">View </span>Details
                       </Button>
                     </div>
                   </CardContent>
@@ -743,30 +763,33 @@ const Admin = () => {
             ) : (
               filteredApprovedEvents.map((event) => (
                 <Card key={event.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl">{event.title}</CardTitle>
-                        <CardDescription className="mt-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base sm:text-xl line-clamp-2">{event.title}</CardTitle>
+                        <CardDescription className="mt-2 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                            <Badge variant="secondary" className={`${statusColors[event.status]} text-[10px] sm:text-xs`}>
                               {event.status.replace("_", " ")}
                             </Badge>
-                            <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                            <span className="text-xs sm:text-sm">
+                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy")}
+                            </span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">
+                              {format(new Date(event.starts_at), "h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
-                            <p className="mt-2 text-sm">{event.description}</p>
+                            <p className="text-xs sm:text-sm line-clamp-2">{event.description}</p>
                           )}
                           {event.creator && (
-                            <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
+                            <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                <User className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
                               </div>
                               {event.creator.ministry_name && (
-                                <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                <span className="text-xs ml-4 truncate">{event.creator.ministry_name}</span>
                               )}
                             </div>
                           )}
@@ -774,27 +797,30 @@ const Admin = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-2">
                       {isAdmin && (
                         <>
                           <Button
+                            size="sm"
+                            className="text-xs sm:text-sm"
                             onClick={() => handleStatusChange(event.id, "published")}
                           >
-                            Publish Event
+                            Publish
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
+                            className="text-xs sm:text-sm"
                             onClick={() => handleUnapprove(event.id)}
                           >
                             Unapprove
                           </Button>
                         </>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
+                      <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => handleViewEvent(event.id)}>
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden xs:inline">View </span>Details
                       </Button>
                     </div>
                   </CardContent>
@@ -815,30 +841,33 @@ const Admin = () => {
             ) : (
               filteredPublishedEvents.map((event) => (
                 <Card key={event.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl">{event.title}</CardTitle>
-                        <CardDescription className="mt-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base sm:text-xl line-clamp-2">{event.title}</CardTitle>
+                        <CardDescription className="mt-2 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                            <Badge variant="secondary" className={`${statusColors[event.status]} text-[10px] sm:text-xs`}>
                               {event.status.replace("_", " ")}
                             </Badge>
-                            <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                            <span className="text-xs sm:text-sm">
+                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy")}
+                            </span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">
+                              {format(new Date(event.starts_at), "h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
-                            <p className="mt-2 text-sm">{event.description}</p>
+                            <p className="text-xs sm:text-sm line-clamp-2">{event.description}</p>
                           )}
                           {event.creator && (
-                            <div className="flex flex-col gap-0.5 mt-2 text-xs text-muted-foreground">
+                            <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                <User className="h-3 w-3 flex-shrink-0" />
+                                <span className="truncate">Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
                               </div>
                               {event.creator.ministry_name && (
-                                <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                <span className="text-xs ml-4 truncate">{event.creator.ministry_name}</span>
                               )}
                             </div>
                           )}
@@ -846,28 +875,31 @@ const Admin = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-2">
                       {isAdmin && (
                         <>
                           <Button
                             variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm"
                             onClick={() => handleStatusChange(event.id, "approved", true)}
                           >
-                            Unpublish Event
+                            Unpublish
                           </Button>
                           <Button
                             variant="secondary"
                             size="sm"
+                            className="text-xs sm:text-sm"
                             onClick={() => handleUnapprove(event.id)}
                           >
                             Unapprove
                           </Button>
                         </>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
+                      <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => handleViewEvent(event.id)}>
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden xs:inline">View </span>Details
                       </Button>
                     </div>
                   </CardContent>
@@ -888,62 +920,66 @@ const Admin = () => {
             ) : (
               filteredRejectedEvents.map((event) => (
                 <Card key={event.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl">{event.title}</CardTitle>
-                        <CardDescription className="mt-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="secondary" className={statusColors[event.status]}>
+                  <CardHeader className="pb-3 sm:pb-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base sm:text-xl line-clamp-2">{event.title}</CardTitle>
+                        <CardDescription className="mt-2 space-y-2">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 flex-wrap">
+                            <Badge variant="secondary" className={`${statusColors[event.status]} text-[10px] sm:text-xs`}>
                               {event.status.replace("_", " ")}
                             </Badge>
-                            <span className="text-sm">
-                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
+                            <span className="text-xs sm:text-sm">
+                              {event.room?.name} • {format(new Date(event.starts_at), "MMM d, yyyy")}
+                            </span>
+                            <span className="text-xs sm:text-sm text-muted-foreground">
+                              {format(new Date(event.starts_at), "h:mm a")} - {format(new Date(event.ends_at), "h:mm a")}
                             </span>
                           </div>
                           {event.description && (
-                            <p className="mt-2 text-sm">{event.description}</p>
+                            <p className="text-xs sm:text-sm line-clamp-2">{event.description}</p>
                           )}
-                          <div className="flex items-center gap-4 mt-2 text-xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs">
                             {event.creator && (
                               <div className="flex flex-col gap-0.5 text-muted-foreground">
                                 <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  <span>Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
+                                  <User className="h-3 w-3 flex-shrink-0" />
+                                  <span className="truncate">Requested by: <span className="font-medium text-foreground">{event.creator.full_name}</span></span>
                                 </div>
                                 {event.creator.ministry_name && (
-                                  <span className="text-xs ml-4">{event.creator.ministry_name}</span>
+                                  <span className="text-xs ml-4 truncate">{event.creator.ministry_name}</span>
                                 )}
                               </div>
                             )}
-                            <span className="text-muted-foreground">
+                            <span className="text-muted-foreground text-[10px] sm:text-xs">
                               Submitted {formatDistance(new Date(event.created_at), new Date(), { addSuffix: true })}
                             </span>
                           </div>
                           {event.reviewer_notes && (
-                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
-                              <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
-                              <p className="text-sm text-red-700 dark:text-red-300 mt-1">{event.reviewer_notes}</p>
+                            <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-md">
+                              <p className="text-xs sm:text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
+                              <p className="text-xs sm:text-sm text-red-700 dark:text-red-300 mt-1">{event.reviewer_notes}</p>
                             </div>
                           )}
                         </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-2">
+                  <CardContent className="pt-0">
+                    <div className="flex flex-wrap gap-2">
                       {isAdmin && (
                         <Button
                           variant="default"
                           size="sm"
+                          className="text-xs sm:text-sm"
                           onClick={() => handleStatusChange(event.id, "pending_review")}
                         >
                           Move to Pending
                         </Button>
                       )}
-                      <Button variant="outline" size="sm" onClick={() => handleViewEvent(event.id)}>
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Details
+                      <Button variant="outline" size="sm" className="text-xs sm:text-sm" onClick={() => handleViewEvent(event.id)}>
+                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="hidden xs:inline">View </span>Details
                       </Button>
                     </div>
                   </CardContent>
@@ -981,6 +1017,20 @@ const Admin = () => {
           actionType="reject"
           eventTitle={eventToReject?.title || ""}
           loading={rejectionLoading}
+        />
+
+        <ExportDialog
+          open={isExportDialogOpen}
+          onOpenChange={setIsExportDialogOpen}
+          events={[
+            ...(approvedEvents || []),
+            ...(publishedEvents || []),
+          ]}
+          organizationName={currentOrganization?.name || "Calendar"}
+          organizationSlug={currentOrganization?.slug}
+          timezone={currentOrganization?.timezone}
+          userId={user?.id}
+          isAdmin={isAdmin}
         />
       </div>
     </DashboardLayout>

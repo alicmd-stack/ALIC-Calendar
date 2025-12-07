@@ -4,11 +4,26 @@
  * This module handles budget and financial management:
  * - Ministry budgets
  * - Expense tracking
- * - Approval workflows
+ * - Multi-step approval workflows (Requester -> Leader -> Treasury -> Finance)
  * - Financial reporting
- *
- * Status: Coming Soon
+ * - Export utilities (CSV, Excel, Print)
+ * - Budget alerts and monitoring
  */
 
 // Pages
 export * from "./pages";
+
+// Components
+export * from "./components";
+
+// Hooks
+export * from "./hooks";
+
+// Services
+export * from "./services";
+
+// Types
+export * from "./types";
+
+// Utilities
+export * from "./utils";

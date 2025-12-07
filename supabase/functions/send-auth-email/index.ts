@@ -9,6 +9,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const CHURCH_NAME =
+  Deno.env.get("CHURCH_NAME") || "Addis Lidet International Church";
+const CHURCH_LOGO_URL =
+  Deno.env.get("CHURCH_LOGO_URL") || "https://addislidet.info/logo.png";
+const APP_URL = Deno.env.get("APP_URL") || "https://app.addislidet.info";
+
 interface AuthEmailPayload {
   user: {
     email: string;
@@ -301,9 +307,9 @@ const handler = async (req: Request): Promise<Response> => {
                 <!-- Header -->
                 <div class="header">
                   <div class="logo-container">
-                    <img src="https://addislidetchurch.org/wp-content/uploads/2021/08/cropped-logo-192x192.png" alt="ALIC Logo" />
+                    <img src="${CHURCH_LOGO_URL}" alt="${CHURCH_NAME}" />
                   </div>
-                  <h1>Addis Lidet International Church</h1>
+                  <h1>${CHURCH_NAME}</h1>
                 </div>
                 
                 <!-- Content -->
@@ -647,9 +653,9 @@ const handler = async (req: Request): Promise<Response> => {
                 <!-- Header -->
                 <div class="header">
                   <div class="logo-container">
-                    <img src="https://addislidetchurch.org/wp-content/uploads/2021/08/cropped-logo-192x192.png" alt="ALIC Logo" />
+                    <img src="${CHURCH_LOGO_URL}" alt="${CHURCH_NAME}" />
                   </div>
-                  <h1>Addis Lidet International Church</h1>
+                  <h1>${CHURCH_NAME}</h1>
                 </div>
                 
                 <!-- Content -->
@@ -657,7 +663,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <!-- Welcome Badge -->
                   <div class="welcome-badge">
                     <div class="welcome-badge-icon">🎉</div>
-                    <p class="welcome-badge-text">Welcome to ALIC Church Management</p>
+                    <p class="welcome-badge-text">Welcome to ${CHURCH_NAME} Management</p>
                   </div>
                   
                   <p class="greeting">Welcome to Our Community!</p>
