@@ -52,7 +52,6 @@ interface NavItem {
 }
 
 const INVENTORY_APP_URL = window.location.origin;
-// import.meta.env.VITE_INVENTORY_APP_URL || "http://localhost:3000";
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
@@ -130,16 +129,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   ];
 
   // Future modules (accessible to both admins and contributors)
-  const futureNavigation: NavItem[] = [
-    // {
-    //   name: "Inventory",
-    //   href: "/inventory",
-    //   icon: Package,
-    //   description: isAdmin ? "Asset tracking" : "My requests",
-    //   comingSoon: true,
-    //   module: "inventory",
-    // },
-  ];
+  const futureNavigation: NavItem[] = [];
 
   // Admin-only future modules
   const adminFutureNavigation: NavItem[] = isAdmin
