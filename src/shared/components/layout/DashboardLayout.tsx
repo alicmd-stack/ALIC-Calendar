@@ -18,7 +18,7 @@ import {
 } from "@/shared/components/ui/popover";
 import { Input } from "@/shared/components/ui/input";
 import { useSearch } from "@/shared/contexts/SearchContext";
-import { CHURCH_BRANDING, getLogoSrc } from "@/shared/constants/branding";
+import { getLogoSrc } from "@/shared/constants/branding";
 import {
   LogOut,
   Users,
@@ -34,6 +34,10 @@ import {
   UserCheck,
   Building,
   X,
+  LayoutDashboard,
+  ClipboardCheck,
+  ArrowRightLeft,
+  Trash2,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/shared/lib/utils";
@@ -46,12 +50,16 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  description: string;
+  description?: string;
   comingSoon?: boolean;
-  module: string;
+  adminOnly?: boolean;
+  external?: boolean; // For cross-app navigation
 }
 
-const INVENTORY_APP_URL = window.location.origin;
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
@@ -67,92 +75,146 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Main navigation items
-  const mainNavigation: NavItem[] = [
+  // Navigation configuration - Unified across Calendar and Inventory apps
+  const navigationSections: NavSection[] = [
     {
-      name: "Dashboard",
-      href: "/dashboard",
-      icon: Home,
-      description: "Calendar overview",
-      module: "calendar",
-    },
-  ];
-
-  // Navigation items accessible to both admins and contributors
-  const contributorNavigation: NavItem[] = [
-    {
-      name: "Event Review",
-      href: "/event-reviews",
-      icon: Settings,
-      description: isAdmin ? "Approve events" : "View my requests",
-      module: "event-reviews",
-    },
-    {
-      name: "Inventory",
-      href: "/inventory",
-      icon: Package,
-      description: "",
-      module: "inventory",
-    },
-  ];
-
-  // Admin-only navigation items
-  const adminNavigation: NavItem[] = isAdmin
-    ? [
+      title: "Overview",
+      items: [
         {
-          name: "Users",
-          href: "/users",
-          icon: Users,
-          description: "Manage users",
-          module: "users",
+          name: "Dashboard",
+          href: "/dashboard",
+          icon: Home,
+          description: "Calendar overview",
+        },
+      ],
+    },
+    {
+      title: "Calendar",
+      items: [
+        {
+          name: "Event Review",
+          href: "/event-reviews",
+          icon: Settings,
+          description: isAdmin ? "Approve events" : "View my requests",
+        },
+        ...(isAdmin
+          ? [
+              {
+                name: "Rooms",
+                href: "/rooms",
+                icon: DoorOpen,
+                description: "Manage rooms",
+                adminOnly: true,
+              },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: "Financial",
+      items: [
+        {
+          name: "Budget",
+          href: "/budget",
+          icon: DollarSign,
+          description: isAdmin ? "Financial management" : "My expenses",
+        },
+      ],
+    },
+    {
+      title: "Inventory",
+      items: [
+        {
+          name: "Dashboard",
+          href: "/inventory",
+          icon: LayoutDashboard,
+          description: "Inventory overview",
+          external: true,
         },
         {
-          name: "Rooms",
-          href: "/rooms",
-          icon: DoorOpen,
-          description: "Manage rooms",
-          module: "rooms",
+          name: "Assets",
+          href: "/inventory/assets",
+          icon: Package,
+          description: "Manage assets",
+          external: true,
         },
-      ]
-    : [];
-
-  // Budget module (now available)
-  const budgetNavigation: NavItem[] = [
-    {
-      name: "Budget",
-      href: "/budget",
-      icon: DollarSign,
-      description: isAdmin ? "Financial management" : "My expenses",
-      comingSoon: false,
-      module: "budget",
-    },
-  ];
-
-  // Future modules (accessible to both admins and contributors)
-  const futureNavigation: NavItem[] = [];
-
-  // Admin-only future modules
-  const adminFutureNavigation: NavItem[] = isAdmin
-    ? [
         {
-          name: "Members",
-          href: "/members",
-          icon: UserCheck,
-          description: "Church membership",
-          comingSoon: true,
-          module: "members",
+          name: "Verifications",
+          href: "/inventory/verification",
+          icon: ClipboardCheck,
+          description: "Verify inventory",
+          external: true,
         },
-      ]
-    : [];
-
-  const allNavigation = [
-    ...mainNavigation,
-    ...contributorNavigation,
-    ...adminNavigation,
-    ...budgetNavigation,
-    ...futureNavigation,
-    ...adminFutureNavigation,
+        {
+          name: "Transfers",
+          href: "/inventory/transfers",
+          icon: ArrowRightLeft,
+          description: "Asset transfers",
+          external: true,
+        },
+        {
+          name: "Disposals",
+          href: "/inventory/disposals",
+          icon: Trash2,
+          description: "Disposed assets",
+          external: true,
+        },
+      ],
+    },
+    ...(isAdmin
+      ? [
+          {
+            title: "Administration",
+            items: [
+              {
+                name: "Users & Roles",
+                href: "/admin/users",
+                icon: Users,
+                description: "Manage users",
+                adminOnly: true,
+                external: true,
+              },
+              {
+                name: "Branches",
+                href: "/admin/branches",
+                icon: Building,
+                description: "Manage branches",
+                adminOnly: true,
+                external: true,
+              },
+              {
+                name: "Ministries",
+                href: "/admin/ministries",
+                icon: UserCheck,
+                description: "Manage ministries",
+                adminOnly: true,
+                external: true,
+              },
+            ],
+          },
+        ]
+      : []),
+    ...(isAdmin
+      ? [
+          {
+            title: "Coming Soon",
+            items: [
+              {
+                name: "Members",
+                href: "/members",
+                icon: UserCheck,
+                description: "Church membership",
+                comingSoon: true,
+                adminOnly: true,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
+
+  // Flatten all navigation items for page title lookup
+  const allNavItems = navigationSections.flatMap((section) => section.items);
 
   // Get user initials for avatar
   const getUserInitials = (name?: string) => {
@@ -167,10 +229,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Get page title based on current route
   const getPageTitle = () => {
-    const currentNav = allNavigation.find(
+    const currentNav = allNavItems.find(
       (nav) => nav.href === location.pathname
     );
-    return currentNav?.name || "Church Management";
+    return currentNav?.name || "ALIC Management";
   };
 
   // Close sidebar and clear search on route change
@@ -187,25 +249,36 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     }
   }, [isSearchOpen]);
 
+  // Check if a path is active (exact match or starts with for nested routes)
+  const isPathActive = (href: string) => {
+    if (href === "/dashboard") {
+      return location.pathname === href;
+    }
+    return (
+      location.pathname === href || location.pathname.startsWith(href + "/")
+    );
+  };
+
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.href;
+    const isActive = isPathActive(item.href);
 
-    // Special handling for Inventory: redirect to external Inventory app
-    if (item.module === "inventory") {
+    // Handle external navigation (cross-app)
+    if (item.external) {
       return (
         <button
           key={item.name}
           type="button"
           onClick={() => {
-            window.location.href = `${INVENTORY_APP_URL}/inventory`;
+            window.location.href = item.href;
           }}
           className={cn(
-            "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-all group text-muted-foreground hover:text-foreground hover:bg-secondary"
+            "flex w-full items-center gap-3 px-3 py-2.5 rounded-lg transition-all group",
+            "text-muted-foreground hover:text-foreground hover:bg-secondary"
           )}
         >
           <Icon className="h-5 w-5" />
-          <div className="flex-1">
+          <div className="flex-1 text-left">
             <div className="font-medium text-sm flex items-center gap-2">
               {item.name}
             </div>
@@ -272,7 +345,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 bg-card border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-[280px] bg-card border-r transform transition-transform duration-200 ease-in-out lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -283,21 +356,18 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
               <div className="bg-white dark:bg-slate-800 p-2 rounded-xl border shadow-sm">
                 <img
                   src={getLogoSrc(currentOrganization?.logo_url)}
-                  alt={currentOrganization?.name || CHURCH_BRANDING.name}
+                  alt="ALIC"
                   className="h-10 w-10 object-contain"
                   onError={(e) => {
-                    // Fallback to building icon if image fails to load
                     const target = e.target as HTMLImageElement;
                     target.style.display = "none";
                   }}
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="font-bold text-lg truncate">
-                  {currentOrganization?.name || CHURCH_BRANDING.shortName}
-                </h1>
+                <h1 className="font-bold text-lg truncate">ALIC</h1>
                 <p className="text-xs text-muted-foreground truncate">
-                  {CHURCH_BRANDING.app.title}
+                  Management System
                 </p>
               </div>
             </Link>
@@ -305,38 +375,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
-            {/* Main Navigation */}
-            <div className="space-y-2">{mainNavigation.map(renderNavItem)}</div>
-
-            {/* Administration Section - includes contributor items + admin-only items */}
-            <div className="space-y-2">
-              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Administration
-              </div>
-              {contributorNavigation.map(renderNavItem)}
-              {adminNavigation.map(renderNavItem)}
-            </div>
-
-            {/* Financial Section */}
-            <div className="space-y-2">
-              <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Financial
-              </div>
-              {budgetNavigation.map(renderNavItem)}
-            </div>
-
-            {/* Future Modules Section */}
-            {(futureNavigation.length > 0 ||
-              adminFutureNavigation.length > 0) && (
-              <div className="space-y-2">
+            {navigationSections.map((section) => (
+              <div key={section.title} className="space-y-2">
                 <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Coming Soon
+                  {section.title}
                 </div>
-                {futureNavigation.length > 0 &&
-                  futureNavigation.map(renderNavItem)}
-                {adminFutureNavigation.map(renderNavItem)}
+                {section.items.map(renderNavItem)}
               </div>
-            )}
+            ))}
           </nav>
 
           {/* User Profile Section */}
@@ -386,7 +432,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </aside>
 
       {/* Main Content */}
-      <div className="lg:ml-72">
+      <div className="lg:ml-[280px]">
         {/* Top Header */}
         <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
           <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">

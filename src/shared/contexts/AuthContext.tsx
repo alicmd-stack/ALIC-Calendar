@@ -106,9 +106,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const roles = data?.map((r) => r.role) || [];
-      setIsAdmin(roles.includes("admin"));
+      let adminStatus = roles.includes("admin");
       setIsTreasury(roles.includes("treasury"));
       setIsFinance(roles.includes("finance"));
+
+      // Also check user_roles table for system_admin role (used by Inventory app)
+      // This ensures admin menus show for system_admin users
+      if (!adminStatus) {
+        try {
+          const { data: userRolesData } = await supabase
+            .from("user_roles")
+            .select("roles(name)")
+            .eq("user_id", userId);
+
+          if (userRolesData && Array.isArray(userRolesData)) {
+            const roleNames = userRolesData
+              .map((ur: unknown) => {
+                const record = ur as { roles?: { name?: string } | null };
+                return record?.roles?.name;
+              })
+              .filter(Boolean);
+            if (roleNames.includes("system_admin")) {
+              adminStatus = true;
+            }
+          }
+        } catch {
+          // user_roles table might not exist in this database schema
+          console.log(
+            "user_roles table not available, skipping system_admin check"
+          );
+        }
+      }
+
+      setIsAdmin(adminStatus);
     } catch (error) {
       console.error("Error checking role status:", error);
       setIsAdmin(false);
