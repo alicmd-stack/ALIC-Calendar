@@ -26,6 +26,7 @@ import {
   DoorOpen,
   Menu,
   ChevronRight,
+  ChevronDown,
   Home,
   Bell,
   Search,
@@ -75,19 +76,34 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // State for collapsible sections - all collapsed by default
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Toggle section expansion
+  const toggleSection = (title: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) {
+        next.delete(title);
+      } else {
+        next.add(title);
+      }
+      return next;
+    });
+  };
+
+  // Dashboard link (standalone, not in a collapsible group)
+  const dashboardItem: NavItem = {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: Home,
+    description: "Calendar overview",
+  };
+
   // Navigation configuration - Unified across Calendar and Inventory apps
   const navigationSections: NavSection[] = [
-    {
-      title: "Overview",
-      items: [
-        {
-          name: "Dashboard",
-          href: "/dashboard",
-          icon: Home,
-          description: "Calendar overview",
-        },
-      ],
-    },
     {
       title: "Calendar",
       items: [
@@ -125,10 +141,10 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       title: "Inventory",
       items: [
         {
-          name: "Dashboard",
+          name: "Asset Overview",
           href: "/inventory",
           icon: LayoutDashboard,
-          description: "Inventory overview",
+          description: "Inventory dashboard",
           external: true,
         },
         {
@@ -248,6 +264,27 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       searchInputRef.current.focus();
     }
   }, [isSearchOpen]);
+
+  // Auto-expand section containing the current route
+  useEffect(() => {
+    const matchingSection = navigationSections.find((section) =>
+      section.items.some((item) => {
+        if (item.href === "/dashboard") {
+          return location.pathname === item.href;
+        }
+        return (
+          location.pathname === item.href ||
+          location.pathname.startsWith(item.href + "/")
+        );
+      })
+    );
+    if (matchingSection) {
+      setExpandedSections((prev) => {
+        if (prev.has(matchingSection.title)) return prev;
+        return new Set([...prev, matchingSection.title]);
+      });
+    }
+  }, [location.pathname, isAdmin]); // Re-run when isAdmin changes (auth loads)
 
   // Check if a path is active (exact match or starts with for nested routes)
   const isPathActive = (href: string) => {
@@ -374,15 +411,40 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
-            {navigationSections.map((section) => (
-              <div key={section.title} className="space-y-2">
-                <div className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {section.title}
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+            {/* Standalone Dashboard link */}
+            <div className="mb-2">{renderNavItem(dashboardItem)}</div>
+
+            {/* Collapsible sections */}
+            {navigationSections.map((section) => {
+              const isExpanded = expandedSections.has(section.title);
+              return (
+                <div key={section.title} className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.title)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground hover:bg-secondary/50 rounded-lg transition-colors"
+                  >
+                    <span>{section.title}</span>
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </button>
+                  <div
+                    className={cn(
+                      "space-y-1 overflow-hidden transition-all duration-200",
+                      isExpanded
+                        ? "max-h-[500px] opacity-100"
+                        : "max-h-0 opacity-0"
+                    )}
+                  >
+                    {section.items.map(renderNavItem)}
+                  </div>
                 </div>
-                {section.items.map(renderNavItem)}
-              </div>
-            ))}
+              );
+            })}
           </nav>
 
           {/* User Profile Section */}
