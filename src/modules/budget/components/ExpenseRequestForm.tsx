@@ -141,6 +141,8 @@ export function ExpenseRequestForm({
   const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousMinistryIdRef = useRef<string | null>(null);
+  const isInitialMount = useRef(true);
 
   const { data: ministries, isLoading: ministriesLoading } = useMinistries(
     currentOrganization?.id
@@ -190,6 +192,7 @@ export function ExpenseRequestForm({
   const selectedJustificationCategory = form.watch("justification_category");
 
   // Get the user's default ministry from their profile
+  // Note: If the user doesn't have a ministry_name in their profile, they'll need to select one manually
   const userMinistry = ministries?.find(
     (m) => m.name.toLowerCase() === profile?.ministry_name?.toLowerCase()
   );
@@ -257,13 +260,21 @@ export function ExpenseRequestForm({
     }
   }, [expense, form, userMinistry?.id, ministries]);
 
-  // Reset justification category when ministry changes
+  // Reset justification category when ministry changes (but not on initial mount)
   useEffect(() => {
-    if (!expense) {
-      // Only reset for new expenses, not when editing
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousMinistryIdRef.current = selectedMinistryId;
+      return;
+    }
+
+    // Only reset if ministry actually changed (not initial setting)
+    if (!expense && previousMinistryIdRef.current !== selectedMinistryId && previousMinistryIdRef.current !== null) {
       form.setValue("justification_category", "");
       form.setValue("title", "");
     }
+
+    previousMinistryIdRef.current = selectedMinistryId;
   }, [selectedMinistryId, form, expense]);
 
   // Handle file upload
