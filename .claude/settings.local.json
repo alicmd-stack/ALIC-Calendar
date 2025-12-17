@@ -11,7 +11,8 @@
       "Bash(supabase db push:*)",
       "Bash(lsof:*)",
       "Bash(cat:*)",
-      "Bash(timeout 60 npx tsc:*)"
+      "Bash(timeout 60 npx tsc:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
