@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
@@ -473,10 +474,10 @@ export function AllocationRequestForm({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>No Active Fiscal Year</DialogTitle>
+            <DialogDescription>
+              Please contact an administrator to set up a fiscal year.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-muted-foreground text-sm">
-            Please contact an administrator to set up a fiscal year.
-          </p>
           <Button onClick={() => onOpenChange(false)} className="mt-4">
             Close
           </Button>
@@ -495,6 +496,9 @@ export function AllocationRequestForm({
               ? "Edit Allocation Request"
               : "Budget Allocation Request"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing ? "Edit an existing budget allocation request" : "Create a new budget allocation request for your ministry"}
+          </DialogDescription>
           <div className="flex items-center gap-2 mt-2 text-violet-100 text-sm">
             <Calendar className="h-4 w-4" />
             <Select

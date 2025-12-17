@@ -559,6 +559,9 @@ export function ExpenseRequestForm({
           <DialogTitle className="text-xl font-semibold">
             {isEditing ? "Edit Expense Request" : "Expense Request"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing ? "Edit an existing expense request" : "Create a new expense request for reimbursement"}
+          </DialogDescription>
           <div className="flex items-center gap-2 mt-2 text-emerald-100 text-sm">
             <Calendar className="h-4 w-4" />
             <Select
