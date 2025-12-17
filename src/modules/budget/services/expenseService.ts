@@ -468,7 +468,7 @@ export const expenseService = {
       new_status: "treasury_approved",
       actor_id: reviewerId,
       actor_name: reviewerName,
-      notes: notes || "Payment approved by treasury",
+      notes: notes || "Approved by treasury",
     });
 
     return data;
