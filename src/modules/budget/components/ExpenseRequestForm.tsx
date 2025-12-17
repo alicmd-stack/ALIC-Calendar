@@ -44,10 +44,17 @@ import { useOrganization } from "@/shared/contexts/OrganizationContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import type { ExpenseRequest, ReimbursementType } from "../types";
 import { REIMBURSEMENT_TYPE_LABELS } from "../types";
+import {
+  getJustificationsForMinistry,
+  OTHER_JUSTIFICATION_VALUE,
+  OTHER_JUSTIFICATION_LABEL,
+} from "../constants/ministryJustifications";
 
 // Form validation schema
 const expenseFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
+  ministry_id: z.string().min(1, "Ministry is required"),
+  justification_category: z.string().min(1, "Justification category is required"),
+  title: z.string().optional(), // Custom justification when "Other" is selected
   description: z.string().optional(),
   amount: z.coerce.number().positive("Amount must be greater than 0").multipleOf(0.01, "Amount can have at most 2 decimal places"),
   reimbursement_type: z.enum(["zelle", "check", "ach", "admin_online_purchase"]),
@@ -57,6 +64,15 @@ const expenseFormSchema = z.object({
   recipient_name: z.string().optional(),
   recipient_phone: z.string().optional(),
   recipient_email: z.string().email("Invalid email address").optional().or(z.literal("")),
+}).refine((data) => {
+  // If "Other" is selected, custom justification (title) is required
+  if (data.justification_category === OTHER_JUSTIFICATION_VALUE) {
+    return !!data.title && data.title.length >= 3;
+  }
+  return true;
+}, {
+  message: "Please specify your justification (at least 3 characters)",
+  path: ["title"],
 }).refine((data) => {
   if (data.is_different_recipient) {
     return !!data.recipient_name && data.recipient_name.length >= 2;
@@ -125,6 +141,8 @@ export function ExpenseRequestForm({
   const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousMinistryIdRef = useRef<string | null>(null);
+  const isInitialMount = useRef(true);
 
   const { data: ministries, isLoading: ministriesLoading } = useMinistries(
     currentOrganization?.id
@@ -153,6 +171,8 @@ export function ExpenseRequestForm({
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
     defaultValues: {
+      ministry_id: "",
+      justification_category: "",
       title: "",
       description: "",
       amount: 0,
@@ -166,19 +186,43 @@ export function ExpenseRequestForm({
     },
   });
 
-  // Watch the is_different_recipient field to show/hide recipient fields
+  // Watch form fields for conditional rendering
   const isDifferentRecipient = form.watch("is_different_recipient");
+  const selectedMinistryId = form.watch("ministry_id");
+  const selectedJustificationCategory = form.watch("justification_category");
 
-  // Get the user's ministry from their profile
+  // Get the user's default ministry from their profile
+  // Note: If the user doesn't have a ministry_name in their profile, they'll need to select one manually
   const userMinistry = ministries?.find(
     (m) => m.name.toLowerCase() === profile?.ministry_name?.toLowerCase()
   );
 
-  // Update form values when expense changes (for editing)
+  // Get the selected ministry for the form
+  const selectedMinistry = ministries?.find((m) => m.id === selectedMinistryId);
+
+  // Get justification options for the selected ministry
+  const justificationOptions = selectedMinistry
+    ? getJustificationsForMinistry(selectedMinistry.name)
+    : [];
+
+  // Check if "Other" is selected
+  const isOtherJustification = selectedJustificationCategory === OTHER_JUSTIFICATION_VALUE;
+
+  // Update form values when expense changes (for editing) or set defaults for new expense
   useEffect(() => {
     if (expense) {
+      // Editing existing expense
+      // Determine if title is a predefined category or custom "Other"
+      const expenseMinistry = ministries?.find((m) => m.id === expense.ministry_id);
+      const expenseMinistryJustifications = expenseMinistry
+        ? getJustificationsForMinistry(expenseMinistry.name)
+        : [];
+      const isPredefinedCategory = expenseMinistryJustifications.includes(expense.title);
+
       form.reset({
-        title: expense.title,
+        ministry_id: expense.ministry_id,
+        justification_category: isPredefinedCategory ? expense.title : OTHER_JUSTIFICATION_VALUE,
+        title: isPredefinedCategory ? "" : expense.title,
         description: expense.description || "",
         amount: expense.amount,
         reimbursement_type: expense.reimbursement_type,
@@ -197,7 +241,10 @@ export function ExpenseRequestForm({
         setAttachments([]);
       }
     } else {
+      // New expense - default to user's ministry
       form.reset({
+        ministry_id: userMinistry?.id || "",
+        justification_category: "",
         title: "",
         description: "",
         amount: 0,
@@ -211,7 +258,24 @@ export function ExpenseRequestForm({
       });
       setAttachments([]);
     }
-  }, [expense, form]);
+  }, [expense, form, userMinistry?.id, ministries]);
+
+  // Reset justification category when ministry changes (but not on initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      previousMinistryIdRef.current = selectedMinistryId;
+      return;
+    }
+
+    // Only reset if ministry actually changed (not initial setting)
+    if (!expense && previousMinistryIdRef.current !== selectedMinistryId && previousMinistryIdRef.current !== null) {
+      form.setValue("justification_category", "");
+      form.setValue("title", "");
+    }
+
+    previousMinistryIdRef.current = selectedMinistryId;
+  }, [selectedMinistryId, form, expense]);
 
   // Handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -354,10 +418,10 @@ export function ExpenseRequestForm({
       return;
     }
 
-    if (!userMinistry) {
+    if (!values.ministry_id) {
       toast({
         title: "Error",
-        description: "You are not assigned to a ministry. Please contact an administrator.",
+        description: "Please select a ministry.",
         variant: "destructive",
       });
       return;
@@ -365,14 +429,19 @@ export function ExpenseRequestForm({
 
     setIsSubmitting(true);
 
+    // Determine the final title: either the selected category or custom "Other" text
+    const finalTitle = values.justification_category === OTHER_JUSTIFICATION_VALUE
+      ? values.title || ""
+      : values.justification_category;
+
     try {
       if (isEditing && expense) {
         // Update existing expense
         await updateExpense.mutateAsync({
           expenseId: expense.id,
           data: {
-            ministry_id: userMinistry.id,
-            title: values.title,
+            ministry_id: values.ministry_id,
+            title: finalTitle,
             description: values.description || null,
             amount: values.amount,
             reimbursement_type: values.reimbursement_type,
@@ -409,8 +478,8 @@ export function ExpenseRequestForm({
           expenseData: {
             organization_id: currentOrganization.id,
             fiscal_year_id: selectedFiscalYear.id,
-            ministry_id: userMinistry.id,
-            title: values.title,
+            ministry_id: values.ministry_id,
+            title: finalTitle,
             description: values.description || null,
             amount: values.amount,
             reimbursement_type: values.reimbursement_type,
@@ -490,6 +559,9 @@ export function ExpenseRequestForm({
           <DialogTitle className="text-xl font-semibold">
             {isEditing ? "Edit Expense Request" : "Expense Request"}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {isEditing ? "Edit an existing expense request" : "Create a new expense request for reimbursement"}
+          </DialogDescription>
           <div className="flex items-center gap-2 mt-2 text-emerald-100 text-sm">
             <Calendar className="h-4 w-4" />
             <Select
@@ -515,8 +587,6 @@ export function ExpenseRequestForm({
                 })}
               </SelectContent>
             </Select>
-            <span className="opacity-50">•</span>
-            <span>{userMinistry?.name || "No Ministry"}</span>
           </div>
         </div>
 
@@ -524,36 +594,96 @@ export function ExpenseRequestForm({
           <div className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
-        ) : !userMinistry ? (
-          <div className="p-6 text-center">
-            <p className="text-muted-foreground">You are not assigned to a ministry.</p>
-            <Button className="mt-4" onClick={() => onOpenChange(false)}>Close</Button>
-          </div>
         ) : (
           <Form {...form}>
             <form className="flex flex-col flex-1 overflow-hidden">
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-6 space-y-5">
-              {/* Title */}
+              {/* Ministry Selection */}
               <FormField
                 control={form.control}
-                name="title"
+                name="ministry_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-slate-700">
+                      Ministry <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-11 border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
+                          <SelectValue placeholder="Select ministry" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {ministries?.map((ministry) => (
+                          <SelectItem key={ministry.id} value={ministry.id}>
+                            {ministry.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Justification Category Dropdown */}
+              <FormField
+                control={form.control}
+                name="justification_category"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-slate-700">
                       Justification <span className="text-red-500">*</span>
                     </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="e.g., Youth Ministry Supplies"
-                        className="h-11 border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
-                        {...field}
-                      />
-                    </FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={!selectedMinistryId}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400">
+                          <SelectValue placeholder={selectedMinistryId ? "Select justification" : "Select a ministry first"} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {justificationOptions.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value={OTHER_JUSTIFICATION_VALUE}>
+                          {OTHER_JUSTIFICATION_LABEL}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Custom Justification Input - shown when "Other" is selected */}
+              {isOtherJustification && (
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm font-medium text-slate-700">
+                        Please Specify <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter your justification..."
+                          className="h-11 border-slate-200 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Amount Section */}
               <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl p-5 border border-slate-200/60">
