@@ -1828,7 +1828,7 @@ export const EnhancedReportExport = ({
           }
 
           ${
-            chartData.ministryChartData.length > 0
+            !isContributor && chartData.ministryChartData.length > 0
               ? `
             <div class="section-header emerald">
               <h2>Top Ministries by Budget Activity</h2>

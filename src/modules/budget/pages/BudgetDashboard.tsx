@@ -62,6 +62,7 @@ import {
 } from "../components";
 import { AllocationRequestForm } from "../components/AllocationRequestForm";
 import { AllocationRequestList } from "../components/AllocationRequestList";
+import { MonthlyBudgetSummary } from "../components/MonthlyBudgetSummary";
 
 const BudgetDashboard = () => {
   const { user, isAdmin, isTreasury, isFinance } = useAuth();
@@ -415,6 +416,13 @@ const BudgetDashboard = () => {
                         onRefresh: handleRefresh,
                       }}
                     />
+
+                    {/* Monthly Budget Summary for Admins */}
+                    <MonthlyBudgetSummary
+                      allocations={allocationRequests || []}
+                      title="Monthly Budget Summary"
+                      description="Consolidated view of all ministry monthly budget requests"
+                    />
                   </>
                 )}
 
@@ -422,11 +430,12 @@ const BudgetDashboard = () => {
                 {isContributor && myExpenses && myExpenses.length > 0 && (
                   <>
                     <BudgetOverview
-                      expenses={expenses}
+                      expenses={myExpenses}
                       allocations={myAllocationRequests}
                       title={`${userMinistryName} Budget Overview`}
                       description={`${userMinistryName} expense requests and budget allocations`}
                       showDetailedLists={true}
+                      showMinistryBreakdown={false}
                       expenseListProps={{
                         isLoading: expensesLoading,
                         userRole: "requester",
@@ -452,6 +461,7 @@ const BudgetDashboard = () => {
                         title={`${userMinistryName} Budget Overview`}
                         description={`${userMinistryName} budget allocations`}
                         showDetailedLists={true}
+                        showMinistryBreakdown={false}
                         expenseListProps={{
                           isLoading: expensesLoading,
                           userRole: "requester",
