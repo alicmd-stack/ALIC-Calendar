@@ -38,6 +38,30 @@ import type {
 } from "../types";
 import { getPeriodLabel, PERIOD_AMOUNT_CATEGORY } from "../types";
 
+// Month labels for display
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_KEYS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
+
+// Extended type for monthly budget items
+interface MonthlyBudgetItem extends BudgetBreakdownItem {
+  monthly_data?: {
+    chart_of_accounts?: string;
+    description?: string;
+    jan?: number;
+    feb?: number;
+    mar?: number;
+    apr?: number;
+    may?: number;
+    jun?: number;
+    jul?: number;
+    aug?: number;
+    sep?: number;
+    oct?: number;
+    nov?: number;
+    dec?: number;
+  };
+}
+
 interface AllocationRequestDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -62,15 +86,23 @@ export function AllocationRequestDetailDialog({
     request.status === "pending" &&
     (userRole === "admin" || userRole === "treasury" || userRole === "finance");
 
-  const breakdown = (request.budget_breakdown as BudgetBreakdownItem[]) || [];
+  const breakdown = (request.budget_breakdown as MonthlyBudgetItem[]) || [];
 
   // Separate period amounts from other budget items
   const periodAmounts = breakdown.filter(
     (item) => item.category === PERIOD_AMOUNT_CATEGORY
   );
-  const otherBreakdown = breakdown.filter(
-    (item) => item.category !== PERIOD_AMOUNT_CATEGORY
+  // Monthly budget items (new format with monthly_data)
+  const monthlyBudgetItems = breakdown.filter(
+    (item) => item.category === "monthly_budget_item"
   );
+  // Other breakdown items (excluding period amounts and monthly items)
+  const otherBreakdown = breakdown.filter(
+    (item) => item.category !== PERIOD_AMOUNT_CATEGORY && item.category !== "monthly_budget_item"
+  );
+
+  // Use wider dialog for monthly budget requests
+  const hasMonthlyItems = monthlyBudgetItems.length > 0;
 
   // Get period type label
   const periodTypeLabel =
@@ -84,7 +116,7 @@ export function AllocationRequestDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`max-h-[90vh] overflow-y-auto ${hasMonthlyItems ? "sm:max-w-[95vw] lg:max-w-[1200px]" : "sm:max-w-[700px]"}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <DollarSign className="h-6 w-6 text-primary" />
@@ -299,6 +331,69 @@ export function AllocationRequestDetailDialog({
                         })}
                     </span>
                   </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Monthly Budget Items - Spreadsheet View */}
+          {monthlyBudgetItems.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <h4 className="font-semibold flex items-center gap-2 mb-4">
+                  <CalendarDays className="h-5 w-5 text-primary" />
+                  Monthly Budget Breakdown
+                </h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse min-w-[900px]">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="text-left p-2 font-semibold border-b">Justification</th>
+                        <th className="text-left p-2 font-semibold border-b">Acct #</th>
+                        <th className="text-left p-2 font-semibold border-b">Description</th>
+                        <th className="text-right p-2 font-semibold border-b">Budget</th>
+                        {MONTH_LABELS.map((month) => (
+                          <th key={month} className="text-center p-2 font-semibold border-b w-16">{month}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyBudgetItems.map((item, index) => (
+                        <tr key={index} className="border-b hover:bg-muted/30">
+                          <td className="p-2 font-medium">{item.description}</td>
+                          <td className="p-2 text-muted-foreground">{item.monthly_data?.chart_of_accounts || "-"}</td>
+                          <td className="p-2 text-muted-foreground">{item.monthly_data?.description || "-"}</td>
+                          <td className="p-2 text-right font-semibold text-primary">
+                            ${Number(item.amount).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </td>
+                          {MONTH_KEYS.map((month) => {
+                            const val = item.monthly_data?.[month] || 0;
+                            return (
+                              <td key={month} className="p-2 text-center text-xs">
+                                {val > 0 ? `$${Number(val).toLocaleString()}` : "-"}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                      {/* Total row */}
+                      <tr className="bg-primary/5 font-semibold">
+                        <td className="p-2" colSpan={3}>Total</td>
+                        <td className="p-2 text-right text-primary">
+                          ${monthlyBudgetItems.reduce((sum, item) => sum + Number(item.amount), 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </td>
+                        {MONTH_KEYS.map((month) => {
+                          const monthTotal = monthlyBudgetItems.reduce((sum, item) => sum + Number(item.monthly_data?.[month] || 0), 0);
+                          return (
+                            <td key={month} className="p-2 text-center text-xs">
+                              {monthTotal > 0 ? `$${monthTotal.toLocaleString()}` : "-"}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </>
