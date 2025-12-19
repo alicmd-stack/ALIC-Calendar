@@ -80,7 +80,9 @@ const periodAmountSchema = z.object({
 const monthlyItemSchema = z.object({
   justification_category: z.string().min(1, "Justification is required"),
   custom_justification: z.string().optional(),
-  budget_amount: z.coerce.number().min(0, "Budget amount required"),
+  chart_of_accounts: z.string().optional(),
+  description: z.string().optional(),
+  // budget_amount is calculated from sum of months, stored for reference
   jan: z.coerce.number().min(0).optional(),
   feb: z.coerce.number().min(0).optional(),
   mar: z.coerce.number().min(0).optional(),
@@ -245,7 +247,7 @@ export function AllocationRequestForm({
       period_type: "annual",
       annual_amount: 0,
       period_amounts: [],
-      monthly_items: [{ justification_category: "", custom_justification: "", budget_amount: 0, jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0, jul: 0, aug: 0, sep: 0, oct: 0, nov: 0, dec: 0 }],
+      monthly_items: [{ justification_category: "", custom_justification: "", chart_of_accounts: "", description: "", jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0, jul: 0, aug: 0, sep: 0, oct: 0, nov: 0, dec: 0 }],
       justification: "",
       budget_breakdown: [],
     },
@@ -291,10 +293,13 @@ export function AllocationRequestForm({
     (sum, pa) => sum + Number(pa.amount || 0),
     0
   );
-  const monthlyItemsTotal = monthlyItems.reduce(
-    (sum, item) => sum + Number(item.budget_amount || 0),
-    0
-  );
+  // Calculate monthly items total by summing all month values for each item
+  const monthlyItemsTotal = monthlyItems.reduce((sum, item) => {
+    const itemTotal = MONTH_KEYS.reduce((monthSum, month) => {
+      return monthSum + Number(item[month] || 0);
+    }, 0);
+    return sum + itemTotal;
+  }, 0);
   const totalAmount =
     periodType === "annual"
       ? annualAmount
@@ -775,7 +780,8 @@ export function AllocationRequestForm({
                           appendMonthlyItem({
                             justification_category: "",
                             custom_justification: "",
-                            budget_amount: 0,
+                            chart_of_accounts: "",
+                            description: "",
                             jan: 0, feb: 0, mar: 0, apr: 0, may: 0, jun: 0,
                             jul: 0, aug: 0, sep: 0, oct: 0, nov: 0, dec: 0,
                           })
@@ -787,10 +793,12 @@ export function AllocationRequestForm({
                     </div>
 
                     {/* Monthly items - spreadsheet style */}
-                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
                       {/* Header row */}
-                      <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 grid grid-cols-[1fr,100px,repeat(12,50px),40px] gap-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                      <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 grid grid-cols-[minmax(180px,1fr),80px,120px,80px,repeat(12,55px),40px] gap-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider min-w-[1100px]">
                         <div>Justification</div>
+                        <div>Acct #</div>
+                        <div>Description</div>
                         <div className="text-right">Budget</div>
                         {MONTH_LABELS.map((month) => (
                           <div key={month} className="text-center">{month}</div>
@@ -803,16 +811,16 @@ export function AllocationRequestForm({
                         const selectedCategory = form.watch(`monthly_items.${index}.justification_category`);
                         const isOther = selectedCategory === OTHER_JUSTIFICATION_VALUE;
 
-                        // Calculate row total from month values
-                        const rowMonthTotal = MONTH_KEYS.reduce((sum, month) => {
+                        // Calculate row total from month values (auto-sum for Budget)
+                        const rowBudgetTotal = MONTH_KEYS.reduce((sum, month) => {
                           const val = form.watch(`monthly_items.${index}.${month}`) || 0;
                           return sum + Number(val);
                         }, 0);
 
                         return (
                           <div key={field.id} className="border-b border-slate-100 last:border-b-0">
-                            <div className="px-3 py-2 grid grid-cols-[1fr,100px,repeat(12,50px),40px] gap-1 items-center">
-                              {/* Task/Justification */}
+                            <div className="px-3 py-2 grid grid-cols-[minmax(180px,1fr),80px,120px,80px,repeat(12,55px),40px] gap-1 items-center min-w-[1100px]">
+                              {/* Justification */}
                               <div>
                                 <FormField
                                   control={form.control}
@@ -824,7 +832,7 @@ export function AllocationRequestForm({
                                       disabled={!selectedMinistryId}
                                     >
                                       <SelectTrigger className="h-8 text-xs border-slate-200">
-                                        <SelectValue placeholder="Select task" />
+                                        <SelectValue placeholder="Select justification" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {justificationOptions.map((option) => (
@@ -841,25 +849,41 @@ export function AllocationRequestForm({
                                 />
                               </div>
 
-                              {/* Budget Amount */}
+                              {/* Chart of Accounts */}
                               <div>
                                 <FormField
                                   control={form.control}
-                                  name={`monthly_items.${index}.budget_amount`}
+                                  name={`monthly_items.${index}.chart_of_accounts`}
                                   render={({ field }) => (
-                                    <div className="relative">
-                                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">$</span>
-                                      <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0"
-                                        className="h-8 pl-5 pr-1 text-xs text-right border-slate-200 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        {...field}
-                                      />
-                                    </div>
+                                    <Input
+                                      placeholder="e.g. 53130"
+                                      className="h-8 text-xs border-slate-200"
+                                      {...field}
+                                    />
                                   )}
                                 />
+                              </div>
+
+                              {/* Description */}
+                              <div>
+                                <FormField
+                                  control={form.control}
+                                  name={`monthly_items.${index}.description`}
+                                  render={({ field }) => (
+                                    <Input
+                                      placeholder="Description"
+                                      className="h-8 text-xs border-slate-200"
+                                      {...field}
+                                    />
+                                  )}
+                                />
+                              </div>
+
+                              {/* Budget Amount (Auto-calculated) */}
+                              <div className="bg-slate-50 rounded px-2 py-1 text-right">
+                                <span className="text-xs font-semibold text-slate-700">
+                                  ${rowBudgetTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                </span>
                               </div>
 
                               {/* Month columns */}
@@ -916,19 +940,15 @@ export function AllocationRequestForm({
                               </div>
                             )}
 
-                            {/* Row total indicator */}
-                            {rowMonthTotal > 0 && (
-                              <div className="px-3 pb-2 text-[10px] text-slate-500">
-                                Month allocations: ${rowMonthTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                              </div>
-                            )}
                           </div>
                         );
                       })}
 
                       {/* Total row */}
-                      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border-t-2 border-violet-200 px-3 py-3 grid grid-cols-[1fr,100px,repeat(12,50px),40px] gap-1 items-center">
+                      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border-t-2 border-violet-200 px-3 py-3 grid grid-cols-[minmax(180px,1fr),80px,120px,80px,repeat(12,55px),40px] gap-1 items-center min-w-[1100px]">
                         <div className="text-sm font-semibold text-slate-700">Total</div>
+                        <div></div>
+                        <div></div>
                         <div className="text-right text-sm font-bold text-violet-700">
                           ${monthlyItemsTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                         </div>
