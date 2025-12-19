@@ -62,6 +62,7 @@ import {
 } from "../components";
 import { AllocationRequestForm } from "../components/AllocationRequestForm";
 import { AllocationRequestList } from "../components/AllocationRequestList";
+import { MonthlyBudgetSummary } from "../components/MonthlyBudgetSummary";
 
 const BudgetDashboard = () => {
   const { user, isAdmin, isTreasury, isFinance } = useAuth();
@@ -414,6 +415,13 @@ const BudgetDashboard = () => {
                           : "finance",
                         onRefresh: handleRefresh,
                       }}
+                    />
+
+                    {/* Monthly Budget Summary for Admins */}
+                    <MonthlyBudgetSummary
+                      allocations={allocationRequests || []}
+                      title="Monthly Budget Summary"
+                      description="Consolidated view of all ministry monthly budget requests"
                     />
                   </>
                 )}
