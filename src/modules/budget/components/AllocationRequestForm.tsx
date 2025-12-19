@@ -105,8 +105,17 @@ const allocationRequestFormSchema = z.object({
   annual_amount: z.coerce.number().min(0).optional(),
   period_amounts: z.array(periodAmountSchema).optional(),
   monthly_items: z.array(monthlyItemSchema).optional(),
-  justification: z.string().min(10, "Please provide at least 10 characters"),
+  justification: z.string().optional(), // Optional for monthly (justification is in the spreadsheet)
   budget_breakdown: z.array(breakdownItemSchema).optional(),
+}).refine((data) => {
+  // Justification is required for annual/quarterly, but not for monthly
+  if (data.period_type !== "monthly") {
+    return data.justification && data.justification.length >= 10;
+  }
+  return true;
+}, {
+  message: "Please provide at least 10 characters",
+  path: ["justification"],
 });
 
 type AllocationRequestFormValues = z.infer<typeof allocationRequestFormSchema>;
@@ -781,7 +790,7 @@ export function AllocationRequestForm({
                     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                       {/* Header row */}
                       <div className="bg-slate-50 border-b border-slate-200 px-3 py-2 grid grid-cols-[1fr,100px,repeat(12,50px),40px] gap-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                        <div>Task</div>
+                        <div>Justification</div>
                         <div className="text-right">Budget</div>
                         {MONTH_LABELS.map((month) => (
                           <div key={month} className="text-center">{month}</div>
@@ -958,26 +967,30 @@ export function AllocationRequestForm({
                 </div>
               )}
 
-              <Separator />
+              {periodType !== "monthly" && (
+                <>
+                  <Separator />
 
-              {/* Justification */}
-              <FormField
-                control={form.control}
-                name="justification"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Justification</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Explain why this budget is needed and how it will be used..."
-                        className="resize-none min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  {/* Justification - hidden for monthly since it's in the spreadsheet */}
+                  <FormField
+                    control={form.control}
+                    name="justification"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Justification</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Explain why this budget is needed and how it will be used..."
+                            className="resize-none min-h-[100px]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
               {/* Budget Breakdown (Collapsible) */}
               <div className="space-y-3">
