@@ -566,7 +566,7 @@ export function AllocationRequestForm({
                 </FormLabel>
                 <div className="grid grid-cols-3 gap-2">
                   {(["annual", "quarterly", "monthly"] as const).map((type) => {
-                    const isDisabled = type !== "annual";
+                    const isDisabled = type === "quarterly";
                     return (
                       <button
                         key={type}
