@@ -213,7 +213,7 @@ export function AllocationRequestForm({
   const { toast } = useToast();
   const { user } = useAuth();
   const { profile } = useUserProfile();
-  const { currentOrganization, isOrgAdmin } = useOrganization();
+  const { currentOrganization, userOrganizations } = useOrganization();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: ministries, isLoading: ministriesLoading } = useMinistries(
@@ -320,8 +320,13 @@ export function AllocationRequestForm({
     }
   }, [userMinistry, form]);
 
-  // Determine if user is a contributor (not admin)
-  const isContributor = !isOrgAdmin;
+  // Get the user's role for the current organization
+  const currentUserOrgRole = userOrganizations.find(
+    (uo) => uo.organization_id === currentOrganization?.id
+  )?.role;
+
+  // Determine if user is a contributor (not admin, treasury, or finance)
+  const isContributor = currentUserOrgRole === "contributor";
 
   // Update period amounts when period type changes
   useEffect(() => {
