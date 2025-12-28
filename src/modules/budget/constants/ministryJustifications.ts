@@ -240,6 +240,160 @@ export const MINISTRY_JUSTIFICATIONS: Record<string, string[]> = {
   "Alic MD Parking": [
     "Miscellaneous Expense",
   ],
+
+  // =====================================================
+  // VA Ministries (Virginia)
+  // =====================================================
+
+  // VA Children
+  "VA Children": [
+    "Sunday School Material",
+    "Children Verse Study",
+    "Children's Choir",
+    "Family and Teachers' Fellowship",
+    "Special Session for Kids on Holidays",
+    "Seminar for Families",
+    "Sunday School Teachers' Fellowship",
+    "Field Trip to Fellowship with Kids",
+    "Vacation Bible School (VBS)",
+    "Translating Teaching Resources",
+    "Resources for Foundation Class",
+  ],
+
+  // VA Choir
+  "VA Choir": [
+    "Musical Instrument Training for Talented Individuals",
+    "Choirs' Refreshment",
+  ],
+
+  // VA Coord. Office
+  "VA Coord. Office": [
+    "Project Management Software License",
+    "Cross Training with Other Ministry Leaders",
+  ],
+
+  // VA Deacons
+  "VA Deacons": [
+    "After Service Fellowship Snacks",
+    "Holy Communion Preparation",
+    "Church Vision Sharing for Newcomers Lunch",
+    "Cleaning Services",
+    "Thanksgiving and New Year Services",
+  ],
+
+  // VA Discipleship
+  "VA Discipleship": [
+    "Quarterly Fellowship (101)",
+    "Quarterly Fellowship (102)",
+    "Books for Class (101 & 102)",
+    "Class Completion (102)",
+  ],
+
+  // VA Evangelism
+  "VA Evangelism": [
+    "Print Tracts / Flyers / Brochures",
+    "Homeless Shelter Visit",
+    "Training for Church Members",
+  ],
+
+  // VA Family
+  "VA Family": [
+    "Singles Program (with Young Adult)",
+    "Couples Dinner",
+    "Family Conference",
+    "Family Cookout / BBQ",
+    "Family Discussion Session",
+  ],
+
+  // VA Holistic
+  "VA Holistic": [
+    "Support for Church Members in Need",
+  ],
+
+  // VA Home Cell / Bible Study
+  "VA Home Cell / Bible Study": [
+    "Meeting & Fellowship with Bible Study Leaders",
+    "Training Materials and Books",
+    "Training New Bible Study Leaders",
+    "All Bible Study Groups Fellowship",
+  ],
+
+  // Also add alternate name
+  "VA Home Cell": [
+    "Meeting & Fellowship with Bible Study Leaders",
+    "Training Materials and Books",
+    "Training New Bible Study Leaders",
+    "All Bible Study Groups Fellowship",
+  ],
+
+  // VA Leadership
+  "VA Leadership": [
+    "Salvation Class Special Program",
+    "Ministry Leaders Training (Quarterly)",
+    "All Ministers Training",
+    "Prayer and Retreat",
+    "Conference",
+  ],
+
+  // VA Media
+  "VA Media": [
+    "Post-production",
+    "Media Equipment",
+  ],
+
+  // VA Men's
+  "VA Men's": [
+    "Men's Special Workshop (Invited Guest)",
+    "Men's Fellowship Session #1",
+    "Annual ALIC Men's Retreat",
+    "Men's Fellowship Session #2",
+    "Men's Summer Fellowship Day",
+    "Men's Fellowship Session #3",
+    "Men's Dinner Night (Career Mentoring at Church)",
+  ],
+
+  // VA Prayer
+  "VA Prayer": [
+    "Prayer with Young Adult & Discussion Session",
+    "Fasting and Prayer",
+    "Love Gifts for Invited Guests",
+  ],
+
+  // VA Welcoming Team
+  "VA Welcoming Team": [
+    "Prayer and Discussion Sessions",
+    "Welcoming Congregation for Holidays",
+    "Fellowship After Service",
+    "Welcoming Team Uniforms",
+  ],
+
+  // VA Women's
+  "VA Women's": [
+    "Holistic Health Training for Women",
+    "Weekend Retreat for Spiritual Renewal",
+    "Fellowship & Relationship Building",
+    "Strengthening Women's Spiritual Walk",
+  ],
+
+  // VA Young Adult
+  "VA Young Adult": [
+    "Young Adult Conference",
+    "Retreat",
+    "Concert",
+    "Holiday Celebration Event",
+  ],
+
+  // VA Youth
+  "VA Youth": [
+    "Youth Fellowship",
+    "Trainings / Discussions",
+    "Bible for Students",
+    "Summer Retreat",
+    "Senior Send-out",
+    "College Students Dinner",
+    "Salvation and Discipleship",
+    "Holiday Celebration for Youth",
+  ],
 };
 
 // Special value for "Other" option
