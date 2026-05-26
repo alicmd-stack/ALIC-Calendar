@@ -5,13 +5,176 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://oyewjuvpnavwhmdiqfve.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95ZXdqdXZwbmF2d2htZGlxZnZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE4NTc0MzIsImV4cCI6MjA3NzQzMzQzMn0.Ln7pLwWdNVNS3oVqMw96IEYetq3OLjZ3QuPl30eptA8";
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// ---------------------------------------------------------------------------
+// Cookie storage adapter — wire-compatible with @supabase/ssr defaults
+// (cookieEncoding: "base64url", base64- prefix, chunked as key.0, key.1, ...).
+//
+// The inventory app (Next.js + @supabase/ssr middleware) reads the Supabase
+// session from cookies. Calendar + inventory now share the alic.org origin
+// via Vercel rewrites, so writing cookies in this exact format lets the
+// inventory middleware see the logged-in user.
+// ---------------------------------------------------------------------------
+
+const PROJECT_REF = "oyewjuvpnavwhmdiqfve";
+const SESSION_KEY = "sb-" + PROJECT_REF + "-auth-token";
+const MAX_CHUNK_SIZE = 3180;
+const BASE64_PREFIX = "base64-";
+
+const isBrowser = typeof document !== "undefined";
+
+function readCookie(name: string): string | null {
+    if (!isBrowser) return null;
+    const cookies = document.cookie ? document.cookie.split("; ") : [];
+    for (const c of cookies) {
+          const eq = c.indexOf("=");
+          if (eq === -1) continue;
+          if (c.slice(0, eq) === name) {
+                  try {
+                            return decodeURIComponent(c.slice(eq + 1));
+                  } catch {
+                            return c.slice(eq + 1);
+                  }
+          }
+    }
+    return null;
+}
+
+function writeCookie(name: string, rawValue: string) {
+    if (!isBrowser) return;
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = name + "=" + encodeURIComponent(rawValue) + "; path=/; max-age=34560000; SameSite=Lax" + secure;
+}
+
+function deleteCookie(name: string) {
+    if (!isBrowser) return;
+    document.cookie = name + "=; path=/; max-age=0; SameSite=Lax";
+}
+
+function isChunkName(cookieName: string, base: string): boolean {
+    if (cookieName === base) return true;
+    const prefix = base + ".";
+    if (!cookieName.startsWith(prefix)) return false;
+    const suffix = cookieName.slice(prefix.length);
+    if (suffix.length === 0) return false;
+    for (let i = 0; i < suffix.length; i++) {
+          const ch = suffix.charCodeAt(i);
+          if (ch < 48 || ch > 57) return false;
+    }
+    return true;
+}
+
+function listChunkCookieNames(base: string): string[] {
+    if (!isBrowser) return [];
+    const cookies = document.cookie ? document.cookie.split("; ") : [];
+    const names: string[] = [];
+    for (const c of cookies) {
+          const eq = c.indexOf("=");
+          if (eq === -1) continue;
+          const n = c.slice(0, eq);
+          if (isChunkName(n, base)) names.push(n);
+    }
+    return names;
+}
+
+function stringToBase64URL(str: string): string {
+    const bytes = new TextEncoder().encode(str);
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    let b64 = btoa(bin);
+    let out = "";
+    for (let i = 0; i < b64.length; i++) {
+          const ch = b64.charAt(i);
+          if (ch === "+") out += "-";
+          else if (ch === "/") out += "_";
+          else if (ch === "=") { /* strip padding */ }
+          else out += ch;
+    }
+    return out;
+}
+
+function stringFromBase64URL(b64url: string): string {
+    let b64 = "";
+    for (let i = 0; i < b64url.length; i++) {
+          const ch = b64url.charAt(i);
+          if (ch === "-") b64 += "+";
+          else if (ch === "_") b64 += "/";
+          else b64 += ch;
+    }
+    const pad = b64.length % 4;
+    if (pad === 2) b64 += "==";
+    else if (pad === 3) b64 += "=";
+    else if (pad === 1) throw new Error("Invalid base64url length");
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+}
+
+function decodeStored(raw: string): string | null {
+    if (!raw.startsWith(BASE64_PREFIX)) return raw;
+    try {
+          const decoded = stringFromBase64URL(raw.slice(BASE64_PREFIX.length));
+          JSON.parse(decoded);
+          return decoded;
+    } catch {
+          return null;
+    }
+}
+
+const cookieStorage = {
+    getItem(key: string): string | null {
+          if (!isBrowser) return null;
+          if (key !== SESSION_KEY) {
+                  try { return localStorage.getItem(key); } catch { return null; }
+          }
+          const direct = readCookie(key);
+          if (direct) {
+                  const decoded = decodeStored(direct);
+                  if (decoded !== null) return decoded;
+          }
+          const parts: string[] = [];
+          for (let i = 0; ; i++) {
+                  const v = readCookie(key + "." + i);
+                  if (v == null) break;
+                  parts.push(v);
+          }
+          if (parts.length === 0) return null;
+          return decodeStored(parts.join(""));
+    },
+
+    setItem(key: string, value: string): void {
+          if (!isBrowser) return;
+          if (key !== SESSION_KEY) {
+                  try { localStorage.setItem(key, value); } catch { /* */ }
+                  return;
+          }
+          const encoded = BASE64_PREFIX + stringToBase64URL(value);
+          for (const n of listChunkCookieNames(key)) deleteCookie(n);
+          if (encoded.length <= MAX_CHUNK_SIZE) {
+                  writeCookie(key, encoded);
+          } else {
+                  let i = 0;
+                  for (let off = 0; off < encoded.length; off += MAX_CHUNK_SIZE) {
+                            writeCookie(key + "." + i, encoded.slice(off, off + MAX_CHUNK_SIZE));
+                            i++;
+                  }
+          }
+    },
+
+    removeItem(key: string): void {
+          if (!isBrowser) return;
+          if (key !== SESSION_KEY) {
+                  try { localStorage.removeItem(key); } catch { /* */ }
+                  return;
+          }
+          for (const n of listChunkCookieNames(key)) deleteCookie(n);
+    },
+};
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
+    auth: {
+          storage: cookieStorage,
+          persistSession: true,
+          autoRefreshToken: true,
+    }
 });
