@@ -1,9 +1,9 @@
 {
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/inventory", "destination": "https://inventory-management-system-mauve-eta.vercel.app/inventory" },
+    { "source": "/inventory/:path*", "destination": "https://inventory-management-system-mauve-eta.vercel.app/inventory/:path*" },
+    { "source": "/api/inventory/:path*", "destination": "https://inventory-management-system-mauve-eta.vercel.app/api/inventory/:path*" },
+    { "source": "/_next/:path*", "destination": "https://inventory-management-system-mauve-eta.vercel.app/_next/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
-
