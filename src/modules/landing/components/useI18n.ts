@@ -89,7 +89,7 @@ const I18N = {
 
     // Footer
     "footer.tag":
-      "A vibrant, Christ-centered Ethiopian community church serving the Washington metropolitan area.",
+      "Addis Lidet International Church is a vibrant, Christ-centered Ethiopian community church serving the Washington metropolitan area.",
     "footer.rights": "© 2026 Addis Lidet International Church",
     "footer.sub": "Silver Spring, MD · Alexandria, VA",
     "footer.visit": "Visit",
@@ -184,7 +184,7 @@ const I18N = {
 
     // Footer
     "footer.tag":
-      "ዋሽንግተን አካባቢን የምታገለግል ሕያው፣ በክርስቶስ ላይ የተመሰረተ የኢትዮጵያውያን ማኅበረሰብ ቤተክርስቲያን።",
+      "አዲስ ልደት ዓለም አቀፍ ቤተክርስቲያን በዋሽንግተን አካባቢ የምታገለግል ሕያው፣ በክርስቶስ ላይ የተመሰረተ የኢትዮጵያውያን ማኅበረሰብ ቤተክርስቲያን ናት።",
     "footer.rights": "© 2026 አዲስ ልደት ዓለም አቀፍ ቤተክርስቲያን",
     "footer.sub": "Silver Spring, MD · Alexandria, VA",
     "footer.visit": "ይጎብኙ",

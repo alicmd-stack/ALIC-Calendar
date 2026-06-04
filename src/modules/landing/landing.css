@@ -675,7 +675,7 @@
   font-variant-numeric: tabular-nums;
 }
 .landing-root .sg__schedule-row {
-  display: grid; grid-template-columns: 78px 1fr;
+  display: grid; grid-template-columns: 108px 1fr;
   align-items: baseline; gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid rgba(17,24,39,0.05);
@@ -686,6 +686,7 @@
   font-family: var(--font-mono); font-size: 12px;
   letter-spacing: 0.04em; color: var(--text-on-paper-dim);
   font-weight: 500;
+  white-space: nowrap;
 }
 .landing-root .sg__schedule-label {
   color: var(--text-on-paper-dim);
