@@ -34,11 +34,11 @@ const I18N = {
     // Sunday Gatherings
     "sg.eyebrow": "On Sunday · እሁድ",
     "sg.title": "Sunday gatherings.",
-    "sg.body": "Addis Lidet International Church is a vibrant Ethiopian community and Christ-centered Church serving the Washington metropolitan area. With locations in Silver Spring, MD, and Alexandria, VA, the church is dedicated to biblical teaching, discipleship, and holistic outreach through worship services and diverse family-focused ministries.",
+    "sg.body": "Addis Lidet International Church is a vibrant, Christ-centered Ethiopian community church serving the Washington metropolitan area. With locations in Silver Spring, MD, and Alexandria, VA, the church is dedicated to biblical teaching, discipleship, and holistic outreach through worship services and diverse family-focused ministries.",
     "sg.cta": "Plan your visit",
 
     // Locations
-    "locs.eyebrow": "Two homes · ሁለት ቤቶች",
+    "locs.eyebrow": "Campuses · ቅርንጫፎች",
     "locs.title": "Find your nearest campus.",
 
     // Story
@@ -89,7 +89,7 @@ const I18N = {
 
     // Footer
     "footer.tag":
-      "A vibrant Ethiopian community and Christ-centered Church serving the Washington metropolitan area.",
+      "A vibrant, Christ-centered Ethiopian community church serving the Washington metropolitan area.",
     "footer.rights": "© 2026 Addis Lidet International Church",
     "footer.sub": "Silver Spring, MD · Alexandria, VA",
     "footer.visit": "Visit",
@@ -129,11 +129,11 @@ const I18N = {
     // Sunday Gatherings
     "sg.eyebrow": "እሁድ · On Sunday",
     "sg.title": "የእሁድ ስብሰባዎች።",
-    "sg.body": "አዲስ ልደት ዓለም አቀፍ ቤተክርስቲያን በዋሽንግተን ዲሲ አካባቢ የሚገኝ ሕያው የኢትዮጵያውያን ማኅበር እና በክርስቶስ ላይ የተመሰረተ ቤተክርስቲያን ነው። በሲልቨር ስፕሪንግ፣ ሜሪላንድ እና በአሌክሳንድሪያ፣ ቨርጂኒያ ቅርንጫፎች ያሉት ሲሆን፣ ለመጽሐፍ ቅዱሳዊ ትምህርት፣ ለደቀ መዝሙርነት እና ለቤተሰብ ተኮር አገልግሎቶች ራሱን ሰጥቷል።",
+    "sg.body": "አዲስ ልደት ዓለም አቀፍ ቤተክርስቲያን በዋሽንግተን ዲሲ አካባቢ የሚያገለግል ሕያው፣ በክርስቶስ ላይ የተመሰረተ የኢትዮጵያውያን ማኅበረሰብ ቤተክርስቲያን ነው። በሲልቨር ስፕሪንግ፣ ሜሪላንድ እና በአሌክሳንድሪያ፣ ቨርጂኒያ ቅርንጫፎች ያሉት ሲሆን፣ ለመጽሐፍ ቅዱሳዊ ትምህርት፣ ለደቀ መዝሙርነት እና ለቤተሰብ ተኮር አገልግሎቶች ራሱን ሰጥቷል።",
     "sg.cta": "ጉብኝትዎን ያቅዱ",
 
     // Locations
-    "locs.eyebrow": "ሁለት ቤቶች · Two homes",
+    "locs.eyebrow": "ቅርንጫፎች · Campuses",
     "locs.title": "የቅርብ ቅርንጫፍዎን ያግኙ።",
 
     // Story
@@ -184,7 +184,7 @@ const I18N = {
 
     // Footer
     "footer.tag":
-      "ዋሽንግተን አካባቢን የምታገለግል ሕያው የኢትዮጵያውያን ማኅበረሰብ እና ክርስቶስ-ተኮር ቤተክርስቲያን።",
+      "ዋሽንግተን አካባቢን የምታገለግል ሕያው፣ በክርስቶስ ላይ የተመሰረተ የኢትዮጵያውያን ማኅበረሰብ ቤተክርስቲያን።",
     "footer.rights": "© 2026 አዲስ ልደት ዓለም አቀፍ ቤተክርስቲያን",
     "footer.sub": "Silver Spring, MD · Alexandria, VA",
     "footer.visit": "ይጎብኙ",

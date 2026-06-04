@@ -2,9 +2,15 @@ import { Toaster } from "@/shared/components/ui/toaster";
 import { Toaster as Sonner } from "@/shared/components/ui/sonner";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { PageLoader } from "@/shared/components/ui/loading";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import {
   AuthProvider,
   useAuth,
@@ -43,6 +49,15 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname, hash]);
+  return null;
+}
 
 const ProtectedRoute = ({
   children,
@@ -116,6 +131,7 @@ const App = () => (
         <AuthProvider>
           <OrganizationProvider>
             <SearchProvider>
+              <ScrollToTop />
               <Suspense fallback={<PageLoader message="Loading…" />}>
               <Routes>
                 {/* Public routes */}
