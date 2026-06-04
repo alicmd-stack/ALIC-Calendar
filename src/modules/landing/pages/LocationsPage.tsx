@@ -48,7 +48,7 @@ const CAMPUSES = [
     yaYt: "https://www.youtube.com/@addislidetyoungadultminist6291",
     yaChannelId: "UCnIYfT518KOxn4KZTZLxwng",
     tagline: "Our founding home — where the family first gathered.",
-    since: "Since 2009",
+    since: "Maryland campus",
     rhythm: [
       {
         day: "Sunday",
@@ -80,7 +80,7 @@ const CAMPUSES = [
     photo: "/va-campus.jpg",
     channelId: "UC9wD2V5iETIWes24ZJv6OsA",
     tagline: "A new home on Eisenhower Avenue — the family across the Potomac.",
-    since: "Since 2014 · New home 2026",
+    since: "Virginia campus",
     rhythm: [
       {
         day: "Sunday",

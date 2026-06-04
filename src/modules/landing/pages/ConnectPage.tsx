@@ -27,8 +27,8 @@ const LOCATIONS = [
     state: "Maryland",
     addr: "11961 Tech Rd",
     city: "Silver Spring, MD 20904",
-    email: "hello@addislidet.org",
-    phone: "(301) 555-0148",
+    email: "info@AddisLidetChurch.com",
+    phone: "+1 301-588-5362",
     mapsUrl:
       "https://www.google.com/maps/search/?api=1&query=11961+Tech+Rd+Silver+Spring+MD+20904",
   },
@@ -38,8 +38,8 @@ const LOCATIONS = [
     state: "Virginia",
     addr: "2730 Eisenhower Ave",
     city: "Alexandria, VA 22314",
-    email: "alexandria@addislidet.org",
-    phone: "(703) 555-0219",
+    email: "info@AddisLidetChurch.com",
+    phone: "+1 301-588-5362",
     mapsUrl:
       "https://www.google.com/maps/search/?api=1&query=2730+Eisenhower+Ave+Alexandria+VA+22314",
   },
@@ -131,7 +131,7 @@ function ConnectForm() {
     } catch (err) {
       console.error("Failed to send connect message:", err);
       const message =
-        "Sorry — we couldn't send your message. Please try again, or email hello@addislidet.org.";
+        "Sorry — we couldn't send your message. Please try again, or email info@AddisLidetChurch.com.";
       setStatus({ kind: "error", message });
       toast({
         title: "Couldn't send message",
@@ -174,8 +174,14 @@ function ConnectForm() {
                     {loc.city}
                   </div>
                   <div className="cf-location__contact">
-                    <div>{loc.email}</div>
-                    <div className="cf-contact-sub">{loc.phone}</div>
+                    <div>
+                      <a href={`mailto:${loc.email}`}>{loc.email}</a>
+                    </div>
+                    <div className="cf-contact-sub">
+                      <a href={`tel:${loc.phone.replace(/[^+\d]/g, "")}`}>
+                        {loc.phone}
+                      </a>
+                    </div>
                   </div>
                   <a
                     href={loc.mapsUrl}

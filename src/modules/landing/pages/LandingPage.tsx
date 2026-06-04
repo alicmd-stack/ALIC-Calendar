@@ -189,7 +189,6 @@ function SundayGatherings() {
         </div>
 
         <div className="sg__text">
-          <span className="eyebrow eyebrow--dark">{t("sg.eyebrow")}</span>
           <p className="sg__body reveal" data-delay="2">
             {t("sg.body")}
           </p>
@@ -210,20 +209,24 @@ function SundayGatherings() {
               </header>
               <ul className="sg__schedule">
                 <li className="sg__schedule-row sg__schedule-row--primary">
-                  <span className="sg__schedule-time">11:00 AM</span>
+                  <span className="sg__schedule-time">Sun 11:00 AM</span>
                   <span className="sg__schedule-label">Sunday Worship</span>
                 </li>
                 <li className="sg__schedule-row">
-                  <span className="sg__schedule-time">10:00 AM</span>
-                  <span className="sg__schedule-label">Morning Prayer</span>
-                </li>
-                <li className="sg__schedule-row">
-                  <span className="sg__schedule-time">4:00 PM</span>
-                  <span className="sg__schedule-label">TrueVine (English)</span>
-                </li>
-                <li className="sg__schedule-row">
-                  <span className="sg__schedule-time">6:30 PM</span>
+                  <span className="sg__schedule-time">Sun 6:30 PM</span>
                   <span className="sg__schedule-label">Young Adult</span>
+                </li>
+                <li className="sg__schedule-row">
+                  <span className="sg__schedule-time">Wed 6:30 PM</span>
+                  <span className="sg__schedule-label">Midweek Service</span>
+                </li>
+                <li className="sg__schedule-row">
+                  <span className="sg__schedule-time">Thu 10:00 AM</span>
+                  <span className="sg__schedule-label">Prayer</span>
+                </li>
+                <li className="sg__schedule-row">
+                  <span className="sg__schedule-time">Fri 8:30 PM</span>
+                  <span className="sg__schedule-label">Overnight Prayer</span>
                 </li>
               </ul>
               <Link to="/locations#md" className="sg__campus-link">
@@ -233,10 +236,7 @@ function SundayGatherings() {
 
             <article className="sg__campus">
               <header className="sg__campus-head">
-                <div className="sg__campus-region-row">
-                  <span className="sg__campus-region">Virginia</span>
-                  <span className="sg__campus-badge">New · 2026</span>
-                </div>
+                <span className="sg__campus-region">Virginia</span>
                 <h3 className="sg__campus-city">Alexandria</h3>
                 <a
                   href="https://maps.apple.com/?q=2730+Eisenhower+Ave+Alexandria+VA+22314"
@@ -249,16 +249,20 @@ function SundayGatherings() {
               </header>
               <ul className="sg__schedule">
                 <li className="sg__schedule-row sg__schedule-row--primary">
-                  <span className="sg__schedule-time">10:30 AM</span>
+                  <span className="sg__schedule-time">Sun 10:30 AM</span>
                   <span className="sg__schedule-label">Sunday Worship</span>
                 </li>
                 <li className="sg__schedule-row">
-                  <span className="sg__schedule-time">9:30 AM</span>
-                  <span className="sg__schedule-label">Morning Prayer</span>
+                  <span className="sg__schedule-time">Sun 7:00 PM</span>
+                  <span className="sg__schedule-label">Young Adults</span>
                 </li>
                 <li className="sg__schedule-row">
-                  <span className="sg__schedule-time">7:00 PM</span>
-                  <span className="sg__schedule-label">Young Adults</span>
+                  <span className="sg__schedule-time">Tue 7:00 PM</span>
+                  <span className="sg__schedule-label">Midweek Service</span>
+                </li>
+                <li className="sg__schedule-row">
+                  <span className="sg__schedule-time">Fri 7:00 PM</span>
+                  <span className="sg__schedule-label">Prayer Night</span>
                 </li>
               </ul>
               <Link to="/locations#va" className="sg__campus-link">
@@ -289,7 +293,6 @@ const LOCATIONS = [
     pastor: "Pastor Mekashaw Shimelash",
     pastorTitle: "Lead Pastor, MD Campus",
     services: [
-      "Sun 10:00am — Morning Prayer",
       "Sun 11:00am — Sunday Worship",
       "Sun 6:30pm — Young Adult",
       "Wed 6:30pm — Midweek Service",
@@ -309,15 +312,14 @@ const LOCATIONS = [
     pastor: "Pastor Elias Getaneh",
     pastorTitle: "Lead Pastor, VA Campus",
     services: [
-      "Sun 9:30am — Morning Prayer",
       "Sun 10:30am — Sunday Worship",
-      "Tue 7:00pm — Bible Study",
-      "Fri 7:00pm — Prayer Night",
       "Sun 7:00pm — Young Adults",
+      "Tue 7:00pm — Midweek Service",
+      "Fri 7:00pm — Prayer Night",
     ],
-    caption: "04 · Eisenhower Ave · new 2026",
+    caption: "04 · Eisenhower Ave",
     photo: "/va-campus.jpg",
-    badge: "New · 2026",
+    badge: null,
   },
 ];
 

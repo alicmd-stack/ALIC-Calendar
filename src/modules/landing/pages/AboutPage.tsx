@@ -404,10 +404,10 @@ function MissionStrip() {
           </div>
           <div className="ms__figs">
             {[
-              ["12+", "Partner churches"],
-              ["3", "Continents served"],
-              ["40+", "Pastors trained"],
-              ["—", "Gospel shared"],
+              ["29,000+", "Reached with the Gospel"],
+              ["1,700+", "New believers discipled"],
+              ["2,000+", "Children & mothers supported"],
+              ["40+", "Children supported in education"],
             ].map(([n, l]) => (
               <div key={l} className="ms__fig">
                 <div className="ms__n">{n}</div>

@@ -560,7 +560,10 @@ export const CAMPUSES: CampusInfo[] = [
     city: "Silver Spring, MD 20904",
     mapsUrl:
       "https://www.google.com/maps/search/?api=1&query=11961+Tech+Rd+Silver+Spring+MD+20904",
-    serviceInfo: { en: "Sunday worship · Midweek Wed 6:30–9:00 PM" },
+    serviceInfo: {
+      en: "Sunday Worship · 11:00 AM",
+      am: "የእሁድ አምልኮ · 11:00 ጥዋት",
+    },
   },
   {
     key: "va",
@@ -570,7 +573,10 @@ export const CAMPUSES: CampusInfo[] = [
     city: "Alexandria, VA 22314",
     mapsUrl:
       "https://www.google.com/maps/search/?api=1&query=2730+Eisenhower+Ave+Alexandria+VA+22314",
-    serviceInfo: { en: "Sunday worship · Midweek Tue 7:00–9:00 PM" },
+    serviceInfo: {
+      en: "Sunday Worship · 10:30 AM",
+      am: "የእሁድ አምልኮ · 10:30 ጥዋት",
+    },
   },
 ];
 
