@@ -73,7 +73,6 @@ export default function LandingNav() {
 
           <div className="nav__right">
             <Link to="/give" className="btn btn--gold btn--sm">{t('cta.give')}</Link>
-            <Link to="/auth" className="btn btn--gold btn--sm nav__login">Log in</Link>
             <button
               className={`nav__burger${menuOpen ? ' is-open' : ''}`}
               onClick={toggleMenu}
@@ -123,7 +122,6 @@ export default function LandingNav() {
           ))}
           <span className="nav__sheet-divider" aria-hidden="true" />
           <Link to="/give" className="nav__sheet-link">{t('cta.give')}</Link>
-          <Link to="/auth" className="nav__sheet-link">Log in</Link>
         </nav>
       </aside>
     </>
