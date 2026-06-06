@@ -317,30 +317,31 @@ const TEAM = [
   {
     name: "Pastor Mekashaw Shimelash",
     role: "Senior Pastor",
-    src: "/Pr. Mekashaw.jpeg",
+    src: "/Pr. Mekashaw.jpg",
     focus: "center 20%",
     scale: 1,
-  },
-  {
-    name: "Pastor Elias Getaneh",
-    role: "Pastor",
-    src: "/Pastor Elu.jpeg",
-    focus: "center 60%",
-    scale: 1.55,
   },
   {
     name: "Pastor Biniam Aboye",
     role: "Pastor",
     src: "/Pr. Bini.jpeg",
     focus: "center 22%",
-    scale: 1,
+    scale: 1.5,
   },
+  {
+    name: "Pastor Elias Getaneh",
+    role: "Pastor",
+    src: "/Pastor Elu.jpeg",
+    focus: "center 50%",
+    scale: 2.0,
+  },
+
   {
     name: "Teacher Worede Zinabu",
     role: "Teacher",
     src: "/Wade.jpeg",
-    focus: "center 18%",
-    scale: 1.3,
+    focus: "center 25%",
+    scale: 2,
   },
 ];
 
