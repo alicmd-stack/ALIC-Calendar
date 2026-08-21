@@ -112,6 +112,14 @@ export default function CheckInStationPage() {
   const [safety, setSafety] = useState<SafetyCard | null>(null);
   /** The New Family desk: a visitor who is not in the directory yet. */
   const [addingVisitor, setAddingVisitor] = useState(false);
+  /**
+   * Check-in needs an OPEN session; checking out does not.
+   *
+   * The server has always drawn the line here — check_out_children never reads
+   * session status. The desk now draws it in the same place instead of going
+   * dark entirely.
+   */
+  const sessionClosed = !!session && session.status !== "open";
   const [safetyFor, setSafetyFor] = useState<string | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<number | null>(null);
@@ -149,9 +157,11 @@ export default function CheckInStationPage() {
   useEffect(() => {
     if (!orgId || !user) return;
     kidsSessionService
-      .listOpen(orgId)
-      .then((open) => {
-        const s = open[0] ?? null;
+      // Open OR closed. A closed session still has children in rooms, and the
+      // desk must keep checkout, the roster and the safety card — that is the
+      // end of the service, when they matter most.
+      .currentForDesk(orgId)
+      .then((s) => {
         setSession(s);
         if (s) {
           dispatch({
@@ -698,14 +708,35 @@ export default function CheckInStationPage() {
         {/* --------------------------------------------------------- lookup */}
         {session && !showRooms && (ctx.state === "idle" || ctx.state === "searching") && (
           <div className="max-w-3xl mx-auto">
+            {/* The service is over but children are still in rooms. The desk
+                used to go completely dark here; now it says which half of the
+                job is still available. */}
+            {sessionClosed && (
+              <div className="mb-4 rounded-lg border-2 border-amber-400 bg-amber-50 p-4">
+                <p className="font-semibold flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  This service has ended
+                </p>
+                <p className="text-sm mt-1">
+                  You can still check children out, open a classroom and see the
+                  safety card. To check anyone new in, reopen the service from
+                  the Kids Ministry page.
+                </p>
+              </div>
+            )}
+
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground" />
               <Input
                 ref={searchInput}
                 className="pl-14 h-16 text-xl"
-                placeholder="Phone number or family name"
+                placeholder={
+                  sessionClosed
+                    ? "Check-in is closed — you can still check out"
+                    : "Phone number or family name"
+                }
                 value={ctx.query}
-                disabled={!online}
+                disabled={!online || sessionClosed}
                 onChange={(e) => runSearch(e.target.value)}
               />
             </div>
@@ -738,7 +769,7 @@ export default function CheckInStationPage() {
                   </p>
                   {/* The dead end this replaces: a visiting family arrived and
                       the desk had nowhere to go. */}
-                  <Button size="lg" disabled={!online} onClick={() => setAddingVisitor(true)}>
+                  <Button size="lg" disabled={!online || sessionClosed} onClick={() => setAddingVisitor(true)}>
                     <UserPlus className="h-4 w-4 mr-1" />
                     They are visiting — add them
                   </Button>
@@ -758,7 +789,7 @@ export default function CheckInStationPage() {
               <Button
                 variant="outline"
                 size="lg"
-                disabled={!online}
+                disabled={!online || sessionClosed}
                 onClick={() => setAddingVisitor(true)}
               >
                 <UserPlus className="h-4 w-4 mr-1" />

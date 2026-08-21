@@ -81,6 +81,43 @@ export const kidsSessionService = {
     return data ?? [];
   },
 
+  /**
+   * The session the desk should be working with, open or not.
+   *
+   * listOpen filters on status='open', and the station gated every panel on the
+   * result — so the moment kids_auto_close_sessions ran, the desk lost checkout,
+   * the roster, the safety card and the parent-message button, with children
+   * still in the rooms. That is precisely the end of the service, which is the
+   * one moment all of those matter.
+   *
+   * The database was never the problem: kids_auto_close_sessions says so in its
+   * own comment — "Only check-in requires an open session; checkout works on a
+   * closed one." check_out_children never reads session status.
+   *
+   * Prefers an open session, falls back to the most recent one from today.
+   */
+  async currentForDesk(organizationId: string): Promise<KidsSession | null> {
+    const open = await this.listOpen(organizationId);
+    if (open.length > 0) return open[0];
+
+    const today = new Date();
+    const iso = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0"),
+    ].join("-");
+
+    const { data, error } = await church()
+      .from("kids_sessions")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .eq("session_date", iso)
+      .order("opened_at", { ascending: false })
+      .limit(1);
+    throwRpc(error);
+    return data?.[0] ?? null;
+  },
+
   async listRecent(organizationId: string, limit = 20): Promise<KidsSession[]> {
     const { data, error } = await church()
       .from("kids_sessions")
