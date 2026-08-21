@@ -31,6 +31,8 @@ export interface HouseholdMatch {
     child_person_id: string;
     child_display_name: string;
     age_band_code: string | null;
+    /** What decides the classroom. Null for a child with no grade on file. */
+    grade_name: string | null;
     already_checked_in: boolean;
     needs_staff: boolean;
   }[];

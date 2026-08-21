@@ -234,6 +234,7 @@ export default function CheckInStationPage() {
         child_person_id: row.child_person_id,
         child_display_name: row.child_display_name,
         age_band_code: row.age_band_code,
+        grade_name: row.grade_name,
         already_checked_in: row.already_checked_in,
         needs_staff: row.needs_staff,
       });
@@ -660,9 +661,16 @@ export default function CheckInStationPage() {
                       {selected && !blocked && <CheckCircle2 className="h-5 w-5 text-primary" />}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
-                      {c.age_band_code && (
+                      {/* The GRADE, because that is what places them. Showing
+                          the age band here meant a Pre-K child read
+                          "Elementary" and was then correctly sent to Joy A,
+                          which teaches the volunteer to distrust a correct
+                          placement. The band remains the label for a child
+                          with no grade — the same child whose placement
+                          genuinely does fall back to it. */}
+                      {(c.grade_name ?? c.age_band_code) && (
                         <Badge variant="outline" className="capitalize">
-                          {c.age_band_code}
+                          {c.grade_name ?? c.age_band_code}
                         </Badge>
                       )}
                       {c.already_checked_in && <Badge variant="secondary">Already checked in</Badge>}

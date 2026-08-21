@@ -25,6 +25,7 @@ const HOUSEHOLD: HouseholdMatch = {
       child_person_id: "c1",
       child_display_name: "Noah B.",
       age_band_code: "elementary",
+      grade_name: null,
       already_checked_in: false,
       needs_staff: false,
     },
@@ -32,6 +33,7 @@ const HOUSEHOLD: HouseholdMatch = {
       child_person_id: "c2",
       child_display_name: "Maya B.",
       age_band_code: "elementary",
+      grade_name: null,
       already_checked_in: true, // already in a room
       needs_staff: false,
     },
@@ -39,6 +41,7 @@ const HOUSEHOLD: HouseholdMatch = {
       child_person_id: "c3",
       child_display_name: "Sara B.",
       age_band_code: "nursery",
+      grade_name: null,
       already_checked_in: false,
       needs_staff: true, // pickup restriction on file
     },

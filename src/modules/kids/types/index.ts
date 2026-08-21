@@ -30,6 +30,7 @@ export interface HouseholdSearchRow {
   child_person_id: string;
   child_display_name: string;
   age_band_code: string | null;
+  grade_name: string | null;
   already_checked_in: boolean;
   needs_staff: boolean;
 }

@@ -3928,6 +3928,7 @@ export type Database = {
           already_checked_in: boolean
           child_display_name: string
           child_person_id: string
+          grade_name: string
           household_id: string
           household_name: string
           masked_phone: string
