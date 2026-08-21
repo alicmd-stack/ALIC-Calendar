@@ -17,6 +17,7 @@ import {
   CardTitle,
 } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import { MedicalCard } from "../components/MedicalCard";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
@@ -195,8 +196,8 @@ export default function MemberProfilePage() {
         </div>
 
         <Tabs defaultValue="overview">
-          <TabsList className="grid grid-cols-4 w-full sm:w-auto sm:inline-flex">
-            {["overview", "family", "serving", "groups"].map((t) => (
+          <TabsList className="grid grid-cols-5 w-full sm:w-auto sm:inline-flex">
+            {["overview", "family", "medical", "serving", "groups"].map((t) => (
               <TabsTrigger
                 key={t}
                 value={t}
@@ -287,6 +288,15 @@ export default function MemberProfilePage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="medical" className="mt-4 space-y-4">
+            <MedicalCard
+              personId={member.id}
+              personName={member.first_name}
+              isChild={member.is_child}
+              canEdit={canWrite}
+            />
           </TabsContent>
 
           <TabsContent value="serving" className="mt-4 space-y-4">

@@ -3169,6 +3169,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_person_to_household: {
+        Args: {
+          _household_id: string
+          _is_primary?: boolean
+          _person_id: string
+        }
+        Returns: undefined
+      }
       age_band_for: {
         Args: {
           _as_of?: string
@@ -3653,6 +3661,10 @@ export type Database = {
         }
         Returns: number
       }
+      refresh_child_allergy_flags: {
+        Args: { _person_id: string }
+        Returns: number
+      }
       register_member_family: {
         Args: {
           _children?: Json
@@ -3925,6 +3937,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      upsert_household_by_name: {
+        Args: { _actor: string; _name: string; _organization_id: string }
+        Returns: string
+      }
       upsert_kids_classroom: {
         Args: {
           _capacity?: number
@@ -3954,6 +3970,40 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "room_kids_config"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_person_sensitive: {
+        Args: {
+          _allergies?: string
+          _allergy_label_short?: string
+          _allergy_severity?: string
+          _medical_notes?: string
+          _medications?: string
+          _person_id: string
+          _photo_consent?: boolean
+          _special_needs?: string
+        }
+        Returns: {
+          allergies: string | null
+          allergy_label_short: string | null
+          allergy_severity: string
+          created_at: string
+          medical_notes: string | null
+          medications: string | null
+          organization_id: string
+          person_id: string
+          photo_consent: boolean
+          special_needs: string | null
+          special_needs_flag: boolean
+          updated_at: string
+          updated_by: string | null
+          updated_by_name: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "person_sensitive"
           isOneToOne: true
           isSetofReturn: false
         }
