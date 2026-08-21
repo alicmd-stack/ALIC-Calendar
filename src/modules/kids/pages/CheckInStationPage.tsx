@@ -283,15 +283,47 @@ export default function CheckInStationPage() {
    * queue of parents in front of them. `room_at_capacity` is handled by the
    * caller and never reaches here.
    */
+  /**
+   * Turn a database error into something a volunteer can act on with a queue
+   * of parents in front of them.
+   *
+   * Matched on the exact identifier, not a substring. The old `includes("session")`
+   * test caught anything with that word in it — a PostgREST schema-cache miss
+   * was reported as "this service is no longer open", which is a confident
+   * answer to a different question. Anything unrecognised is shown as-is
+   * rather than guessed at: a raw identifier is ugly, a wrong explanation
+   * sends someone to fix the wrong thing.
+   */
   const explainCheckInError = (raw: string): string => {
-    if (raw.includes("already_checked_in") || raw.includes("uq_"))
-      return "One of these children is already checked in somewhere. Refresh and look them up again.";
-    if (raw.includes("not_permitted"))
-      return "You do not have permission to check children in.";
-    if (raw.includes("session"))
-      return "This service is no longer open. Ask the Kids Ministry lead to reopen it.";
-    if (raw.includes("Failed to fetch") || raw.includes("NetworkError"))
-      return "Lost connection to the database. Nothing was saved.";
+    const known: Record<string, string> = {
+      session_not_open:
+        "This service has been closed. Reopen it from the Kids Ministry page.",
+      session_not_found:
+        "This service no longer exists. Go back and start check-in again.",
+      outside_check_in_window:
+        "Check-in is closed for this service right now.",
+      no_open_classroom:
+        "No classroom is open. Someone needs to open one on the Kids Ministry page.",
+      no_classrooms_configured:
+        "No classrooms are set up yet. An admin needs to mark which rooms take children.",
+      not_permitted_to_check_in: "You do not have permission to check children in.",
+      volunteer_not_eligible:
+        "Your volunteer record is marked restricted, so you cannot run check-in.",
+      child_not_found: "That child's record could not be found. Refresh and try again.",
+      no_children_supplied: "No children were selected.",
+      room_not_open: "That classroom is closed. Choose another room.",
+    };
+
+    for (const [code, message] of Object.entries(known)) {
+      if (raw.includes(code)) return message;
+    }
+
+    if (raw.includes("uq_kids_check_ins_one_active_per_session")) {
+      return "One of these children is already checked in. Refresh and look them up again.";
+    }
+    if (raw.includes("Failed to fetch") || raw.includes("NetworkError")) {
+      return "Lost connection while saving. The check-in may or may not have gone through — look the family up again before printing anything.";
+    }
     return raw;
   };
 
@@ -314,9 +346,7 @@ export default function CheckInStationPage() {
       setSafetyFor(null);
       dispatch({
         type: "BLOCKING_ERROR",
-        message:
-          "Could not load the safety card: " +
-          (err instanceof Error ? err.message : String(err)),
+        message: "Could not load the safety card: " + errorMessage(err),
       });
     }
   };
