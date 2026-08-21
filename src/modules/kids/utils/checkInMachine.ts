@@ -45,6 +45,16 @@ export interface CheckedInChild {
   has_restriction: boolean;
 }
 
+/** Someone the database says may collect this child. */
+export interface PickupCandidate {
+  person_id: string;
+  display_name: string;
+  relationship: string;
+  is_authorized: boolean;
+  is_guardian: boolean;
+  child_has_restriction: boolean;
+}
+
 export interface MachineContext {
   state: StationState;
   stationId: string | null;
@@ -61,7 +71,28 @@ export interface MachineContext {
   checkedIn: CheckedInChild[];
   checkoutInput: string;
   checkoutMatches: CheckedInChild[];
+  /** Who the database says may collect the matched children. */
+  pickupCandidates: PickupCandidate[];
+  /** The person the volunteer says is collecting. */
+  collectorPersonId: string | null;
+  collectorName: string | null;
   error: string | null;
+  /**
+   * Set when a classroom is full: holds the family name for the warning copy.
+   *
+   * Lives in the machine rather than in component state so that clearFamily()
+   * clears it on EVERY reset path — including the 45-second idle wipe, which
+   * previously left an amber dialog open over the search screen still naming
+   * the previous household.
+   */
+  capacityBlocked: string | null;
+  /**
+   * A failure the volunteer must acknowledge before carrying on, as opposed
+   * to `error`, which is inline hint text. A check-in that failed is shown as
+   * a blocking modal: the tablet must never let a label be handed over when
+   * the database has no matching row.
+   */
+  blockingError: string | null;
 }
 
 export const initialContext: MachineContext = {
@@ -79,7 +110,12 @@ export const initialContext: MachineContext = {
   checkedIn: [],
   checkoutInput: "",
   checkoutMatches: [],
+  pickupCandidates: [],
+  collectorPersonId: null,
+  collectorName: null,
   error: null,
+  capacityBlocked: null,
+  blockingError: null,
 };
 
 export type MachineEvent =
@@ -96,8 +132,14 @@ export type MachineEvent =
   | { type: "CHECKOUT_STARTED" }
   | { type: "CHECKOUT_INPUT"; value: string }
   | { type: "CHECKOUT_RESOLVED"; matches: CheckedInChild[] }
+  | { type: "CHECKOUT_CANDIDATES"; candidates: PickupCandidate[] }
+  | { type: "COLLECTOR_SELECTED"; personId: string | null; name: string | null }
   | { type: "CHECKOUT_DONE" }
   | { type: "ERROR"; message: string }
+  | { type: "BLOCKING_ERROR"; message: string }
+  | { type: "DISMISS_BLOCKING" }
+  | { type: "CAPACITY_BLOCKED"; householdName: string }
+  | { type: "DISMISS_CAPACITY" }
   | { type: "RESET" };
 
 /**
@@ -117,7 +159,12 @@ function clearFamily(ctx: MachineContext): MachineContext {
     checkedIn: [],
     checkoutInput: "",
     checkoutMatches: [],
+    pickupCandidates: [],
+    collectorPersonId: null,
+    collectorName: null,
     error: null,
+    capacityBlocked: null,
+    blockingError: null,
   };
 }
 
@@ -233,14 +280,67 @@ export function reduce(ctx: MachineContext, event: MachineEvent): MachineContext
       if (event.matches.length === 0) {
         return { ...ctx, error: "That code was not recognised." };
       }
-      return { ...ctx, state: "checkout_confirm", checkoutMatches: event.matches };
+      return {
+        ...ctx,
+        state: "checkout_confirm",
+        checkoutMatches: event.matches,
+        pickupCandidates: [],
+        collectorPersonId: null,
+        collectorName: null,
+      };
+
+    case "CHECKOUT_CANDIDATES":
+      if (ctx.state !== "checkout_confirm") return ctx;
+      return { ...ctx, pickupCandidates: event.candidates };
+
+    case "COLLECTOR_SELECTED":
+      if (ctx.state !== "checkout_confirm") return ctx;
+      return {
+        ...ctx,
+        collectorPersonId: event.personId,
+        collectorName: event.name,
+        error: null,
+      };
 
     case "CHECKOUT_DONE":
       if (ctx.state !== "checkout_confirm") return ctx;
       return { ...ctx, state: "checkout_done" };
 
     case "ERROR":
+      // A failure while committing must hand the screen BACK to the volunteer
+      // in a state they can act on. Staying in "confirming" left the retry
+      // button rendered, enabled and inert, because it only fires from
+      // "selecting" — the volunteer's only exit was to cancel the family.
+      if (ctx.state === "confirming") {
+        return { ...ctx, state: "selecting", error: event.message };
+      }
       return { ...ctx, error: event.message };
+
+    case "BLOCKING_ERROR":
+      // Same state transition as ERROR, plus a modal the volunteer has to
+      // dismiss, so a failed check-in cannot be mistaken for a quiet success.
+      return {
+        ...ctx,
+        state: ctx.state === "confirming" ? "selecting" : ctx.state,
+        blockingError: event.message,
+      };
+
+    case "DISMISS_BLOCKING":
+      return { ...ctx, blockingError: null };
+
+    case "CAPACITY_BLOCKED":
+      // Returns to 'selecting' for the same reason ERROR does: leaving the
+      // machine in 'confirming' renders the whole select screen enabled and
+      // inert, because its controls only fire from 'selecting'.
+      return {
+        ...ctx,
+        state: ctx.state === "confirming" ? "selecting" : ctx.state,
+        capacityBlocked: event.householdName,
+        error: null,
+      };
+
+    case "DISMISS_CAPACITY":
+      return { ...ctx, capacityBlocked: null };
 
     case "RESET":
       // Returns to idle only when a volunteer is still on shift.

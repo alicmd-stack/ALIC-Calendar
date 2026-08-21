@@ -104,7 +104,7 @@ export function RoomRosterSheet({ room, onOpenChange }: RoomRosterSheetProps) {
         <SheetHeader>
           <SheetTitle>{roomLabel}</SheetTitle>
           <SheetDescription>
-            {room?.age_band_name ?? "No age group set"} ·{" "}
+            {room?.grade_name ?? room?.age_band_name ?? "No grade set"} ·{" "}
             {room?.session_label ?? ""}
           </SheetDescription>
         </SheetHeader>
@@ -184,6 +184,7 @@ export function RoomRosterSheet({ room, onOpenChange }: RoomRosterSheetProps) {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{child.child_name}</p>
                     <p className="text-xs text-muted-foreground truncate">
+                      {child.grade_name ?? "No grade on file"} ·{" "}
                       {child.minutes_in_room} min
                       {child.guardian_phone && (
                         <>
@@ -192,6 +193,14 @@ export function RoomRosterSheet({ room, onOpenChange }: RoomRosterSheetProps) {
                         </>
                       )}
                     </p>
+                    {/* Check-in could not place this child by grade. Shown in
+                        full rather than as an icon: it is the leader's cue to
+                        move them, and there is no nursery to fall back on. */}
+                    {child.assignment_reason && (
+                      <p className="text-xs text-amber-700 dark:text-amber-500 mt-0.5">
+                        {child.assignment_reason}
+                      </p>
+                    )}
                   </div>
                   {child.has_allergy && (
                     <Badge variant="outline" className="gap-1 border-amber-400 shrink-0">

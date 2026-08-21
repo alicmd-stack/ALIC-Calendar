@@ -7,6 +7,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { throwRpc } from "./rpcError";
 import type { KidsSession, KidsCheckIn } from "../types";
 
 const church = () => supabase.schema("church");
@@ -34,7 +35,7 @@ export const kidsSessionService = {
       _organization_id: organizationId,
       _service_label: serviceLabel,
     });
-    if (error) throw error;
+    throwRpc(error);
     const rows = (data ?? []) as unknown as {
       session_id: string;
       service_label: string;
@@ -48,7 +49,7 @@ export const kidsSessionService = {
     const { data, error } = await church().rpc("close_todays_sessions", {
       _organization_id: organizationId,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data as unknown as number) ?? 0;
   },
 
@@ -60,7 +61,7 @@ export const kidsSessionService = {
       .eq("organization_id", organizationId)
       .eq("status", "open")
       .order("starts_at");
-    if (error) throw error;
+    throwRpc(error);
     return data ?? [];
   },
 
@@ -71,7 +72,7 @@ export const kidsSessionService = {
       .eq("organization_id", organizationId)
       .order("session_date", { ascending: false })
       .limit(limit);
-    if (error) throw error;
+    throwRpc(error);
     return data ?? [];
   },
 
@@ -89,8 +90,8 @@ export const kidsSessionService = {
         .eq("kids_session_id", sessionId)
         .eq("status", "checked_in"),
     ]);
-    if (roomsRes.error) throw roomsRes.error;
-    if (countsRes.error) throw countsRes.error;
+    throwRpc(roomsRes.error);
+    throwRpc(countsRes.error);
 
     const roomIds = (roomsRes.data ?? []).map((r) => r.room_id);
     if (roomIds.length === 0) return [];
@@ -104,8 +105,8 @@ export const kidsSessionService = {
         .select("room_id, label_room_name, capacity, kids_age_band_id")
         .in("room_id", roomIds),
     ]);
-    if (namesRes.error) throw namesRes.error;
-    if (configRes.error) throw configRes.error;
+    throwRpc(namesRes.error);
+    throwRpc(configRes.error);
 
     const nameById = new Map((namesRes.data ?? []).map((r) => [r.id, r.name]));
     const configById = new Map((configRes.data ?? []).map((c) => [c.room_id, c]));
@@ -135,7 +136,7 @@ export const kidsSessionService = {
       .eq("kids_session_id", sessionId)
       .eq("status", "checked_in")
       .order("tag_number");
-    if (error) throw error;
+    throwRpc(error);
     return data ?? [];
   },
 
@@ -147,7 +148,7 @@ export const kidsSessionService = {
       .eq("organization_id", organizationId)
       .eq("status", "checked_in")
       .order("checked_in_at");
-    if (error) throw error;
+    throwRpc(error);
     return data ?? [];
   },
 };

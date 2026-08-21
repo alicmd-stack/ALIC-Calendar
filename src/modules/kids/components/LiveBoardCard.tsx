@@ -39,7 +39,7 @@ export function LiveBoardCard({ room, onOpenRoster }: LiveBoardCardProps) {
               {room.label_room_name || room.room_name}
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {room.age_band_name ?? "No age group set"}
+              {room.grade_name ?? room.age_band_name ?? "No grade set"}
             </p>
           </div>
           {room.restriction_count > 0 && (
@@ -79,6 +79,12 @@ export function LiveBoardCard({ room, onOpenRoster }: LiveBoardCardProps) {
             <Users className="h-3.5 w-3.5" />
             {room.volunteer_count} volunteer{room.volunteer_count === 1 ? "" : "s"}
           </span>
+          {room.misplaced_count > 0 && (
+            <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-500">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {room.misplaced_count} to check
+            </span>
+          )}
           {room.allergy_count > 0 && (
             <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-500">
               <Baby className="h-3.5 w-3.5" />

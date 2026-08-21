@@ -3568,6 +3568,17 @@ export type Database = {
           volunteer_name: string
         }[]
       }
+      station_pickup_candidates: {
+        Args: { _check_in_id: string; _shift_token?: string }
+        Returns: {
+          child_has_restriction: boolean
+          display_name: string
+          is_authorized: boolean
+          is_guardian: boolean
+          person_id: string
+          relationship: string
+        }[]
+      }
       station_room_roster: {
         Args: {
           _kids_session_id: string

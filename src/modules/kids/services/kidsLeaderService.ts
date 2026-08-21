@@ -16,6 +16,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { throwRpc } from "./rpcError";
 
 const church = () => supabase.schema("church");
 
@@ -27,6 +28,8 @@ export interface LiveBoardRoom {
   room_id: string;
   room_name: string;
   label_room_name: string | null;
+  /** The school grade this room teaches — the ministry's actual organisation. */
+  grade_name: string | null;
   age_band_code: string | null;
   age_band_name: string | null;
   capacity: number | null;
@@ -36,6 +39,8 @@ export interface LiveBoardRoom {
   volunteer_count: number;
   allergy_count: number;
   restriction_count: number;
+  /** Children placed somewhere their grade is not taught. */
+  misplaced_count: number;
   over_capacity: boolean;
   over_ratio: boolean;
 }
@@ -60,6 +65,14 @@ export interface RosterRow {
   has_restriction: boolean;
   checkout_method: string | null;
   minutes_in_room: number;
+  /**
+   * Set when check-in could not place the child by grade — no grade on file,
+   * or no classroom teaches it. ALIC runs no nursery, so a child below Pre-K
+   * lands here. Never null-checked away: an unexplained placement is exactly
+   * what a leader needs to see.
+   */
+  assignment_reason: string | null;
+  grade_name: string | null;
 }
 
 export interface AttendanceRow {
@@ -110,13 +123,68 @@ export interface StaffingRow {
   was_background_check_current: boolean | null;
 }
 
+/** One standing teaching assignment for a classroom. */
+export interface ClassroomTeacher {
+  id: string;
+  room_id: string;
+  room_name: string;
+  person_id: string;
+  display_name: string;
+  phone: string | null;
+  role: string;
+  is_lead: boolean;
+  background_check_status: string;
+  is_eligible: boolean;
+}
+
 export const kidsLeaderService = {
+  /**
+   * Who normally teaches each classroom.
+   *
+   * Standing week to week, unlike sessionStaffing() which is who is serving on
+   * one particular Sunday. Checkout happens at the classroom door, so the room
+   * has to know whose room it is.
+   */
+  async classroomTeachers(organizationId: string): Promise<ClassroomTeacher[]> {
+    const { data, error } = await church().rpc("kids_classroom_teacher_list", {
+      _organization_id: organizationId,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as ClassroomTeacher[];
+  },
+
+  async assignTeacher(params: {
+    organizationId: string;
+    roomId: string;
+    personId: string;
+    role?: string;
+    isLead?: boolean;
+  }) {
+    const { data, error } = await church().rpc("assign_classroom_teacher", {
+      _organization_id: params.organizationId,
+      _room_id: params.roomId,
+      _person_id: params.personId,
+      _role: params.role ?? "teacher",
+      _is_lead: params.isLead ?? false,
+    });
+    throwRpc(error);
+    return data;
+  },
+
+  /** Ends the assignment rather than deleting it — last term's roster is a record. */
+  async removeTeacher(assignmentId: string): Promise<void> {
+    const { error } = await church().rpc("remove_classroom_teacher", {
+      _id: assignmentId,
+    });
+    throwRpc(error);
+  },
+
   /** Every open classroom, right now. Refetch this on a Realtime event. */
   async liveBoard(organizationId: string): Promise<LiveBoardRoom[]> {
     const { data, error } = await church().rpc("kids_live_board", {
       _organization_id: organizationId,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as LiveBoardRoom[];
   },
 
@@ -126,7 +194,7 @@ export const kidsLeaderService = {
       _kids_session_id: sessionId,
       _room_id: roomId ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as RosterRow[];
   },
 
@@ -140,7 +208,7 @@ export const kidsLeaderService = {
       _from: from,
       _to: to,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as AttendanceRow[];
   },
 
@@ -154,7 +222,7 @@ export const kidsLeaderService = {
       _from: from,
       _to: to,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as ExceptionRow[];
   },
 
@@ -162,7 +230,7 @@ export const kidsLeaderService = {
     const { data, error } = await church().rpc("kids_eligible_volunteers", {
       _organization_id: organizationId,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as EligibleVolunteer[];
   },
 
@@ -173,7 +241,7 @@ export const kidsLeaderService = {
       .select("*")
       .eq("kids_session_id", sessionId)
       .is("ended_at", null);
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as StaffingRow[];
   },
 
@@ -189,7 +257,7 @@ export const kidsLeaderService = {
       _room_id: params.roomId ?? null,
       _role: params.role ?? "classroom_volunteer",
     });
-    if (error) throw error;
+    throwRpc(error);
     return data as unknown as StaffingRow;
   },
 
@@ -197,7 +265,7 @@ export const kidsLeaderService = {
     const { error } = await church().rpc("end_session_staff", {
       _staffing_id: staffingId,
     });
-    if (error) throw error;
+    throwRpc(error);
   },
 
   /**
@@ -222,7 +290,7 @@ export const kidsLeaderService = {
       _label_room_name: params.labelRoomName ?? null,
       _sort_order: params.sortOrder ?? 0,
     });
-    if (error) throw error;
+    throwRpc(error);
     return data;
   },
 
@@ -237,7 +305,7 @@ export const kidsLeaderService = {
       _room_id: roomId,
       _capacity_override: capacityOverride ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
   },
 
   /** Refused server-side while children are still checked into the room. */
@@ -246,22 +314,74 @@ export const kidsLeaderService = {
       _kids_session_id: sessionId,
       _room_id: roomId,
     });
-    if (error) throw error;
+    throwRpc(error);
   },
 
-  /** Classrooms configured for this branch, with their age band. */
+  /**
+   * Create or edit a classroom, including its NAME.
+   *
+   * public.rooms is shared with the events module and its RLS grants writes
+   * only to app_role = 'admin', so the Children's Ministry leader — a
+   * kids_admin, which is a different thing — could configure a classroom but
+   * never rename or create one. This RPC lets them, bounded to children's
+   * spaces: they cannot rename the Main Auditorium.
+   *
+   * Pass roomId to edit, omit it to create.
+   */
+  async upsertClassroom(params: {
+    organizationId: string;
+    roomId?: string | null;
+    name?: string | null;
+    schoolGradeId?: string | null;
+    ageBandId?: string | null;
+    capacity?: number | null;
+    ratio?: number | null;
+    labelRoomName?: string | null;
+    sortOrder?: number;
+  }) {
+    const { data, error } = await church().rpc("upsert_kids_classroom", {
+      _organization_id: params.organizationId,
+      _room_id: params.roomId ?? null,
+      _name: params.name ?? null,
+      _school_grade_id: params.schoolGradeId ?? null,
+      _kids_age_band_id: params.ageBandId ?? null,
+      _capacity: params.capacity ?? null,
+      _ratio: params.ratio ?? null,
+      _label_room_name: params.labelRoomName ?? null,
+      _sort_order: params.sortOrder ?? 0,
+    });
+    throwRpc(error);
+    return data;
+  },
+
+  /**
+   * Take a room out of children's use. The room survives for the events
+   * module. Refused server-side while children are still in it.
+   */
+  async retireClassroom(organizationId: string, roomId: string): Promise<void> {
+    const { error } = await church().rpc("retire_kids_classroom", {
+      _organization_id: organizationId,
+      _room_id: roomId,
+    });
+    throwRpc(error);
+  },
+
+  /** Classrooms configured for this branch, with their grade. */
   async listClassrooms(organizationId: string) {
     // church.room_kids_config and public.rooms are in different schemas, so
     // PostgREST cannot embed them in one query.
-    const [cfgRes, roomsRes, bandsRes] = await Promise.all([
+    const [cfgRes, roomsRes, bandsRes, gradesRes] = await Promise.all([
       church()
         .from("room_kids_config")
         .select("*")
         .eq("organization_id", organizationId)
         .order("sort_order"),
       supabase
+        // public.rooms has no capacity column — capacity for a classroom is
+        // kids configuration, held on church.room_kids_config. Selecting it
+        // here returned a PostgREST 400 and broke the whole tab.
         .from("rooms")
-        .select("id, name, capacity, is_active")
+        .select("id, name, is_active")
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("name"),
@@ -271,10 +391,17 @@ export const kidsLeaderService = {
         .eq("organization_id", organizationId)
         .eq("is_active", true)
         .order("min_age_months"),
+      church()
+        .from("school_grades")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .eq("is_active", true)
+        .order("sort_order"),
     ]);
-    if (cfgRes.error) throw cfgRes.error;
-    if (roomsRes.error) throw roomsRes.error;
-    if (bandsRes.error) throw bandsRes.error;
+    throwRpc(cfgRes.error);
+    throwRpc(roomsRes.error);
+    throwRpc(bandsRes.error);
+    throwRpc(gradesRes.error);
 
     const cfgByRoom = new Map((cfgRes.data ?? []).map((c) => [c.room_id, c]));
 
@@ -284,10 +411,10 @@ export const kidsLeaderService = {
       rooms: (roomsRes.data ?? []).map((room) => ({
         room_id: room.id,
         room_name: room.name,
-        room_capacity: room.capacity,
         config: cfgByRoom.get(room.id) ?? null,
       })),
       ageBands: bandsRes.data ?? [],
+      grades: gradesRes.data ?? [],
     };
   },
 };
@@ -297,3 +424,4 @@ export type ClassroomListing = Awaited<
 >;
 export type ClassroomRow = ClassroomListing["rooms"][number];
 export type AgeBand = ClassroomListing["ageBands"][number];
+export type SchoolGrade = ClassroomListing["grades"][number];

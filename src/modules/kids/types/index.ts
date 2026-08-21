@@ -61,13 +61,32 @@ export interface PickupMatchRow {
   has_restriction: boolean;
 }
 
+/**
+ * One row from church.station_child_safety_card (KID-018).
+ *
+ * Reading this writes an audit row server-side on every call, which is what
+ * keeps "org admins can see children's medical data" traceable.
+ */
+export interface SafetyCard {
+  child_name: string;
+  allergy_severity: string | null;
+  allergies: string | null;
+  medications: string | null;
+  special_needs: string | null;
+  emergency_name: string | null;
+  emergency_phone: string | null;
+}
+
 /** One row from church.station_session_rooms. Occupancy only, no people. */
 export interface StationRoom {
   room_id: string;
   room_name: string;
+  grade_name: string | null;
   age_band_name: string | null;
   capacity: number | null;
   checked_in_count: number;
+  /** First names of the room's standing teachers, lead first. */
+  teachers: string | null;
 }
 
 /**

@@ -8,6 +8,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { throwRpc } from "./rpcError";
 import type {
   CheckInStation,
   VolunteerOption,
@@ -16,7 +17,9 @@ import type {
   PickupMatchRow,
   StationRoom,
   StationRosterRow,
+  SafetyCard,
 } from "../types";
+import type { PickupCandidate } from "../utils/checkInMachine";
 
 const church = () => supabase.schema("church");
 
@@ -28,7 +31,7 @@ export const kidsStationService = {
       .eq("organization_id", organizationId)
       .eq("is_active", true)
       .order("name");
-    if (error) throw error;
+    throwRpc(error);
     return data ?? [];
   },
 
@@ -36,7 +39,7 @@ export const kidsStationService = {
     const { data, error } = await church().rpc("station_list_volunteers", {
       _station_id: stationId,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as VolunteerOption[];
   },
 
@@ -58,7 +61,7 @@ export const kidsStationService = {
       _volunteer_id: volunteerId,
       _pin: pin,
     });
-    if (error) throw error;
+    throwRpc(error);
     const rows = (data ?? []) as unknown as {
       shift_token: string;
       volunteer_name: string;
@@ -76,7 +79,7 @@ export const kidsStationService = {
     const { error } = await church().rpc("station_close_shift", {
       _shift_token: token,
     });
-    if (error) throw error;
+    throwRpc(error);
   },
 
   async searchHouseholds(
@@ -89,16 +92,27 @@ export const kidsStationService = {
       _kids_session_id: sessionId,
       _shift_token: token ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as HouseholdSearchRow[];
   },
 
+  /**
+   * Commit a family's check-in.
+   *
+   * `overrideCapacity` exists because a full room must not turn a child away.
+   * The RPC raises `room_at_capacity` by default; the station catches it, warns
+   * the volunteer, and re-sends with the override plus a recorded reason —
+   * a warning with an audit trail rather than a refusal.
+   */
   async checkIn(params: {
     sessionId: string;
     childIds: string[];
     roomIds?: (string | null)[];
     token?: string | null;
     clientBatchKey: string;
+    droppedOffByPersonId?: string | null;
+    overrideCapacity?: boolean;
+    assignmentReason?: string | null;
   }): Promise<CheckInResultRow[]> {
     const { data, error } = await church().rpc("check_in_children", {
       _kids_session_id: params.sessionId,
@@ -106,9 +120,50 @@ export const kidsStationService = {
       _room_ids: params.roomIds ?? null,
       _shift_token: params.token ?? null,
       _client_batch_key: params.clientBatchKey,
+      _dropped_off_by_person_id: params.droppedOffByPersonId ?? null,
+      _override_capacity: params.overrideCapacity ?? false,
+      _assignment_reason: params.assignmentReason ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as CheckInResultRow[];
+  },
+
+  /**
+   * Who the database says may collect this child.
+   *
+   * Anyone on the restricted list is omitted, so an unlisted name falls
+   * through to "Someone else", which needs an admin — the escalation is the
+   * point. `child_has_restriction` is returned so the desk knows to check
+   * identity carefully even when the person IS listed.
+   */
+  async pickupCandidates(
+    checkInId: string,
+    token?: string | null
+  ): Promise<PickupCandidate[]> {
+    const { data, error } = await church().rpc("station_pickup_candidates", {
+      _check_in_id: checkInId,
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as PickupCandidate[];
+  },
+
+  /**
+   * KID-018/KID-025: the minimum a volunteer needs in an emergency.
+   * Every call writes an audit row server-side, which is what makes giving
+   * admins access to children's medical data traceable after the fact.
+   */
+  async safetyCard(
+    checkInId: string,
+    token?: string | null
+  ): Promise<SafetyCard | null> {
+    const { data, error } = await church().rpc("station_child_safety_card", {
+      _check_in_id: checkInId,
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    const rows = (data ?? []) as unknown as SafetyCard[];
+    return rows[0] ?? null;
   },
 
   /** Zero rows means denied — wrong, expired, locked or already used. */
@@ -122,23 +177,41 @@ export const kidsStationService = {
       _presented: presented,
       _shift_token: token ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as PickupMatchRow[];
   },
 
+  /**
+   * Release children to whoever is collecting them.
+   *
+   * `pickedUpByPersonId` is not optional in spirit: the restricted-pickup
+   * check only runs against an identified person, and the database now refuses
+   * to release a child who has a restriction on file when nobody is named.
+   * Passing only a code releases ordinary children and denies restricted ones.
+   *
+   * Zero rows returned means DENIED — wrong code, expired, locked, already
+   * out, or a restricted collector. The reason is deliberately not
+   * distinguished, so the desk cannot be used as an oracle.
+   */
   async checkOut(params: {
     checkInIds: string[];
-    presented: string;
+    presented?: string | null;
     token?: string | null;
-    pickedUpByName?: string;
+    pickedUpByPersonId?: string | null;
+    pickedUpByName?: string | null;
+    overrideReason?: string | null;
+    overrideVerification?: string | null;
   }): Promise<{ check_in_id: string; child_name: string }[]> {
     const { data, error } = await church().rpc("check_out_children", {
       _check_in_ids: params.checkInIds,
-      _presented: params.presented,
+      _presented: params.presented ?? null,
       _shift_token: params.token ?? null,
+      _picked_up_by_person_id: params.pickedUpByPersonId ?? null,
       _picked_up_by_name: params.pickedUpByName ?? null,
+      _override_reason: params.overrideReason ?? null,
+      _override_verification: params.overrideVerification ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as { check_in_id: string; child_name: string }[];
   },
 
@@ -151,7 +224,7 @@ export const kidsStationService = {
       _kids_session_id: sessionId,
       _shift_token: token ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as StationRoom[];
   },
 
@@ -172,7 +245,7 @@ export const kidsStationService = {
       _room_id: roomId,
       _shift_token: token ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as StationRosterRow[];
   },
 
@@ -196,7 +269,7 @@ export const kidsStationService = {
       _message: params.message,
       _shift_token: params.token ?? null,
     });
-    if (error) throw error;
+    throwRpc(error);
     return (data ?? []) as unknown as {
       recipient_name: string;
       channel: string;

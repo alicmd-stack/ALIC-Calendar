@@ -14,8 +14,16 @@ import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
+import {
   AlertTriangle,
   ArrowLeft,
+  HeartPulse,
   Loader2,
   MessageSquare,
   RefreshCw,
@@ -23,7 +31,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { kidsStationService } from "../services/kidsStationService";
-import type { StationRoom, StationRosterRow } from "../types";
+import type { SafetyCard, StationRoom, StationRosterRow } from "../types";
 
 interface StationRoomsPanelProps {
   sessionId: string;
@@ -42,6 +50,8 @@ export function StationRoomsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [safety, setSafety] = useState<SafetyCard | null>(null);
+  const [safetyOpen, setSafetyOpen] = useState(false);
   const [messaging, setMessaging] = useState<StationRosterRow | null>(null);
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
@@ -85,6 +95,22 @@ export function StationRoomsPanel({
     const timer = window.setInterval(() => void loadRoster(room), 20_000);
     return () => window.clearInterval(timer);
   }, [room, online, loadRoster]);
+
+  /**
+   * KID-018. This is the screen a volunteer is on when something goes wrong,
+   * so the medical detail has to be one tap away — and every tap is written
+   * to the audit log server-side, which is what makes that access accountable.
+   */
+  async function openSafety(child: StationRosterRow) {
+    setSafety(null);
+    setSafetyOpen(true);
+    try {
+      setSafety(await kidsStationService.safetyCard(child.check_in_id));
+    } catch (err) {
+      setSafetyOpen(false);
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
 
   async function send() {
     if (!messaging || !messageText.trim()) return;
@@ -145,8 +171,15 @@ export function StationRoomsPanel({
               >
                 <p className="text-lg font-medium">{option.room_name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {option.age_band_name ?? "No age group"}
+                  {option.grade_name ?? option.age_band_name ?? "No grade"}
                 </p>
+                {/* Checkout happens at this door, so whose room it is matters
+                    to the parent standing in front of it. */}
+                {option.teachers && (
+                  <p className="text-sm text-muted-foreground truncate">
+                    {option.teachers}
+                  </p>
+                )}
                 <p className="mt-2 text-2xl font-bold tabular-nums">
                   {option.checked_in_count}
                   {option.capacity != null && (
@@ -176,7 +209,9 @@ export function StationRoomsPanel({
         <div>
           <h2 className="text-2xl font-semibold">{room.room_name}</h2>
           <p className="text-sm text-muted-foreground">
+            {room.grade_name ? `${room.grade_name} · ` : ""}
             {roster.length} in the room
+            {room.teachers ? ` · ${room.teachers}` : ""}
           </p>
         </div>
         <div className="flex gap-2">
@@ -298,6 +333,15 @@ export function StationRoomsPanel({
               variant="outline"
               size="lg"
               className="shrink-0"
+              title="Allergies, medication and emergency contact"
+              onClick={() => void openSafety(child)}
+            >
+              <HeartPulse className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="shrink-0"
               disabled={!online}
               onClick={() => {
                 setSendResult(null);
@@ -317,6 +361,57 @@ export function StationRoomsPanel({
           </p>
         )}
       </div>
+
+      <Dialog
+        open={safetyOpen}
+        onOpenChange={(open) => {
+          setSafetyOpen(open);
+          if (!open) setSafety(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{safety?.child_name ?? "Safety card"}</DialogTitle>
+            <DialogDescription>
+              Opening this is recorded against your name.
+            </DialogDescription>
+          </DialogHeader>
+          {safety ? (
+            <dl className="space-y-3 text-sm">
+              <Row label="Allergies" value={safety.allergies} highlight />
+              <Row label="Severity" value={safety.allergy_severity} />
+              <Row label="Medications" value={safety.medications} />
+              <Row label="Special needs" value={safety.special_needs} />
+              <Row label="Emergency contact" value={safety.emergency_name} />
+              <Row label="Phone" value={safety.emergency_phone} highlight />
+            </dl>
+          ) : (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/** One line of the safety card. Absence is stated, never left blank. */
+function Row({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string | null | undefined;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex gap-3">
+      <dt className="w-36 shrink-0 text-muted-foreground">{label}</dt>
+      <dd className={highlight && value ? "font-semibold" : undefined}>
+        {value || <span className="text-muted-foreground">Nothing on file</span>}
+      </dd>
     </div>
   );
 }

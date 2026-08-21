@@ -22,6 +22,7 @@ export const kidsLeaderKeys = {
   volunteers: (orgId: string) => [...kidsLeaderKeys.all, "volunteers", orgId] as const,
   staffing: (sessionId: string) => [...kidsLeaderKeys.all, "staffing", sessionId] as const,
   classrooms: (orgId: string) => [...kidsLeaderKeys.all, "classrooms", orgId] as const,
+  teachers: (orgId: string) => [...kidsLeaderKeys.all, "teachers", orgId] as const,
 };
 
 export function useLiveBoard(organizationId: string | undefined) {
@@ -177,6 +178,74 @@ export function useSetRoomConfig(organizationId: string | undefined) {
   return useMutation({
     mutationFn: (params: Parameters<typeof kidsLeaderService.setRoomConfig>[0]) =>
       kidsLeaderService.setRoomConfig(params),
+    onSuccess: () => {
+      if (!organizationId) return;
+      queryClient.invalidateQueries({
+        queryKey: kidsLeaderKeys.classrooms(organizationId),
+      });
+      queryClient.invalidateQueries({ queryKey: kidsLeaderKeys.board(organizationId) });
+    },
+  });
+}
+
+export function useClassroomTeachers(organizationId: string | undefined) {
+  return useQuery({
+    queryKey: kidsLeaderKeys.teachers(organizationId || ""),
+    queryFn: () => kidsLeaderService.classroomTeachers(organizationId!),
+    enabled: !!organizationId,
+  });
+}
+
+export function useAssignTeacher(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: Omit<Parameters<typeof kidsLeaderService.assignTeacher>[0], "organizationId">) =>
+      kidsLeaderService.assignTeacher({ organizationId: organizationId!, ...params }),
+    onSuccess: () => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: kidsLeaderKeys.teachers(organizationId),
+        });
+      }
+    },
+  });
+}
+
+export function useRemoveTeacher(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (assignmentId: string) =>
+      kidsLeaderService.removeTeacher(assignmentId),
+    onSuccess: () => {
+      if (organizationId) {
+        queryClient.invalidateQueries({
+          queryKey: kidsLeaderKeys.teachers(organizationId),
+        });
+      }
+    },
+  });
+}
+
+export function useUpsertClassroom(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: Parameters<typeof kidsLeaderService.upsertClassroom>[0]) =>
+      kidsLeaderService.upsertClassroom(params),
+    onSuccess: () => {
+      if (!organizationId) return;
+      queryClient.invalidateQueries({
+        queryKey: kidsLeaderKeys.classrooms(organizationId),
+      });
+      queryClient.invalidateQueries({ queryKey: kidsLeaderKeys.board(organizationId) });
+    },
+  });
+}
+
+export function useRetireClassroom(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (roomId: string) =>
+      kidsLeaderService.retireClassroom(organizationId!, roomId),
     onSuccess: () => {
       if (!organizationId) return;
       queryClient.invalidateQueries({

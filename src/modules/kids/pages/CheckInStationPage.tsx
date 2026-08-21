@@ -30,14 +30,24 @@ import {
   Baby,
   Play,
   DoorOpen,
+  HeartPulse,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/shared/components/ui/dialog";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { useOrganization } from "@/shared/contexts/OrganizationContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { kidsStationService, kidsSessionService, printLabels, renderQrSvg } from "../services";
 import { StationRoomsPanel } from "../components/StationRoomsPanel";
+import { errorMessage, isDbError } from "../services/rpcError";
 import { reduce, initialContext, showsFamilyData, type HouseholdMatch } from "../utils/checkInMachine";
-import type { HouseholdSearchRow, KidsSession } from "../types";
+import type { HouseholdSearchRow, KidsSession, SafetyCard } from "../types";
 
 const AUTO_RESET_MS = 20_000;
 /** Wipe a family's details from a shared screen after this long with no input. */
@@ -62,8 +72,25 @@ export default function CheckInStationPage() {
   // it is a side panel a volunteer steps into and back out of, and it must
   // not disturb a half-finished check-in behind it.
   const [showRooms, setShowRooms] = useState(false);
+  const [safety, setSafety] = useState<SafetyCard | null>(null);
+  const [safetyFor, setSafetyFor] = useState<string | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<number | null>(null);
+  /**
+   * Makes the idempotency key unique PER ATTEMPT.
+   *
+   * The key used to be session+household+children, identical every time the
+   * same family was checked in. check_in_children short-circuits on a
+   * matching key without testing whether that batch is still active, so a
+   * family returning after a checkout replayed the finished batch: the screen
+   * said "Checked in", a label printed, and the database recorded nothing —
+   * a child in a room that appears on no roster, holding a dead code.
+   *
+   * Kept STABLE across a retry of the same attempt (network failure, capacity
+   * override), which is the case the idempotency key exists for, and rotated
+   * when a new family is started.
+   */
+  const attemptKey = useRef<string>(crypto.randomUUID());
 
   /* ----------------------------------------------------------- connection */
   useEffect(() => {
@@ -129,11 +156,16 @@ export default function CheckInStationPage() {
   const resetIdle = useCallback(() => {
     if (idleTimer.current) window.clearTimeout(idleTimer.current);
     if (!showsFamilyData(ctx.state)) return;
+    // Never wipe while the check-in RPC is outstanding. 'confirming' exists
+    // only for the duration of that call, and wiping mid-flight discards the
+    // CHECKED_IN result — destroying the only copy of the pickup code, which
+    // is stored as a peppered hash and cannot be recovered by anyone.
+    if (busy) return;
     idleTimer.current = window.setTimeout(() => {
       dispatch({ type: "RESET" });
       setResults([]);
     }, FAMILY_IDLE_MS);
-  }, [ctx.state]);
+  }, [ctx.state, busy]);
 
   useEffect(() => {
     resetIdle();
@@ -193,21 +225,74 @@ export default function CheckInStationPage() {
     return [...byId.values()];
   }, [results]);
 
-  const doCheckIn = async () => {
+  /**
+   * Turn a raw database error into something a volunteer can act on with a
+   * queue of parents in front of them. `room_at_capacity` is handled by the
+   * caller and never reaches here.
+   */
+  const explainCheckInError = (raw: string): string => {
+    if (raw.includes("already_checked_in") || raw.includes("uq_"))
+      return "One of these children is already checked in somewhere. Refresh and look them up again.";
+    if (raw.includes("not_permitted"))
+      return "You do not have permission to check children in.";
+    if (raw.includes("session"))
+      return "This service is no longer open. Ask the Kids Ministry lead to reopen it.";
+    if (raw.includes("Failed to fetch") || raw.includes("NetworkError"))
+      return "Lost connection to the database. Nothing was saved.";
+    return raw;
+  };
+
+  /** KID-018: pull the safety card for one child. Audited server-side. */
+  const openSafetyCard = async (checkInId: string) => {
+    setSafety(null);
+    setSafetyFor(checkInId);
+    try {
+      const card = await kidsStationService.safetyCard(checkInId);
+      if (card) {
+        setSafety(card);
+      } else {
+        setSafetyFor(null);
+        dispatch({
+          type: "BLOCKING_ERROR",
+          message: "No safety card is on file for this child.",
+        });
+      }
+    } catch (err) {
+      setSafetyFor(null);
+      dispatch({
+        type: "BLOCKING_ERROR",
+        message:
+          "Could not load the safety card: " +
+          (err instanceof Error ? err.message : String(err)),
+      });
+    }
+  };
+
+  const doCheckIn = async (overrideCapacity = false, reason?: string) => {
     if (!session || ctx.selectedChildIds.length === 0) return;
     setBusy(true);
     try {
       // Idempotency key: if the response is lost and the tablet retries, the
       // RPC returns the ORIGINAL batch with a rotated code rather than
       // checking the same children in twice.
-      const batchKey = `${session.id}:${ctx.household?.household_id}:${[...ctx.selectedChildIds].sort().join(",")}`;
+      const batchKey =
+        `${session.id}:${ctx.household?.household_id}:` +
+        `${[...ctx.selectedChildIds].sort().join(",")}:${attemptKey.current}`;
       const rows = await kidsStationService.checkIn({
         sessionId: session.id,
         childIds: ctx.selectedChildIds,
         clientBatchKey: batchKey,
+        overrideCapacity,
+        assignmentReason: reason ?? null,
       });
       if (rows.length === 0) {
-        dispatch({ type: "ERROR", message: "Check-in did not complete. Try again." });
+        // No rows and no error means nothing was written, so there is no label
+        // to hand over. That has to be acknowledged, not glanced at.
+        dispatch({
+          type: "BLOCKING_ERROR",
+          message:
+            "Check-in did not complete and nothing was saved. Do NOT hand out a label. Try again.",
+        });
         return;
       }
       dispatch({
@@ -227,10 +312,25 @@ export default function CheckInStationPage() {
       // database row is the worst possible outcome.
       void doPrint(rows[0].pickup_code, rows[0].pickup_token, rows);
     } catch (err) {
-      dispatch({
-        type: "ERROR",
-        message: err instanceof Error ? err.message : "Check-in failed",
-      });
+      // errorMessage(), not `err instanceof Error`: supabase puts a PLAIN
+      // OBJECT in `error`, so the instanceof test was always false and every
+      // branch below read "[object Object]".
+      const raw = errorMessage(err);
+
+      // A full room is a warning, never a refusal — a church cannot turn a
+      // child away at the door. Ask for a one-tap reason and re-send with the
+      // override, which the database records against the check-in.
+      if (isDbError(err, "room_at_capacity")) {
+        // Must dispatch, or the machine stays in `confirming` where every
+        // control on the select screen renders enabled and inert.
+        dispatch({
+          type: "CAPACITY_BLOCKED",
+          householdName: ctx.household?.household_name ?? "This family",
+        });
+        return;
+      }
+
+      dispatch({ type: "BLOCKING_ERROR", message: explainCheckInError(raw) });
     } finally {
       setBusy(false);
     }
@@ -301,26 +401,64 @@ export default function CheckInStationPage() {
 
   const doCheckout = async () => {
     if (ctx.checkoutMatches.length === 0) return;
+    // Naming the collector is what makes the restricted-pickup list mean
+    // anything: the database can only check a person it has been told about.
+    // It refuses to release a restricted child when nobody is named.
+    if (!ctx.collectorName) {
+      dispatch({ type: "ERROR", message: "Choose who is collecting first." });
+      return;
+    }
     setBusy(true);
     try {
       const released = await kidsStationService.checkOut({
         checkInIds: ctx.checkoutMatches.map((m) => m.check_in_id),
         presented: ctx.checkoutInput.trim(),
+        pickedUpByPersonId: ctx.collectorPersonId,
+        pickedUpByName: ctx.collectorName,
       });
       if (released.length === 0) {
+        // One generic denial for every reason — wrong code, expired, already
+        // out, or a restricted collector — so the desk is not an oracle.
         dispatch({
-          type: "ERROR",
-          message: "Not released. Please get the Kids Ministry lead.",
+          type: "BLOCKING_ERROR",
+          message:
+            "These children were NOT released. Do not hand them over. " +
+            "Please get the Kids Ministry lead.",
         });
         return;
       }
       dispatch({ type: "CHECKOUT_DONE" });
     } catch {
-      dispatch({ type: "ERROR", message: "Not released. Please get the Kids lead." });
+      dispatch({
+        type: "BLOCKING_ERROR",
+        message:
+          "These children were NOT released. Do not hand them over. " +
+          "Please get the Kids Ministry lead.",
+      });
     } finally {
       setBusy(false);
     }
   };
+
+  /** Load who may collect, as soon as a code resolves to children. */
+  useEffect(() => {
+    if (ctx.state !== "checkout_confirm" || ctx.checkoutMatches.length === 0) return;
+    let cancelled = false;
+    kidsStationService
+      .pickupCandidates(ctx.checkoutMatches[0].check_in_id)
+      .then((candidates) => {
+        if (!cancelled) dispatch({ type: "CHECKOUT_CANDIDATES", candidates });
+      })
+      .catch(() => {
+        // An empty list is safe: it leaves only "Someone else", which the
+        // database refuses for a restricted child. Failing open here would
+        // mean guessing, so we do not.
+        if (!cancelled) dispatch({ type: "CHECKOUT_CANDIDATES", candidates: [] });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.state, ctx.checkoutMatches]);
 
   /* ------------------------------------------------------------- rendering */
   return (
@@ -402,7 +540,12 @@ export default function CheckInStationPage() {
                 <button
                   key={h.household_id}
                   className="w-full text-left rounded-lg border p-4 hover:bg-muted/50"
-                  onClick={() => dispatch({ type: "HOUSEHOLD_SELECTED", household: h })}
+                  onClick={() => {
+                    // New family, new attempt: the previous key must never be
+                    // reused, or check_in_children replays the finished batch.
+                    attemptKey.current = crypto.randomUUID();
+                    dispatch({ type: "HOUSEHOLD_SELECTED", household: h });
+                  }}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-medium">{h.household_name}</span>
@@ -554,6 +697,19 @@ export default function CheckInStationPage() {
                       {c.allergy_label}
                     </Badge>
                   )}
+                  {/* Not gated on allergy_label: a child on daily medication
+                      with a seizure plan has no allergy label at all, and is
+                      exactly who this button exists for. */}
+                  {(
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-1 h-7"
+                      onClick={() => void openSafetyCard(c.check_in_id)}
+                    >
+                      <HeartPulse className="h-4 w-4" />
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>
@@ -630,8 +786,12 @@ export default function CheckInStationPage() {
         )}
 
         {ctx.state === "checkout_confirm" && (
-          <Centered title="Release these children?">
-            <ul className="space-y-2 my-4">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-2xl font-semibold text-center">
+              Who is collecting?
+            </h2>
+
+            <ul className="my-5 space-y-1 text-center">
               {ctx.checkoutMatches.map((m) => (
                 <li key={m.check_in_id} className="text-xl">
                   {m.child_name}
@@ -639,17 +799,113 @@ export default function CheckInStationPage() {
                 </li>
               ))}
             </ul>
-            {ctx.error && <p className="text-destructive text-sm">{ctx.error}</p>}
+
+            {/* A restriction on file is the reason this screen exists, so it
+                is stated plainly — without naming the restricted person, who
+                may well be standing at the desk. */}
+            {/* Driven off checkoutMatches, not the candidate list. The
+                candidates are fetched for the FIRST match only, so a sibling
+                batch whose restricted child did not sort first suppressed the
+                warning entirely — whether a custody order reached the desk
+                was a coin flip on tag number. */}
+            {(ctx.checkoutMatches.some((m) => m.has_restriction) ||
+              ctx.pickupCandidates.some((c) => c.child_has_restriction)) && (
+              <div className="mb-4 rounded-lg border-2 border-destructive bg-destructive/10 p-4">
+                <p className="font-semibold flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-destructive" />
+                  Check this person's ID carefully
+                </p>
+                <p className="text-sm mt-1">
+                  There is a pickup restriction on file for this family. If the
+                  person collecting is not listed below, do not release the
+                  children — get the Kids Ministry lead.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              {ctx.pickupCandidates.map((candidate) => {
+                const chosen = ctx.collectorPersonId === candidate.person_id;
+                return (
+                  <button
+                    key={candidate.person_id}
+                    className={
+                      "w-full rounded-lg border p-4 text-left transition-colors " +
+                      (chosen
+                        ? "border-primary bg-primary/10"
+                        : "hover:bg-muted/50")
+                    }
+                    onClick={() => {
+                      dispatch({
+                        type: "COLLECTOR_SELECTED",
+                        personId: candidate.person_id,
+                        name: candidate.display_name,
+                      });
+                    }}
+                  >
+                    <span className="text-lg font-medium">
+                      {candidate.display_name}
+                    </span>
+                    <span className="block text-sm text-muted-foreground">
+                      {candidate.relationship}
+                      {candidate.is_authorized && " · authorised for pickup"}
+                    </span>
+                  </button>
+                );
+              })}
+
+              {/* Anyone not on the list. For an ordinary child this is a
+                  recorded name; for a restricted child the database refuses,
+                  which is exactly the escalation wanted. */}
+              <div
+                className={
+                  "rounded-lg border p-4 " +
+                  (ctx.collectorPersonId === null && ctx.collectorName
+                    ? "border-primary bg-primary/10"
+                    : "")
+                }
+              >
+                <label className="text-sm font-medium">
+                  Someone else — write their name
+                </label>
+                <Input
+                  className="mt-2 h-12 text-lg"
+                  placeholder="Name of the person collecting"
+                  value={ctx.collectorPersonId === null ? ctx.collectorName ?? "" : ""}
+                  onChange={(e) => {
+                    dispatch({
+                      type: "COLLECTOR_SELECTED",
+                      personId: null,
+                      name: e.target.value.trim() || null,
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            {ctx.error && (
+              <p className="text-destructive text-sm mt-3">{ctx.error}</p>
+            )}
+
             <div className="flex gap-3 mt-6">
-              <Button variant="outline" size="lg" onClick={() => dispatch({ type: "RESET" })}>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => dispatch({ type: "RESET" })}
+              >
                 Cancel
               </Button>
-              <Button size="lg" onClick={doCheckout} disabled={busy}>
+              <Button
+                size="lg"
+                className="flex-1"
+                onClick={doCheckout}
+                disabled={busy || !ctx.collectorName}
+              >
                 {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
-                Release
+                Release to {ctx.collectorName || "\u2026"}
               </Button>
             </div>
-          </Centered>
+          </div>
         )}
 
         {ctx.state === "checkout_done" && (
@@ -661,6 +917,133 @@ export default function CheckInStationPage() {
           </Centered>
         )}
       </main>
+
+      {/* ------------------------------------------- room full: warn, allow */}
+      {/* The plan is explicit: capacity is an amber warning, never a hard
+          block. A church cannot turn a child away at the door, so the only
+          question is whether the breach gets recorded — and it does. */}
+      <Dialog
+        open={ctx.capacityBlocked !== null}
+        onOpenChange={(open) => !open && dispatch({ type: "DISMISS_CAPACITY" })}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              That room is full
+            </DialogTitle>
+            <DialogDescription>
+              The classroom is at capacity. You can still check {ctx.capacityBlocked}{" "}
+              in — the room will show an over-capacity warning on the Kids
+              Ministry board so a leader can move a volunteer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => dispatch({ type: "DISMISS_CAPACITY" })}
+            >
+              Not now
+            </Button>
+            <Button
+              size="lg"
+              disabled={busy}
+              onClick={() =>
+                void doCheckIn(true, "Room at capacity — checked in anyway at the desk")
+              }
+            >
+              {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Check in anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------ failure the volunteer must see */}
+      {/* A toast is wrong here: it fades while a volunteer is looking at a
+          parent, and the one thing they must not do is hand over a label for
+          a check-in that never committed. */}
+      <Dialog
+        open={ctx.blockingError !== null}
+        onOpenChange={(open) => !open && dispatch({ type: "DISMISS_BLOCKING" })}
+      >
+        <DialogContent className="border-destructive border-2">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Stop
+            </DialogTitle>
+            <DialogDescription className="text-base text-foreground">
+              {ctx.blockingError}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={() => dispatch({ type: "DISMISS_BLOCKING" })}
+            >
+              I understand
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* --------------------------------------------- KID-018 safety card */}
+      {/* Opening this writes an audit row server-side, every time. */}
+      <Dialog
+        open={safety !== null || safetyFor !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSafety(null);
+            setSafetyFor(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{safety?.child_name ?? "Safety card"}</DialogTitle>
+            <DialogDescription>
+              Opening this is recorded against your name.
+            </DialogDescription>
+          </DialogHeader>
+          {safety ? (
+            <dl className="space-y-3 text-sm">
+              <SafetyRow label="Allergies" value={safety.allergies} highlight />
+              <SafetyRow label="Severity" value={safety.allergy_severity} />
+              <SafetyRow label="Medications" value={safety.medications} />
+              <SafetyRow label="Special needs" value={safety.special_needs} />
+              <SafetyRow label="Emergency contact" value={safety.emergency_name} />
+              <SafetyRow label="Phone" value={safety.emergency_phone} highlight />
+            </dl>
+          ) : (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/** One line of the safety card. Nothing on file is said so, not left blank. */
+function SafetyRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string | null | undefined;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex gap-3">
+      <dt className="w-36 shrink-0 text-muted-foreground">{label}</dt>
+      <dd className={highlight && value ? "font-semibold" : undefined}>
+        {value || <span className="text-muted-foreground">Nothing on file</span>}
+      </dd>
     </div>
   );
 }
