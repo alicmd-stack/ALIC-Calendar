@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Badge } from "@/shared/components/ui/badge";
+import { Label } from "@/shared/components/ui/label";
 import {
   Loader2,
   Search,
@@ -42,6 +43,7 @@ import {
 } from "@/shared/components/ui/dialog";
 import { useAuth } from "@/shared/contexts/AuthContext";
 import { useOrganization } from "@/shared/contexts/OrganizationContext";
+import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { kidsStationService, kidsSessionService, printLabels, renderQrSvg } from "../services";
 import { StationRoomsPanel } from "../components/StationRoomsPanel";
@@ -74,6 +76,10 @@ export default function CheckInStationPage() {
   const { user } = useAuth();
   const { profile } = useUserProfile();
   const { currentOrganization } = useOrganization();
+  const { can } = useCapabilities();
+  // Only a kids_admin may release a child the gate refused. The database
+  // enforces the same rule; this only decides whether the option is offered.
+  const canOverride = can("kids.override");
   const orgId = currentOrganization?.id;
 
   const [ctx, dispatch] = useReducer(reduce, initialContext);
@@ -88,6 +94,10 @@ export default function CheckInStationPage() {
   // it is a side panel a volunteer steps into and back out of, and it must
   // not disturb a half-finished check-in behind it.
   const [showRooms, setShowRooms] = useState(false);
+  /** Set when a lead chooses to release a child the gate refused. */
+  const [overriding, setOverriding] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideCheck, setOverrideCheck] = useState("");
   const [safety, setSafety] = useState<SafetyCard | null>(null);
   const [safetyFor, setSafetyFor] = useState<string | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
@@ -134,7 +144,7 @@ export default function CheckInStationPage() {
           dispatch({
             type: "SHIFT_STARTED",
             volunteerName: profile?.full_name || "Volunteer",
-            canOverride: false,
+            canOverride,
           });
         }
       })
@@ -152,7 +162,7 @@ export default function CheckInStationPage() {
       dispatch({
         type: "SHIFT_STARTED",
         volunteerName: profile?.full_name || "Volunteer",
-        canOverride: false,
+        canOverride,
       });
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
@@ -416,11 +426,11 @@ export default function CheckInStationPage() {
     }
   };
 
-  const doCheckout = async () => {
+  const doCheckout = async (override?: { reason: string; verification: string }) => {
     if (ctx.checkoutMatches.length === 0) return;
-    // Naming the collector is what makes the restricted-pickup list mean
-    // anything: the database can only check a person it has been told about.
-    // It refuses to release a restricted child when nobody is named.
+    // Naming the collector is what makes the restricted list mean anything:
+    // the database can only check a person it has been told about, and it
+    // refuses to release a restricted child when nobody is named.
     if (!ctx.collectorName?.trim()) {
       dispatch({ type: "ERROR", message: "Choose who is collecting first." });
       return;
@@ -432,25 +442,36 @@ export default function CheckInStationPage() {
         presented: ctx.checkoutInput.trim(),
         pickedUpByPersonId: ctx.collectorPersonId,
         pickedUpByName: ctx.collectorName?.trim() || null,
+        overrideReason: override?.reason ?? null,
+        overrideVerification: override?.verification ?? null,
       });
       if (released.length === 0) {
-        // One generic denial for every reason — wrong code, expired, already
-        // out, or a restricted collector — so the desk is not an oracle.
+        // One generic denial for every ordinary failure, so the desk cannot be
+        // used as an oracle. An override that STILL fails is different: it can
+        // only mean a protective order, which no override clears, and the
+        // person at the door needs telling plainly.
         dispatch({
           type: "BLOCKING_ERROR",
-          message:
-            "These children were NOT released. Do not hand them over. " +
-            "Please get the Kids Ministry lead.",
+          message: override
+            ? "Still not released. This person is named in a protective order " +
+              "for one of these children, and no override can clear that. " +
+              "Do not hand them over."
+            : "These children were NOT released. Do not hand them over. " +
+              "Please get the Kids Ministry lead.",
         });
         return;
       }
+      setOverriding(false);
+      setOverrideReason("");
+      setOverrideCheck("");
       dispatch({ type: "CHECKOUT_DONE" });
-    } catch {
+    } catch (err) {
       dispatch({
         type: "BLOCKING_ERROR",
-        message:
-          "These children were NOT released. Do not hand them over. " +
-          "Please get the Kids Ministry lead.",
+        message: isDbError(err, "override_requires_admin")
+          ? "Only a Kids Ministry lead can override a pick-up."
+          : "These children were NOT released. Do not hand them over. " +
+            "Please get the Kids Ministry lead.",
       });
     } finally {
       setBusy(false);
@@ -944,7 +965,7 @@ export default function CheckInStationPage() {
               <Button
                 size="lg"
                 className="flex-1"
-                onClick={doCheckout}
+                onClick={() => void doCheckout()}
                 disabled={busy || !ctx.collectorName?.trim()}
               >
                 {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
@@ -1032,13 +1053,113 @@ export default function CheckInStationPage() {
               {ctx.blockingError}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               size="lg"
-              className="w-full"
+              variant={
+                canOverride && ctx.state === "checkout_confirm"
+                  ? "outline"
+                  : "default"
+              }
+              className="flex-1"
               onClick={() => dispatch({ type: "DISMISS_BLOCKING" })}
             >
               I understand
+            </Button>
+            {/* A lead can release a child the gate refused — for incomplete
+                paperwork, which is the common cause. It can never release to
+                somebody named in a protective order: that is checked before
+                the override branch and has no override by design. */}
+            {canOverride && ctx.state === "checkout_confirm" && (
+              <Button
+                size="lg"
+                variant="destructive"
+                className="flex-1"
+                onClick={() => {
+                  dispatch({ type: "DISMISS_BLOCKING" });
+                  setOverriding(true);
+                }}
+              >
+                Release anyway
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ------------------------------------------ lead override on pickup */}
+      <Dialog
+        open={overriding}
+        onOpenChange={(open) => {
+          if (!open) {
+            setOverriding(false);
+            setOverrideReason("");
+            setOverrideCheck("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-destructive" />
+              Release without a valid code
+            </DialogTitle>
+            <DialogDescription>
+              Releasing{" "}
+              {ctx.checkoutMatches.map((m) => m.child_name).join(", ")} to{" "}
+              <strong>{ctx.collectorName}</strong>. This is recorded against
+              your name and appears on the Kids Ministry exceptions report.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Why is the code not being used?</Label>
+              <Input
+                autoFocus
+                className="h-12 text-base"
+                value={overrideReason}
+                onChange={(e) => setOverrideReason(e.target.value)}
+                placeholder="Label lost; parent phoned ahead"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>How did you check who they are?</Label>
+              <Input
+                className="h-12 text-base"
+                value={overrideCheck}
+                onChange={(e) => setOverrideCheck(e.target.value)}
+                placeholder="Driver's licence, recognised by the room lead"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                setOverriding(false);
+                setOverrideReason("");
+                setOverrideCheck("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="lg"
+              className="flex-1"
+              disabled={busy || !overrideReason.trim() || !overrideCheck.trim()}
+              onClick={() =>
+                void doCheckout({
+                  reason: overrideReason.trim(),
+                  verification: overrideCheck.trim(),
+                })
+              }
+            >
+              {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+              Release
             </Button>
           </DialogFooter>
         </DialogContent>
