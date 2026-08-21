@@ -38,6 +38,17 @@ export interface PersonPayload {
   accepted_lord_is_approximate?: boolean;
   school_grade_id?: string;
   notes?: string;
+  /**
+   * Allergy and medical fields, on children only.
+   *
+   * Captured here because registration is the one moment a parent is actually
+   * asked. Recorded only when something is said, so "no allergy" stays
+   * distinguishable from "nobody asked" on the volunteer's safety card.
+   */
+  allergy_severity?: string;
+  allergies?: string;
+  medications?: string;
+  special_needs?: string;
 }
 
 export interface HouseholdPayload {

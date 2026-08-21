@@ -690,6 +690,72 @@ export default function MemberRegistrationPage() {
                       />
                     </Field>
                   </Grid>
+
+                  {/* Asked here because this is the one moment somebody is
+                      sitting with the parent. An allergy recorded later, on a
+                      separate screen, is usually an allergy never recorded —
+                      and the safety card a volunteer opens mid-reaction is
+                      only as good as what was captured now. */}
+                  <div className="mt-4 rounded-md border bg-muted/30 p-3 space-y-3">
+                    <p className="text-sm font-medium">
+                      Allergies and medical
+                    </p>
+                    <Grid>
+                      <Field label="Allergy severity">
+                        <PickOne
+                          value={child.allergy_severity}
+                          onChange={(v) =>
+                            updateChild(child.key, { allergy_severity: v })
+                          }
+                          options={[
+                            { value: "none", label: "No allergy" },
+                            { value: "mild", label: "Mild" },
+                            { value: "severe", label: "Severe" },
+                            {
+                              value: "life_threatening",
+                              label: "Life-threatening",
+                            },
+                          ]}
+                          placeholder="Not asked"
+                        />
+                      </Field>
+                      <Field label="Allergic to">
+                        <Input
+                          value={child.allergies ?? ""}
+                          onChange={(e) =>
+                            updateChild(child.key, { allergies: e.target.value })
+                          }
+                          placeholder="Peanuts, dairy"
+                        />
+                      </Field>
+                      <Field label="Medication">
+                        <Input
+                          value={child.medications ?? ""}
+                          onChange={(e) =>
+                            updateChild(child.key, {
+                              medications: e.target.value,
+                            })
+                          }
+                          placeholder="EpiPen in their bag"
+                        />
+                      </Field>
+                    </Grid>
+                    <Field label="Special needs or anything a volunteer should know">
+                      <Input
+                        value={child.special_needs ?? ""}
+                        onChange={(e) =>
+                          updateChild(child.key, {
+                            special_needs: e.target.value,
+                          })
+                        }
+                        placeholder="Needs a quiet space when overwhelmed"
+                      />
+                    </Field>
+                    <p className="text-xs text-muted-foreground">
+                      An allergy prints on the child's name tag and shows on the
+                      safety card volunteers open in an emergency.
+                    </p>
+                  </div>
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={addChild}>
@@ -703,7 +769,10 @@ export default function MemberRegistrationPage() {
         <Section
           icon={<Phone className="h-4 w-4" />}
           title="Emergency contact"
-          description="Required before a child can be checked in to Kids Ministry. Applied to every child in this family."
+          // Not "required": check-in deliberately never blocks a child at the
+          // door, so claiming it is required was simply untrue — and a false
+          // requirement teaches people to disbelieve the real ones.
+          description="Shown to volunteers on the safety card in an emergency. Applied to every child in this family."
         >
           <div className="space-y-3">
             {contacts.map((c, idx) => (
