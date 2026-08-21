@@ -19,6 +19,7 @@ import type {
   StationRosterRow,
   SafetyCard,
   VisitorFamilyRow,
+  ClassroomGradeRow,
 } from "../types";
 import type { PickupCandidate } from "../utils/checkInMachine";
 
@@ -223,6 +224,20 @@ export const kidsStationService = {
       _reason: reason || null,
     });
     throwRpc(error);
+  },
+
+  /**
+   * The classrooms a child can be put in, with their school grade.
+   *
+   * Not session-scoped: registering a family happens before anyone has opened
+   * a session, and the class list belongs to the branch, not to today.
+   */
+  async classroomGrades(token?: string | null): Promise<ClassroomGradeRow[]> {
+    const { data, error } = await church().rpc("station_classroom_grades", {
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as ClassroomGradeRow[];
   },
 
   /**

@@ -21,7 +21,7 @@
  * collect one is how the express lane turns into a five-minute queue.
  */
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
@@ -37,12 +37,15 @@ import { Loader2, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { kidsStationService } from "../services";
 import { errorMessage } from "../services/rpcError";
-import type { VisitorFamilyRow } from "../types";
+import type { ClassroomGradeRow, VisitorFamilyRow } from "../types";
+import { suggestGrade, type GradeOption } from "../utils/gradeForAge";
 
 interface ChildDraft {
   firstName: string;
   lastName: string;
   birthYear: string;
+  /** Empty means "use the class suggested from the child's age". */
+  gradeId: string;
   hasAllergy: boolean;
   allergies: string;
   severity: string;
@@ -52,6 +55,7 @@ const emptyChild = (): ChildDraft => ({
   firstName: "",
   lastName: "",
   birthYear: "",
+  gradeId: "",
   hasAllergy: false,
   allergies: "",
   severity: "severe",
@@ -78,6 +82,30 @@ export function VisitorFamilyDialog({
   const [children, setChildren] = useState<ChildDraft[]>([emptyChild()]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [classrooms, setClassrooms] = useState<ClassroomGradeRow[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    kidsStationService
+      .classroomGrades()
+      // A failure here must not block a registration: the class is a default
+      // the volunteer can set, and the child can be moved at the door.
+      .then(setClassrooms)
+      .catch(() => setClassrooms([]));
+  }, [open]);
+
+  /** Only rooms that actually carry a grade can be suggested from an age. */
+  const gradeOptions = useMemo<GradeOption[]>(
+    () =>
+      classrooms
+        .filter((c) => c.school_grade_id && c.grade_name)
+        .map((c) => ({
+          school_grade_id: c.school_grade_id!,
+          grade_name: c.grade_name!,
+          sort_order: c.sort_order,
+        })),
+    [classrooms]
+  );
 
   const setChild = (i: number, patch: Partial<ChildDraft>) =>
     setChildren((cs) => cs.map((c, n) => (n === i ? { ...c, ...patch } : c)));
@@ -121,6 +149,14 @@ export function VisitorFamilyDialog({
           // applies the patronymic default.
           last_name: c.lastName.trim() || null,
           birth_year: c.birthYear.trim(),
+          // Storing the GRADE rather than a one-off room assignment is the
+          // point: pick_room_for_child then places this child correctly this
+          // week and every week after, with no special case for visitors.
+          school_grade_id:
+            c.gradeId ||
+            suggestGrade(Number(c.birthYear.trim()), gradeOptions, new Date())
+              ?.school_grade_id ||
+            null,
           allergies: c.hasAllergy ? c.allergies.trim() || null : null,
           allergy_severity: c.hasAllergy ? c.severity : null,
         }))
@@ -240,6 +276,51 @@ export function VisitorFamilyDialog({
                     onChange={(e) => setChild(i, { birthYear: e.target.value })}
                   />
                 </div>
+
+                {gradeOptions.length > 0 && (() => {
+                  const suggested = suggestGrade(
+                    Number(c.birthYear.trim()),
+                    gradeOptions,
+                    new Date()
+                  );
+                  const effective = c.gradeId || suggested?.school_grade_id || "";
+                  const overridden = !!c.gradeId && c.gradeId !== suggested?.school_grade_id;
+                  return (
+                    <div>
+                      <Label htmlFor={`vf-class-${i}`} className="text-xs">
+                        Class
+                      </Label>
+                      <select
+                        id={`vf-class-${i}`}
+                        className="w-full h-11 rounded-md border bg-background px-3 text-sm"
+                        value={effective}
+                        onChange={(e) => setChild(i, { gradeId: e.target.value })}
+                      >
+                        <option value="">Choose a class…</option>
+                        {classrooms
+                          .filter((r) => r.school_grade_id)
+                          .map((r) => (
+                            <option key={r.room_id} value={r.school_grade_id!}>
+                              {r.room_name} · {r.grade_name}
+                            </option>
+                          ))}
+                      </select>
+                      {/* The suggestion is arithmetic on a birth year, and a
+                          held-back or skipped year makes it wrong for a real
+                          child. Say where it came from so the volunteer knows
+                          it is theirs to change. */}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {!c.birthYear.trim()
+                          ? "Enter a birth year and a class will be suggested."
+                          : !suggested
+                            ? "Too young or too old to suggest — please choose."
+                            : overridden
+                              ? `Changed from the suggested ${suggested.grade_name}.`
+                              : `Suggested from age. Change it if they are in a different class.`}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Asked here or never. There is no second chance at 11:30. */}
                 <label className="flex items-center gap-2 text-sm cursor-pointer">

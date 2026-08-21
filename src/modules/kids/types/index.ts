@@ -138,3 +138,12 @@ export interface VisitorFamilyRow {
   child_person_id: string;
   child_display_name: string;
 }
+
+/** One row from church.station_classroom_grades — a classroom and its grade. */
+export interface ClassroomGradeRow {
+  room_id: string;
+  room_name: string;
+  school_grade_id: string | null;
+  grade_name: string | null;
+  sort_order: number;
+}

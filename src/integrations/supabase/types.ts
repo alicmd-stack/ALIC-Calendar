@@ -3921,6 +3921,16 @@ export type Database = {
           special_needs: string
         }[]
       }
+      station_classroom_grades: {
+        Args: { _shift_token?: string }
+        Returns: {
+          grade_name: string
+          room_id: string
+          room_name: string
+          school_grade_id: string
+          sort_order: number
+        }[]
+      }
       station_close_shift: {
         Args: { _shift_token: string }
         Returns: undefined
