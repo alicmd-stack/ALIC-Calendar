@@ -441,6 +441,11 @@ export default function CheckInStationPage() {
         allergyLabel: r.allergy_label,
         serviceLabel: session?.service_label ?? "",
         sessionDate: dateLabel,
+        // Whoever the desk is serving. The station holds only a MASKED phone
+        // by design — enough to check the last four against the parent's
+        // number at the door, not enough to dial from a tag a child is wearing.
+        guardianName: ctx.household?.household_name ?? null,
+        guardianPhone: ctx.household?.masked_phone ?? null,
       })),
       {
         householdName: ctx.household?.household_name ?? "",

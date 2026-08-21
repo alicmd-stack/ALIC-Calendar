@@ -37,7 +37,29 @@ describe("child label", () => {
     const html = buildChildLabel(CHILD);
     expect(html).toContain("Noah Bekele");
     expect(html).toContain("Blossom A");
-    expect(html).toContain("Tag 1000");
+    // The tag number lives in the edge tab, stacked upright by CSS, so the
+    // word and the number are separate elements.
+    expect(html).toContain('class="tabword">TAG<');
+    expect(html).toContain('class="tabnum">1000<');
+  });
+
+  it("prints the guardian at the foot when one is known", () => {
+    const html = buildChildLabel({
+      ...CHILD,
+      guardianName: "Almaz Tesfaye",
+      guardianPhone: "\u2022\u2022\u2022-0101",
+    });
+    expect(html).toContain("Almaz Tesfaye");
+    expect(html).toContain("\u2022\u2022\u2022-0101");
+  });
+
+  it("omits the guardian row entirely when nobody is named", () => {
+    // An empty rule and a blank line read as missing data rather than as
+    // data that was never collected.
+    expect(buildChildLabel(CHILD)).not.toContain('class="guardian"');
+    expect(
+      buildChildLabel({ ...CHILD, guardianName: "  ", guardianPhone: null })
+    ).not.toContain('class="guardian"');
   });
 
   it("renders an approved allergy as an uppercase knockout bar", () => {
