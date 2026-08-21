@@ -182,3 +182,14 @@ export interface MemberStats {
 
 /** Page size for directory queries. PostgREST truncates at max_rows = 1000. */
 export const MEMBER_PAGE_SIZE = 50;
+
+/** One row from church.preview_profile_backfill. */
+export interface ProfileBackfillRow {
+  profile_id: string;
+  full_name: string;
+  email: string | null;
+  /** "create member" | "link to existing member" | "already linked" */
+  action: string;
+  matched_person_id: string | null;
+  matched_person_name: string | null;
+}

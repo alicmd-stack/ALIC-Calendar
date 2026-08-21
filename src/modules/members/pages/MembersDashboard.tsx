@@ -44,6 +44,7 @@ import { MyInformation } from "../components/MyInformation";
 import { useMembers, useMemberStats, useBirthdays } from "../hooks/useMembers";
 import { useServingTotals } from "../hooks/useServing";
 import { MemberTable } from "../components/MemberTable";
+import { ProfileBackfillCard } from "../components/ProfileBackfillCard";
 import { MEMBER_PAGE_SIZE, MONTH_NAMES, type MemberFilters } from "../types";
 import { displayName } from "../utils/normalize";
 import { formatBirthday } from "../utils/age";
@@ -127,6 +128,19 @@ export default function MembersDashboard() {
           <MyInformation userId={user?.id} />
         ) : (
         <>
+        {/* An empty directory is not an empty church — it means the people who
+            already sign in have no member record yet. Offered first, because
+            nothing else on this page can do anything until it is run. */}
+        {canWrite && (
+          <ProfileBackfillCard
+            organizationId={orgId}
+            memberCount={stats?.active ?? 0}
+            onDone={() => {
+              void statsQuery.refetch();
+            }}
+          />
+        )}
+
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
             icon={<UsersRound className="h-4 w-4" />}

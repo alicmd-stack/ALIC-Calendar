@@ -1445,6 +1445,13 @@ export type Database = {
             referencedColumns: ["id", "organization_id"]
           },
           {
+            foreignKeyName: "fk_kids_check_ins_picked_up_by"
+            columns: ["picked_up_by_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_kids_check_ins_session"
             columns: ["kids_session_id", "organization_id"]
             isOneToOne: false
@@ -1502,9 +1509,67 @@ export type Database = {
           },
         ]
       }
+      kids_classroom_teachers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_lead: boolean
+          notes: string | null
+          organization_id: string
+          person_id: string
+          role: string
+          room_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_lead?: boolean
+          notes?: string | null
+          organization_id: string
+          person_id: string
+          role?: string
+          room_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          is_lead?: boolean
+          notes?: string | null
+          organization_id?: string
+          person_id?: string
+          role?: string
+          room_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_kids_classroom_teachers_person"
+            columns: ["person_id", "organization_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
       kids_events: {
         Row: {
           auto_expire_minutes_after_end: number
+          auto_open_dow: number | null
+          auto_open_service_label: string
           check_in_closes_minutes_after: number
           check_in_opens_minutes_before: number
           created_at: string
@@ -1516,10 +1581,14 @@ export type Database = {
           is_active: boolean
           name: string
           organization_id: string
+          service_minutes: number
+          service_starts_local: string | null
           updated_at: string
         }
         Insert: {
           auto_expire_minutes_after_end?: number
+          auto_open_dow?: number | null
+          auto_open_service_label?: string
           check_in_closes_minutes_after?: number
           check_in_opens_minutes_before?: number
           created_at?: string
@@ -1531,10 +1600,14 @@ export type Database = {
           is_active?: boolean
           name: string
           organization_id: string
+          service_minutes?: number
+          service_starts_local?: string | null
           updated_at?: string
         }
         Update: {
           auto_expire_minutes_after_end?: number
+          auto_open_dow?: number | null
+          auto_open_service_label?: string
           check_in_closes_minutes_after?: number
           check_in_opens_minutes_before?: number
           created_at?: string
@@ -1546,6 +1619,8 @@ export type Database = {
           is_active?: boolean
           name?: string
           organization_id?: string
+          service_minutes?: number
+          service_starts_local?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3112,6 +3187,36 @@ export type Database = {
         Args: { _organization_id: string }
         Returns: undefined
       }
+      assign_classroom_teacher: {
+        Args: {
+          _is_lead?: boolean
+          _organization_id: string
+          _person_id: string
+          _role?: string
+          _room_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          is_lead: boolean
+          notes: string | null
+          organization_id: string
+          person_id: string
+          role: string
+          room_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "kids_classroom_teachers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_session_staff: {
         Args: {
           _kids_session_id: string
@@ -3138,6 +3243,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      backfill_people_from_profiles: {
+        Args: { _organization_id: string }
+        Returns: {
+          created: number
+          linked: number
+          skipped: number
+        }[]
       }
       check_in_children: {
         Args: {
@@ -3194,6 +3307,10 @@ export type Database = {
           checked_out_at: string
           child_name: string
         }[]
+      }
+      child_has_active_restriction: {
+        Args: { _child_person_id: string }
+        Returns: boolean
       }
       claim_queued_notifications: {
         Args: { _limit?: number }
@@ -3281,6 +3398,14 @@ export type Database = {
         }
         Returns: string
       }
+      is_approved_collector: {
+        Args: {
+          _child_person_id: string
+          _person_id: string
+          _person_name?: string
+        }
+        Returns: boolean
+      }
       kids_attendance_report: {
         Args: { _from: string; _organization_id: string; _to: string }
         Returns: {
@@ -3294,6 +3419,23 @@ export type Database = {
           service_label: string
           session_date: string
           volunteers: number
+        }[]
+      }
+      kids_auto_close_sessions: { Args: never; Returns: number }
+      kids_auto_open_sessions: { Args: never; Returns: number }
+      kids_classroom_teacher_list: {
+        Args: { _organization_id: string }
+        Returns: {
+          background_check_status: string
+          display_name: string
+          id: string
+          is_eligible: boolean
+          is_lead: boolean
+          person_id: string
+          phone: string
+          role: string
+          room_id: string
+          room_name: string
         }[]
       }
       kids_close_room_in_session: {
@@ -3338,8 +3480,10 @@ export type Database = {
           capacity: number
           checked_in_count: number
           checked_out_count: number
+          grade_name: string
           kids_session_id: string
           label_room_name: string
+          misplaced_count: number
           over_capacity: boolean
           over_ratio: boolean
           ratio_children_per_volunteer: number
@@ -3374,9 +3518,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      kids_open_session: {
+        Args: {
+          _ends_at: string
+          _kids_event_id: string
+          _label: string
+          _organization_id: string
+          _reopen_closed?: boolean
+          _session_date: string
+          _starts_at: string
+        }
+        Returns: {
+          session_id: string
+          was_created: boolean
+        }[]
+      }
       kids_room_roster: {
         Args: { _kids_session_id: string; _room_id?: string }
         Returns: {
+          assignment_reason: string
           check_in_id: string
           checked_in_at: string
           checked_in_by_name: string
@@ -3386,6 +3546,7 @@ export type Database = {
           child_name: string
           child_person_id: string
           dropped_off_by_name: string
+          grade_name: string
           guardian_phone: string
           has_allergy: boolean
           has_restriction: boolean
@@ -3396,6 +3557,18 @@ export type Database = {
           status: string
           tag_number: number
         }[]
+      }
+      kids_session_tick: { Args: never; Returns: undefined }
+      kids_sync_session_rooms: {
+        Args: { _kids_session_id: string }
+        Returns: {
+          rooms_attached: number
+          rooms_closed: number
+        }[]
+      }
+      link_profile_to_person: {
+        Args: { _person_id: string; _profile_id: string }
+        Returns: undefined
       }
       my_admin_orgs: { Args: never; Returns: string[] }
       my_household_ids: { Args: never; Returns: string[] }
@@ -3431,6 +3604,28 @@ export type Database = {
           was_created: boolean
         }[]
       }
+      pick_room_for_child: {
+        Args: {
+          _child_person_id: string
+          _kids_session_id: string
+          _organization_id: string
+        }
+        Returns: {
+          reason: string
+          room_id: string
+        }[]
+      }
+      preview_profile_backfill: {
+        Args: { _organization_id: string }
+        Returns: {
+          action: string
+          email: string
+          full_name: string
+          matched_person_id: string
+          matched_person_name: string
+          profile_id: string
+        }[]
+      }
       queue_child_notification: {
         Args: {
           _body: string
@@ -3460,6 +3655,7 @@ export type Database = {
           out_spouse_person_id: string
         }[]
       }
+      remove_classroom_teacher: { Args: { _id: string }; Returns: undefined }
       resolve_actor: {
         Args: { _shift_token?: string }
         Returns: Database["church"]["CompositeTypes"]["resolved_actor"]
@@ -3486,6 +3682,18 @@ export type Database = {
           status: string
           tag_number: number
         }[]
+      }
+      restriction_names_person: {
+        Args: {
+          _child_person_id: string
+          _person_id: string
+          _person_name?: string
+        }
+        Returns: boolean
+      }
+      retire_kids_classroom: {
+        Args: { _organization_id: string; _room_id: string }
+        Returns: undefined
       }
       send_parent_message: {
         Args: { _check_in_id: string; _message: string; _shift_token?: string }
@@ -3622,8 +3830,10 @@ export type Database = {
           age_band_name: string
           capacity: number
           checked_in_count: number
+          grade_name: string
           room_id: string
           room_name: string
+          teachers: string
         }[]
       }
       transfer_child: {
@@ -3634,6 +3844,14 @@ export type Database = {
           _to_room_id: string
         }
         Returns: undefined
+      }
+      unlinked_logins: {
+        Args: { _organization_id: string }
+        Returns: {
+          email: string
+          full_name: string
+          profile_id: string
+        }[]
       }
       update_my_contact_details: {
         Args: { _email: string; _person_id: string; _phone: string }
@@ -3680,6 +3898,39 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "people"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      upsert_kids_classroom: {
+        Args: {
+          _capacity?: number
+          _kids_age_band_id?: string
+          _label_room_name?: string
+          _name?: string
+          _organization_id: string
+          _ratio?: number
+          _room_id?: string
+          _school_grade_id?: string
+          _sort_order?: number
+        }
+        Returns: {
+          capacity: number | null
+          created_at: string
+          is_active: boolean
+          is_checkin_location: boolean
+          kids_age_band_id: string | null
+          label_room_name: string | null
+          organization_id: string
+          ratio_children_per_volunteer: number | null
+          room_id: string
+          school_grade_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "room_kids_config"
           isOneToOne: true
           isSetofReturn: false
         }

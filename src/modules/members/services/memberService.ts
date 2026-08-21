@@ -14,6 +14,7 @@ import type {
   MemberWithRelations,
   MemberFilters,
   MemberStats,
+  ProfileBackfillRow,
 } from "../types";
 import { MEMBER_PAGE_SIZE } from "../types";
 import { normalizePhone } from "../utils/normalize";
@@ -223,6 +224,63 @@ export const memberService = {
       // does the COUNT(DISTINCT person_id) the spec requires.
       serving: serving.count ?? 0,
     };
+  },
+
+  /**
+   * What backfilling members from existing logins would do, before it does it.
+   *
+   * The church has logins for people who have no member record at all, which
+   * is why the directory can be empty while 62 people can sign in. Linking
+   * them also switches on everything keyed to church.people.profile_id: a
+   * member seeing their own record, "My household", and the volunteer
+   * eligibility check at the check-in desk.
+   */
+  async previewProfileBackfill(organizationId: string): Promise<ProfileBackfillRow[]> {
+    const { data, error } = await church().rpc("preview_profile_backfill", {
+      _organization_id: organizationId,
+    });
+    if (error) throw error;
+    return (data ?? []) as unknown as ProfileBackfillRow[];
+  },
+
+  /** Idempotent: re-running links what is new and skips what is done. */
+  async runProfileBackfill(
+    organizationId: string
+  ): Promise<{ created: number; linked: number; skipped: number }> {
+    const { data, error } = await church().rpc("backfill_people_from_profiles", {
+      _organization_id: organizationId,
+    });
+    if (error) throw error;
+    const rows = (data ?? []) as unknown as {
+      created: number;
+      linked: number;
+      skipped: number;
+    }[];
+    return rows[0] ?? { created: 0, linked: 0, skipped: 0 };
+  },
+
+  /** Logins in this branch with no member record yet. */
+  async unlinkedLogins(
+    organizationId: string
+  ): Promise<{ profile_id: string; full_name: string; email: string | null }[]> {
+    const { data, error } = await church().rpc("unlinked_logins", {
+      _organization_id: organizationId,
+    });
+    if (error) throw error;
+    return (data ?? []) as unknown as {
+      profile_id: string;
+      full_name: string;
+      email: string | null;
+    }[];
+  },
+
+  /** Attach a login to a member by hand, for anyone the email match missed. */
+  async linkProfile(personId: string, profileId: string | null): Promise<void> {
+    const { error } = await church().rpc("link_profile_to_person", {
+      _person_id: personId,
+      _profile_id: profileId,
+    });
+    if (error) throw error;
   },
 
   /** Birthday list. Month granularity only — no day is stored. */
