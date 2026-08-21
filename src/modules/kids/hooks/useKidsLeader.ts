@@ -22,6 +22,7 @@ export const kidsLeaderKeys = {
   volunteers: (orgId: string) => [...kidsLeaderKeys.all, "volunteers", orgId] as const,
   staffing: (sessionId: string) => [...kidsLeaderKeys.all, "staffing", sessionId] as const,
   classrooms: (orgId: string) => [...kidsLeaderKeys.all, "classrooms", orgId] as const,
+  stillHere: (orgId: string) => [...kidsLeaderKeys.all, "still-here", orgId] as const,
   teachers: (orgId: string) => [...kidsLeaderKeys.all, "teachers", orgId] as const,
 };
 
@@ -184,6 +185,31 @@ export function useSetRoomConfig(organizationId: string | undefined) {
         queryKey: kidsLeaderKeys.classrooms(organizationId),
       });
       queryClient.invalidateQueries({ queryKey: kidsLeaderKeys.board(organizationId) });
+    },
+  });
+}
+
+export function useStillHere(organizationId: string | undefined) {
+  return useQuery({
+    queryKey: kidsLeaderKeys.stillHere(organizationId || ""),
+    queryFn: () => kidsLeaderService.stillHere(organizationId!),
+    enabled: !!organizationId,
+    // The end of a service is exactly when this must not be stale.
+    refetchInterval: 30_000,
+    staleTime: 5_000,
+  });
+}
+
+export function useTransferChild(organizationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { checkInId: string; toRoomId: string; reason?: string }) =>
+      kidsLeaderService.transferChild(p.checkInId, p.toRoomId, p.reason),
+    onSuccess: () => {
+      if (!organizationId) return;
+      queryClient.invalidateQueries({ queryKey: kidsLeaderKeys.board(organizationId) });
+      queryClient.invalidateQueries({ queryKey: [...kidsLeaderKeys.all, "roster"] });
+      queryClient.invalidateQueries({ queryKey: kidsLeaderKeys.stillHere(organizationId) });
     },
   });
 }

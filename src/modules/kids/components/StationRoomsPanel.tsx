@@ -23,6 +23,9 @@ import {
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRightLeft,
+  UserCheck,
+  UserPlus,
   HeartPulse,
   Loader2,
   MessageSquare,
@@ -31,6 +34,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { kidsStationService } from "../services/kidsStationService";
+import { errorMessage, isDbError } from "../services/rpcError";
 import type { SafetyCard, StationRoom, StationRosterRow } from "../types";
 
 interface StationRoomsPanelProps {
@@ -50,6 +54,10 @@ export function StationRoomsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** Which room I have put myself in, so the ratio warnings mean something. */
+  const [myRoomId, setMyRoomId] = useState<string | null>(null);
+  const [shiftBusy, setShiftBusy] = useState(false);
+  const [moving, setMoving] = useState<StationRosterRow | null>(null);
   const [safety, setSafety] = useState<SafetyCard | null>(null);
   const [safetyOpen, setSafetyOpen] = useState(false);
   const [messaging, setMessaging] = useState<StationRosterRow | null>(null);
@@ -87,6 +95,60 @@ export function StationRoomsPanel({
   useEffect(() => {
     void loadRooms();
   }, [loadRooms]);
+
+  // Where am I already serving, if I came back to this screen?
+  useEffect(() => {
+    let cancelled = false;
+    kidsStationService
+      .myCurrentShift(sessionId)
+      .then((shift) => {
+        if (!cancelled) setMyRoomId(shift?.room_id ?? null);
+      })
+      .catch(() => {
+        /* Not being on a shift is a normal answer, not an error. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId]);
+
+  async function toggleMyShift(target: StationRoom) {
+    setShiftBusy(true);
+    setError(null);
+    try {
+      if (myRoomId === target.room_id) {
+        await kidsStationService.endMyShift(sessionId);
+        setMyRoomId(null);
+      } else {
+        await kidsStationService.startMyShift(sessionId, target.room_id);
+        setMyRoomId(target.room_id);
+      }
+      await loadRooms();
+    } catch (err) {
+      setError(
+        isDbError(err, "no_member_record")
+          ? "Your login is not linked to a member record yet, so this cannot be attributed to you. Ask an admin to link it."
+          : errorMessage(err)
+      );
+    } finally {
+      setShiftBusy(false);
+    }
+  }
+
+  async function moveChild(child: StationRosterRow, toRoomId: string) {
+    try {
+      await kidsStationService.transferChild(
+        child.check_in_id,
+        toRoomId,
+        "Moved at the classroom door"
+      );
+      setMoving(null);
+      if (room) await loadRoster(room);
+      await loadRooms();
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   // A roster on a wall-mounted tablet goes stale silently, so refresh it while
   // the room is open rather than trusting whatever was true on first load.
@@ -161,9 +223,9 @@ export function StationRoomsPanel({
         ) : (
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             {rooms.map((option) => (
+              <div key={option.room_id} className="rounded-lg border p-5">
               <button
-                key={option.room_id}
-                className="rounded-lg border p-5 text-left hover:bg-muted/50"
+                className="w-full text-left"
                 onClick={() => {
                   setRoom(option);
                   void loadRoster(option);
@@ -190,6 +252,25 @@ export function StationRoomsPanel({
                   )}
                 </p>
               </button>
+              {/* Until a volunteer could say "I am here", every staffed room
+                  reported "no volunteer assigned" and the ratio warning was
+                  wrong all morning — which teaches people to ignore it. */}
+              <Button
+                variant={myRoomId === option.room_id ? "default" : "outline"}
+                className="mt-2 w-full"
+                disabled={shiftBusy || !online}
+                onClick={() => void toggleMyShift(option)}
+              >
+                {shiftBusy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : myRoomId === option.room_id ? (
+                  <UserCheck className="h-4 w-4" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+                {myRoomId === option.room_id ? "Serving here" : "I'm serving here"}
+              </Button>
+              </div>
             ))}
             {rooms.length === 0 && !loading && (
               <p className="text-muted-foreground py-8">
@@ -333,6 +414,16 @@ export function StationRoomsPanel({
               variant="outline"
               size="lg"
               className="shrink-0"
+              title="Move to another room"
+              disabled={!online}
+              onClick={() => setMoving(child)}
+            >
+              <ArrowRightLeft className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="shrink-0"
               title="Allergies, medication and emergency contact"
               onClick={() => void openSafety(child)}
             >
@@ -361,6 +452,43 @@ export function StationRoomsPanel({
           </p>
         )}
       </div>
+
+      {/* Moving keeps the child's pickup code. Checking them out and back in
+          would ROTATE it, leaving the parent holding a dead label. */}
+      <Dialog open={moving !== null} onOpenChange={(o) => !o && setMoving(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Move {moving?.child_display_name}</DialogTitle>
+            <DialogDescription>
+              Their pickup code stays the same, so the label the parent is
+              holding still works.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {rooms
+              .filter((r) => r.room_id !== moving?.room_id)
+              .map((r) => (
+                <button
+                  key={r.room_id}
+                  className="flex w-full items-center gap-3 rounded-lg border p-4 text-left hover:bg-muted/50"
+                  onClick={() => moving && void moveChild(moving, r.room_id)}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{r.room_name}</p>
+                    <p className="text-sm text-muted-foreground truncate">
+                      {r.grade_name ?? r.age_band_name ?? "No grade"}
+                      {r.teachers ? ` · ${r.teachers}` : ""}
+                    </p>
+                  </div>
+                  <span className="tabular-nums text-muted-foreground shrink-0">
+                    {r.checked_in_count}
+                    {r.capacity != null && ` / ${r.capacity}`}
+                  </span>
+                </button>
+              ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={safetyOpen}

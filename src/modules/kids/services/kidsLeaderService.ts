@@ -137,7 +137,48 @@ export interface ClassroomTeacher {
   is_eligible: boolean;
 }
 
+/** One child who has not been collected. */
+export interface StillHereRow {
+  check_in_id: string;
+  child_person_id: string;
+  child_name: string;
+  tag_number: number;
+  room_name: string | null;
+  session_label: string | null;
+  session_date: string;
+  session_status: string;
+  checked_in_at: string;
+  minutes_in_room: number;
+  guardian_name: string | null;
+  guardian_phone: string | null;
+  has_allergy: boolean;
+  has_restriction: boolean;
+}
+
 export const kidsLeaderService = {
+  /**
+   * Every child still in a room, across ALL sessions — not just today's open
+   * one. The children who matter most are those left in a session that has
+   * already ended, which a session-scoped query cannot find.
+   */
+  async stillHere(organizationId: string): Promise<StillHereRow[]> {
+    const { data, error } = await church().rpc("kids_still_here", {
+      _organization_id: organizationId,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as StillHereRow[];
+  },
+
+  /** Move a child to another room mid-service, keeping their pickup code. */
+  async transferChild(checkInId: string, toRoomId: string, reason?: string) {
+    const { error } = await church().rpc("transfer_child", {
+      _check_in_id: checkInId,
+      _to_room_id: toRoomId,
+      _reason: reason || null,
+    });
+    throwRpc(error);
+  },
+
   /**
    * Who normally teaches each classroom.
    *

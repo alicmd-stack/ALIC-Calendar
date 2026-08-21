@@ -166,6 +166,64 @@ export const kidsStationService = {
     return rows[0] ?? null;
   },
 
+  /**
+   * Put myself on this shift, in this room.
+   *
+   * Separate from the leader's assign_session_staff, which requires
+   * kids_admin: that is right for rostering somebody else and wrong for
+   * saying "I am in this room now". Until this existed, every staffed room
+   * showed "no volunteer assigned" and the ratio warnings were wrong all
+   * morning, which teaches people to ignore them.
+   */
+  async startMyShift(sessionId: string, roomId: string | null, role?: string) {
+    const { data, error } = await church().rpc("start_my_shift", {
+      _kids_session_id: sessionId,
+      _room_id: roomId,
+      _role: role ?? "classroom_volunteer",
+    });
+    throwRpc(error);
+    return data;
+  },
+
+  async endMyShift(sessionId: string): Promise<number> {
+    const { data, error } = await church().rpc("end_my_shift", {
+      _kids_session_id: sessionId,
+    });
+    throwRpc(error);
+    return (data as unknown as number) ?? 0;
+  },
+
+  async myCurrentShift(
+    sessionId: string
+  ): Promise<{ staffing_id: string; room_id: string | null; room_name: string | null; role: string } | null> {
+    const { data, error } = await church().rpc("my_current_shift", {
+      _kids_session_id: sessionId,
+    });
+    throwRpc(error);
+    const rows = (data ?? []) as unknown as {
+      staffing_id: string;
+      room_id: string | null;
+      room_name: string | null;
+      role: string;
+    }[];
+    return rows[0] ?? null;
+  },
+
+  /**
+   * Move a child to another room, keeping their pickup code.
+   *
+   * Without this a misplaced child had to be checked out and back in, which
+   * ROTATES the code — leaving the parent holding a label that no longer works.
+   */
+  async transferChild(checkInId: string, toRoomId: string, reason?: string) {
+    const { error } = await church().rpc("transfer_child", {
+      _check_in_id: checkInId,
+      _to_room_id: toRoomId,
+      _reason: reason || null,
+    });
+    throwRpc(error);
+  },
+
   /** Zero rows means denied — wrong, expired, locked or already used. */
   async resolvePickup(
     sessionId: string,

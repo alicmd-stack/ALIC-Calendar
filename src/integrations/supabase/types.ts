@@ -3411,6 +3411,7 @@ export type Database = {
         Returns: undefined
       }
       dispatch_kids_notifications: { Args: never; Returns: undefined }
+      end_my_shift: { Args: { _kids_session_id: string }; Returns: number }
       end_pickup_permission: {
         Args: { _id: string; _kind: string }
         Returns: undefined
@@ -3490,6 +3491,10 @@ export type Database = {
       }
       kids_auto_close_sessions: { Args: never; Returns: number }
       kids_auto_open_sessions: { Args: never; Returns: number }
+      kids_batch_is_replayable: {
+        Args: { _batch_id: string }
+        Returns: boolean
+      }
       kids_classroom_teacher_list: {
         Args: { _organization_id: string }
         Returns: {
@@ -3626,6 +3631,25 @@ export type Database = {
         }[]
       }
       kids_session_tick: { Args: never; Returns: undefined }
+      kids_still_here: {
+        Args: { _organization_id: string }
+        Returns: {
+          check_in_id: string
+          checked_in_at: string
+          child_name: string
+          child_person_id: string
+          guardian_name: string
+          guardian_phone: string
+          has_allergy: boolean
+          has_restriction: boolean
+          minutes_in_room: number
+          room_name: string
+          session_date: string
+          session_label: string
+          session_status: string
+          tag_number: number
+        }[]
+      }
       kids_sync_session_rooms: {
         Args: { _kids_session_id: string }
         Returns: {
@@ -3638,6 +3662,15 @@ export type Database = {
         Returns: undefined
       }
       my_admin_orgs: { Args: never; Returns: string[] }
+      my_current_shift: {
+        Args: { _kids_session_id: string }
+        Returns: {
+          role: string
+          room_id: string
+          room_name: string
+          staffing_id: string
+        }[]
+      }
       my_household_ids: { Args: never; Returns: string[] }
       my_orgs: { Args: never; Returns: string[] }
       my_orgs_with_any: {
@@ -3847,6 +3880,28 @@ export type Database = {
       set_volunteer_pin: {
         Args: { _pin: string; _volunteer_id: string }
         Returns: undefined
+      }
+      start_my_shift: {
+        Args: { _kids_session_id: string; _role?: string; _room_id?: string }
+        Returns: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          kids_session_id: string
+          organization_id: string
+          person_id: string
+          role: string
+          room_id: string | null
+          started_at: string
+          updated_at: string
+          was_background_check_current: boolean | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "kids_session_staffing"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       station_child_safety_card: {
         Args: { _check_in_id: string; _shift_token?: string }

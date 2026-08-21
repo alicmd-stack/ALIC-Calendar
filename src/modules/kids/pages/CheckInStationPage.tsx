@@ -65,7 +65,12 @@ function attemptId(): string {
   );
 }
 import { reduce, initialContext, showsFamilyData, type HouseholdMatch } from "../utils/checkInMachine";
-import type { HouseholdSearchRow, KidsSession, SafetyCard } from "../types";
+import type {
+  HouseholdSearchRow,
+  KidsSession,
+  SafetyCard,
+  StationRoom,
+} from "../types";
 
 const AUTO_RESET_MS = 20_000;
 /** Wipe a family's details from a shared screen after this long with no input. */
@@ -94,6 +99,8 @@ export default function CheckInStationPage() {
   // it is a side panel a volunteer steps into and back out of, and it must
   // not disturb a half-finished check-in behind it.
   const [showRooms, setShowRooms] = useState(false);
+  /** Open classrooms, for keeping siblings together at the desk. */
+  const [openRooms, setOpenRooms] = useState<StationRoom[]>([]);
   /** Set when a lead chooses to release a child the gate refused. */
   const [overriding, setOverriding] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
@@ -214,6 +221,25 @@ export default function CheckInStationPage() {
     if (ctx.state === "idle") searchInput.current?.focus();
   }, [ctx.state]);
 
+  // Loaded once a session is open, so the room picker has somewhere to point.
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    kidsStationService
+      .sessionRooms(session.id)
+      .then((rooms) => {
+        if (!cancelled) setOpenRooms(rooms);
+      })
+      .catch(() => {
+        // A missing picker is a degraded desk, not a broken one: check-in
+        // still places by grade.
+        if (!cancelled) setOpenRooms([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
   /* ------------------------------------------------------------- handlers */
   const runSearch = async (query: string) => {
     dispatch({ type: "QUERY_CHANGED", query });
@@ -309,6 +335,12 @@ export default function CheckInStationPage() {
         sessionId: session.id,
         childIds: ctx.selectedChildIds,
         clientBatchKey: batchKey,
+        // Positional, matching _child_person_ids: null means "decide by
+        // grade". Without this the machine's roomOverrides were dead state and
+        // siblings could not be kept together.
+        roomIds: ctx.selectedChildIds.map(
+          (id) => ctx.roomOverrides[id] ?? null
+        ),
         overrideCapacity,
         assignmentReason: reason ?? null,
       });
@@ -689,6 +721,30 @@ export default function CheckInStationPage() {
                           placement. The band remains the label for a child
                           with no grade — the same child whose placement
                           genuinely does fall back to it. */}
+                      {openRooms.length > 0 && selected && (
+                        <select
+                          className="mt-2 w-full rounded-md border bg-background px-2 py-1.5 text-sm"
+                          value={ctx.roomOverrides[c.child_person_id] ?? ""}
+                          // The tile itself toggles the child; changing the
+                          // room must not also deselect them.
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            dispatch({
+                              type: "ROOM_OVERRIDDEN",
+                              childId: c.child_person_id,
+                              roomId: e.target.value,
+                            });
+                          }}
+                        >
+                          <option value="">Room by grade</option>
+                          {openRooms.map((r) => (
+                            <option key={r.room_id} value={r.room_id}>
+                              {r.room_name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {(c.grade_name ?? c.age_band_code) && (
                         <Badge variant="outline" className="capitalize">
                           {c.grade_name ?? c.age_band_code}

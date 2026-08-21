@@ -37,6 +37,7 @@ import { useOrganization } from "@/shared/contexts/OrganizationContext";
 import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import { LiveBoardCard } from "../components/LiveBoardCard";
 import { RoomRosterSheet } from "../components/RoomRosterSheet";
+import { StillHerePanel } from "../components/StillHerePanel";
 import { ClassroomsTab } from "../components/ClassroomsTab";
 import { VolunteersTab } from "../components/VolunteersTab";
 import { KidsReportsTab } from "../components/KidsReportsTab";
@@ -200,6 +201,11 @@ export default function KidsDashboardPage() {
                 warn={totals.breaches > 0}
               />
             </div>
+
+            {/* The end-of-service question, above the room tiles because at
+                12:40 it is the only one that matters — and because a child in
+                a session that has already closed appears on no tile at all. */}
+            <StillHerePanel organizationId={orgId} />
 
             {totals.restrictions > 0 && (
               <Alert variant="destructive">
