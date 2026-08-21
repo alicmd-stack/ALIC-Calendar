@@ -102,7 +102,10 @@ export const LABEL_CSS = `
   .label {
     width: 58mm;
     margin: 0 auto;
-    padding: 3mm 0;
+    /* The reference's outlined card. A border also gives the volunteer a
+       cutting guide when the roll is fed through a manual cutter. */
+    border: 0.5mm solid #000; border-radius: 2mm;
+    padding: 2.5mm;
     page-break-after: always;
     break-after: page;
     box-sizing: border-box;
@@ -141,7 +144,7 @@ export const LABEL_CSS = `
      A worn tag curls and the flat face stops being readable; the edge does not. */
   .tab {
     width: 11mm; flex: 0 0 11mm;
-    background: #000; color: #fff;
+    background: #000; color: #fff; border-radius: 1.5mm;
     display: flex; flex-direction: column;
     align-items: center; justify-content: space-between;
     padding: 1.5mm 0; box-sizing: border-box;
@@ -163,6 +166,7 @@ export const LABEL_CSS = `
     letter-spacing: 0.3mm;
     padding: 1.8mm 2mm;
     margin-top: 2.5mm;
+    border-radius: 1.5mm;
     text-align: center;
     text-transform: uppercase;
   }
@@ -182,8 +186,9 @@ export const LABEL_CSS = `
   .codebar {
     background: #000; color: #fff;
     font-family: "Courier New", Courier, monospace;
-    font-size: 30pt; font-weight: 700; letter-spacing: 1mm;
-    text-align: center; line-height: 1.25;
+    font-size: 34pt; font-weight: 700; letter-spacing: 1.5mm;
+    text-align: center; line-height: 1.2;
+    border-radius: 1.5mm;
     padding: 2mm 1mm; margin-top: 2.5mm;
   }
   .qr { text-align: center; margin-top: 2.5mm; }
@@ -254,6 +259,8 @@ export function buildChildLabel(data: ChildLabelData): string {
 }
 
 export function buildParentLabel(data: ParentLabelData): string {
+  // Four characters read as one unit — the reference prints R2D2, not R2-D2.
+  // A six-character legacy code still gets the grouping that made it readable.
   const code = data.pickupCode.length === 6
     ? `${data.pickupCode.slice(0, 3)}-${data.pickupCode.slice(3)}`
     : data.pickupCode;

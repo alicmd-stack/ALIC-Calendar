@@ -328,6 +328,30 @@ export default function CheckInStationPage() {
     return raw;
   };
 
+  /**
+   * Why a checkout LOOKUP threw.
+   *
+   * Says nothing about the code itself — it cannot, because a code-related
+   * denial never reaches here. It reports the operator or infrastructure
+   * failure, which is information the desk needs and an attacker cannot use.
+   */
+  const explainCheckoutError = (err: unknown): string => {
+    const raw = errorMessage(err);
+    if (raw.includes("not_permitted_to_check_out")) {
+      return "You do not have permission to check children out. Ask a kids admin to grant it.";
+    }
+    if (raw.includes("volunteer_not_eligible")) {
+      return "Your volunteer record is marked restricted, so you cannot release children.";
+    }
+    if (raw.includes("Failed to fetch") || raw.includes("NetworkError")) {
+      return "Lost connection. Do not release anyone until the code has been checked again.";
+    }
+    if (isDbError(err, "PGRST202") || raw.includes("schema cache")) {
+      return "The station is out of date with the server. Reload the page and try again.";
+    }
+    return `Could not check that code: ${raw}`;
+  };
+
   /** KID-018: pull the safety card for one child. Audited server-side. */
   const openSafetyCard = async (checkInId: string) => {
     setSafety(null);
@@ -482,8 +506,19 @@ export default function CheckInStationPage() {
             has_restriction: m.has_restriction,
           })),
       });
-    } catch {
-      dispatch({ type: "ERROR", message: "That code was not recognised." });
+    } catch (err) {
+      // A THROWN error is not a rejected code.
+      //
+      // resolve_pickup deliberately returns zero ROWS for every code-related
+      // denial — wrong, expired, locked, already collected — so the desk cannot
+      // be used as an oracle. That generic path is handled by the machine.
+      //
+      // An exception is a different kind of failure: the operator lacks
+      // permission, the schema cache is stale, the network dropped. Reporting
+      // those as "not recognised" sent a volunteer hunting for a bad code that
+      // was never bad — which is exactly how a pickup code that was born
+      // expired stayed hidden for two days.
+      dispatch({ type: "ERROR", message: explainCheckoutError(err) });
     } finally {
       setBusy(false);
     }
