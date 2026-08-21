@@ -113,9 +113,8 @@ export default function MemberRegistrationPage() {
   });
 
   // Household + address
-  const [captureHousehold, setCaptureHousehold] = useState(true);
+  const [sinceBirth, setSinceBirth] = useState(false);
   const [household, setHousehold] = useState({
-    name: "",
     address_line1: "",
     address_line2: "",
     city: "",
@@ -149,12 +148,20 @@ export default function MemberRegistrationPage() {
     8
   );
 
-  // Default the household name from the surname, which is what it almost
-  // always is — still editable.
-  const suggestedHouseholdName = useMemo(
-    () => (person.last_name.trim() ? `${person.last_name.trim()} Household` : ""),
-    [person.last_name]
-  );
+  /**
+   * Households still need a name in the database, but nobody is asked for one.
+   *
+   * Ethiopian naming has no family surname — the second name is the father's
+   * given name — so "the Bekele household" is not a thing anyone says, and
+   * asking for it produced either a blank or an Anglicised invention. It is
+   * derived from the person being registered, which is how the family is
+   * actually referred to.
+   */
+  const derivedHouseholdName = useMemo(() => {
+    const first = person.first_name.trim();
+    const last = person.last_name.trim();
+    return [first, last].filter(Boolean).join(" ") || "Household";
+  }, [person.first_name, person.last_name]);
 
   const setP = (patch: Partial<PersonPayload>) => setPerson((p) => ({ ...p, ...patch }));
 
@@ -204,10 +211,21 @@ export default function MemberRegistrationPage() {
     try {
       const result = await register.mutateAsync({
         organizationId: orgId,
-        person,
-        household: captureHousehold
-          ? { ...household, name: household.name.trim() || suggestedHouseholdName }
-          : null,
+        // "Since birth" means they were raised in the faith, so the year they
+        // accepted the Lord is the year they were born. Derived here rather
+        // than copied when the box was ticked, so entering the birth year
+        // afterwards — the usual order — still works.
+        person: sinceBirth
+          ? {
+              ...person,
+              accepted_lord_year: person.birth_year,
+              accepted_lord_month: person.birth_month,
+              accepted_lord_is_approximate: true,
+            }
+          : person,
+        // Always created. Every child must be in one to be found at check-in,
+        // and an address has nowhere else to live.
+        household: { ...household, name: derivedHouseholdName },
         spouse: !isMarried
           ? { mode: "none" }
           : spouseMode === "link" && linkedSpouseId
@@ -321,12 +339,6 @@ export default function MemberRegistrationPage() {
                 placeholder="What they go by"
               />
             </Field>
-            <Field label="Amharic name">
-              <Input
-                value={person.amharic_name ?? ""}
-                onChange={(e) => setP({ amharic_name: e.target.value })}
-              />
-            </Field>
             <Field label="Gender">
               <PickOne
                 value={person.gender}
@@ -408,25 +420,45 @@ export default function MemberRegistrationPage() {
             <Field label="Accepted the Lord — month">
               <PickOne
                 value={
-                  person.accepted_lord_month ? String(person.accepted_lord_month) : undefined
+                  sinceBirth
+                    ? person.birth_month
+                      ? String(person.birth_month)
+                      : undefined
+                    : person.accepted_lord_month
+                      ? String(person.accepted_lord_month)
+                      : undefined
                 }
                 onChange={(v) => setP({ accepted_lord_month: v })}
                 options={MONTH_NAMES.map((m, i) => ({ value: String(i + 1), label: m }))}
-                placeholder="Not given"
+                placeholder={sinceBirth ? "From birth month" : "Not given"}
+                disabled={sinceBirth}
               />
             </Field>
             <Field label="Accepted the Lord — year">
               <Input
                 inputMode="numeric"
-                placeholder="e.g. 2005"
-                value={person.accepted_lord_year ?? ""}
+                placeholder={sinceBirth ? "From birth year" : "e.g. 2005"}
+                disabled={sinceBirth}
+                value={
+                  sinceBirth
+                    ? (person.birth_year ?? "")
+                    : (person.accepted_lord_year ?? "")
+                }
                 onChange={(e) => setP({ accepted_lord_year: e.target.value })}
               />
             </Field>
           </Grid>
           <label className="flex items-center gap-2 mt-3 text-sm">
             <Checkbox
+              checked={sinceBirth}
+              onCheckedChange={(v) => setSinceBirth(!!v)}
+            />
+            Since birth
+          </label>
+          <label className="flex items-center gap-2 mt-2 text-sm">
+            <Checkbox
               checked={!!person.accepted_lord_is_approximate}
+              disabled={sinceBirth}
               onCheckedChange={(v) => setP({ accepted_lord_is_approximate: !!v })}
             />
             This date is approximate
@@ -438,22 +470,7 @@ export default function MemberRegistrationPage() {
           title="Household & address"
           description="Stored once for the whole family rather than repeated on each person."
         >
-          <label className="flex items-center gap-2 text-sm mb-3">
-            <Checkbox
-              checked={captureHousehold}
-              onCheckedChange={(v) => setCaptureHousehold(!!v)}
-            />
-            Create a household for this family
-          </label>
-          {captureHousehold && (
             <Grid>
-              <Field label="Household name">
-                <Input
-                  value={household.name}
-                  onChange={(e) => setHousehold((h) => ({ ...h, name: e.target.value }))}
-                  placeholder={suggestedHouseholdName || "e.g. Bekele Household"}
-                />
-              </Field>
               <Field label="Street address">
                 <Input
                   value={household.address_line1}
@@ -492,7 +509,6 @@ export default function MemberRegistrationPage() {
                 />
               </Field>
             </Grid>
-          )}
         </Section>
 
         {isMarried && (
@@ -979,16 +995,20 @@ function PickOne({
   onChange,
   options,
   placeholder,
+  disabled,
 }: {
   value?: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   placeholder: string;
+  /** For a field whose value is derived from another answer. */
+  disabled?: boolean;
 }) {
   return (
     <Select
       value={value || NONE}
       onValueChange={(v) => onChange(v === NONE ? "" : v)}
+      disabled={disabled}
     >
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />

@@ -3854,6 +3854,7 @@ export type Database = {
           allergies: string
           allergy_severity: string
           child_name: string
+          contacts: Json
           emergency_name: string
           emergency_phone: string
           medications: string

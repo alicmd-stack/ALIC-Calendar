@@ -1055,14 +1055,44 @@ export default function CheckInStationPage() {
             </DialogDescription>
           </DialogHeader>
           {safety ? (
-            <dl className="space-y-3 text-sm">
-              <SafetyRow label="Allergies" value={safety.allergies} highlight />
-              <SafetyRow label="Severity" value={safety.allergy_severity} />
-              <SafetyRow label="Medications" value={safety.medications} />
-              <SafetyRow label="Special needs" value={safety.special_needs} />
-              <SafetyRow label="Emergency contact" value={safety.emergency_name} />
-              <SafetyRow label="Phone" value={safety.emergency_phone} highlight />
-            </dl>
+            <div className="space-y-3">
+              <dl className="space-y-3 text-sm">
+                <SafetyRow label="Allergies" value={safety.allergies} highlight />
+                <SafetyRow label="Severity" value={safety.allergy_severity} />
+                <SafetyRow label="Medications" value={safety.medications} />
+                <SafetyRow label="Special needs" value={safety.special_needs} />
+              </dl>
+
+              {/* Parents first. The people you ring about a child are their
+                  parents; a recorded "emergency contact" is who to try when
+                  they cannot be reached. Tappable, because this screen is
+                  read on a tablet by someone holding a child. */}
+              <div className="space-y-2 border-t pt-3">
+                <p className="text-sm font-medium">Who to call</p>
+                {(safety.contacts ?? []).length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Nobody with a phone number on file.
+                  </p>
+                )}
+                {(safety.contacts ?? []).map((c, i) => (
+                  <a
+                    key={`${c.name}-${i}`}
+                    href={c.phone ? `tel:${c.phone}` : undefined}
+                    className="flex items-center gap-3 rounded-md border p-2.5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{c.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {c.relationship}
+                      </p>
+                    </div>
+                    <span className="font-semibold tabular-nums shrink-0">
+                      {c.phone}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

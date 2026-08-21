@@ -73,8 +73,19 @@ export interface SafetyCard {
   allergies: string | null;
   medications: string | null;
   special_needs: string | null;
+  /** The first person to call — a parent, unless none has a phone on file. */
   emergency_name: string | null;
   emergency_phone: string | null;
+  /**
+   * Everyone worth calling, parents first.
+   *
+   * The people you ring about a child are their parents; a recorded
+   * "emergency contact" is who to try when the parents cannot be reached. The
+   * card used to show only the latter, so for most children a volunteer
+   * holding a reacting child saw a blank while the mother's number sat in the
+   * directory.
+   */
+  contacts: { name: string; phone: string | null; relationship: string }[];
 }
 
 /** One row from church.station_session_rooms. Occupancy only, no people. */
