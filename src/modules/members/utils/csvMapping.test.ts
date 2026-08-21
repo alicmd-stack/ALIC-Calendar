@@ -231,3 +231,50 @@ describe("applyMapping", () => {
     expect(out.notes).toBe("first | second");
   });
 });
+
+describe("family column", () => {
+  // Without a household an imported person is invisible to check-in:
+  // station_search_households reaches people only through a household.
+  it("recognises the spellings a church spreadsheet actually uses", () => {
+    for (const header of [
+      "Household",
+      "household_name",
+      "Family",
+      "Family Name",
+      "FAMILY-NAME",
+      "Home Name",
+    ]) {
+      const mapping = autoMapColumns([header]);
+      expect(mapping[header]).toBe("household_name");
+    }
+  });
+
+  it("carries the family name through to the parsed row", () => {
+    const parsed = applyMapping(
+      { Family: "  Bekele Household  ", "First Name": "Noah" },
+      { Family: "household_name", "First Name": "first_name" }
+    );
+    expect(parsed.household_name).toBe("Bekele Household");
+  });
+
+  it("omits an empty family rather than sending a blank", () => {
+    const parsed = applyMapping(
+      { Family: "   ", "First Name": "Noah" },
+      { Family: "household_name", "First Name": "first_name" }
+    );
+    expect(parsed.household_name).toBeUndefined();
+  });
+
+  it("groups siblings under one family name", () => {
+    const rows = [
+      { Family: "Worku Household", Name: "Abel" },
+      { Family: "worku household", Name: "Ruth" },
+    ];
+    const names = rows.map(
+      (r) => applyMapping(r, { Family: "household_name" }).household_name
+    );
+    // Case differences are reconciled in the database, which matches on
+    // lower(btrim(name)) — the parser passes through what was typed.
+    expect(names).toEqual(["Worku Household", "worku household"]);
+  });
+});

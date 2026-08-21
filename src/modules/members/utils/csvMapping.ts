@@ -23,6 +23,7 @@ export const IMPORT_TARGETS = [
   "member_since",
   "accepted_lord_year",
   "is_child",
+  "household_name",
   "notes",
 ] as const;
 
@@ -46,6 +47,7 @@ export const TARGET_LABELS: Record<ImportTarget, string> = {
   member_since: "Member since",
   accepted_lord_year: "Accepted the Lord (year)",
   is_child: "Is a child",
+  household_name: "Family / household",
   notes: "Notes",
 };
 
@@ -101,6 +103,15 @@ const HEADER_ALIASES: Record<string, ImportTarget> = {
   salvationyear: "accepted_lord_year",
   ischild: "is_child",
   child: "is_child",
+  // The family column is what makes an imported person visible to check-in:
+  // station_search_households reaches people only THROUGH a household.
+  household: "household_name",
+  householdname: "household_name",
+  family: "household_name",
+  familyname: "household_name",
+  familyid: "household_name",
+  householdid: "household_name",
+  homename: "household_name",
   notes: "notes",
   comment: "notes",
   comments: "notes",
@@ -243,6 +254,8 @@ export interface ParsedRow {
   member_since?: string;
   accepted_lord_year?: string;
   is_child?: boolean;
+  /** Groups rows into one family. Matched by name within the branch. */
+  household_name?: string;
   notes?: string;
 }
 
