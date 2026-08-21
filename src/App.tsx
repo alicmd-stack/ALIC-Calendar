@@ -43,6 +43,7 @@ import {
   MemberRegistrationPage,
   MemberProfilePage,
   MemberImportPage,
+  HouseholdsPage,
 } from "@/modules/members";
 import { CheckInStationPage, KidsDashboardPage } from "@/modules/kids";
 import NotFound from "./pages/NotFound";
@@ -270,6 +271,15 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/members/households"
+                  element={
+                    <ProtectedRoute requireAny={["members.read"]}>
+                      <HouseholdsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
                 {/* Declared AFTER the literal /members/* paths so they win
                     over the :memberId parameter. */}
                 <Route

@@ -3169,6 +3169,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_child_to_household: {
+        Args: { _child: Json; _household_id: string }
+        Returns: string
+      }
       add_person_to_household: {
         Args: {
           _household_id: string
@@ -3398,6 +3402,18 @@ export type Database = {
         Returns: boolean
       }
       hash_pickup: { Args: { _value: string }; Returns: string }
+      household_summaries: {
+        Args: { _organization_id: string }
+        Returns: {
+          adult_count: number
+          child_count: number
+          city: string
+          household_id: string
+          name: string
+          primary_contact_name: string
+          primary_phone: string
+        }[]
+      }
       import_commit: { Args: { _batch_id: string }; Returns: Json }
       import_dry_run: { Args: { _batch_id: string }; Returns: Json }
       insert_person_from_json: {
@@ -3730,6 +3746,15 @@ export type Database = {
           recipient_name: string
           status: string
         }[]
+      }
+      set_child_sensitive_from_json: {
+        Args: {
+          _actor: string
+          _child: Json
+          _organization_id: string
+          _person_id: string
+        }
+        Returns: undefined
       }
       set_module_grants: {
         Args: {

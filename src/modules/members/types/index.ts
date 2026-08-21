@@ -193,3 +193,14 @@ export interface ProfileBackfillRow {
   matched_person_id: string | null;
   matched_person_name: string | null;
 }
+
+/** One row from church.household_summaries. */
+export interface HouseholdSummary {
+  household_id: string;
+  name: string;
+  city: string | null;
+  primary_contact_name: string | null;
+  primary_phone: string | null;
+  adult_count: number;
+  child_count: number;
+}

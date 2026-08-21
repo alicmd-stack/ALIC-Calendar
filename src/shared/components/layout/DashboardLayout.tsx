@@ -270,6 +270,16 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           icon: UsersRound,
           description: isAdmin ? "Church directory" : "My information",
         },
+        ...(canViewMembers
+          ? [
+              {
+                name: "Families",
+                href: "/members/households",
+                icon: Home,
+                description: "Households and who is in them",
+              },
+            ]
+          : []),
       ],
     },
   ];

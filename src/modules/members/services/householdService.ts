@@ -11,12 +11,39 @@ import type {
   Member,
   PersonRelationshipInsert,
   RelationshipWithPerson,
+  HouseholdSummary,
 } from "../types";
 
 const church = () => supabase.schema("church");
 const NO_ROWS = "PGRST116";
 
 export const householdService = {
+  /** Families with enough detail to be useful in a list. */
+  async summaries(organizationId: string): Promise<HouseholdSummary[]> {
+    const { data, error } = await church().rpc("household_summaries", {
+      _organization_id: organizationId,
+    });
+    if (error) throw error;
+    return (data ?? []) as unknown as HouseholdSummary[];
+  },
+
+  /**
+   * Add a NEW child to an existing family.
+   *
+   * Not the same as addMember(), which attaches an existing person. This
+   * creates the child AND the parent relationships AND the pickup
+   * authorisations — without which the check-in desk would offer nobody to
+   * collect them.
+   */
+  async addChild(householdId: string, child: Record<string, unknown>): Promise<string> {
+    const { data, error } = await church().rpc("add_child_to_household", {
+      _household_id: householdId,
+      _child: child as never,
+    });
+    if (error) throw error;
+    return data as unknown as string;
+  },
+
   async list(organizationId: string): Promise<Household[]> {
     const { data, error } = await church()
       .from("households")
@@ -152,7 +179,11 @@ export const relationshipService = {
       .from("person_relationships")
       .select(
         `*,
-         related_person:people!person_relationships_related_person_id_fkey(
+         // PostgREST needs the CONSTRAINT name, and person_relationships has
+         // two foreign keys into people, so the hint is not optional. The
+         // invented "person_relationships_related_person_id_fkey" does not
+         // exist and returned a 400.
+         related_person:people!fk_person_relationships_related(
            id, first_name, last_name, is_child
          ),
          relationship_type:relationship_types(code, display_name)`
