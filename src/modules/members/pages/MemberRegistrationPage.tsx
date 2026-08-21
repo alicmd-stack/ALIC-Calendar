@@ -79,6 +79,14 @@ const MARITAL_STATUSES = [
 
 interface ChildRow extends PersonPayload {
   key: string;
+  /**
+   * Purely a disclosure flag for the form — never sent.
+   *
+   * Unticked means no medical row is written at all, so the safety card can
+   * still say "nothing on file" rather than asserting "no allergies" on the
+   * strength of a question nobody answered.
+   */
+  hasMedical?: boolean;
 }
 
 export default function MemberRegistrationPage() {
@@ -217,7 +225,10 @@ export default function MemberRegistrationPage() {
         children: hasChildren
           ? children
               .filter((c) => c.first_name.trim())
-              .map(({ key, ...rest }) => rest)
+              // `key` and `hasMedical` are form-only. hasMedical in particular
+              // must not reach the RPC: it is a disclosure toggle, not an
+              // assertion about the child.
+              .map(({ key, hasMedical, ...rest }) => rest)
           : [],
         emergencyContacts: contacts.filter((c) => c.name.trim() && c.phone.trim()),
         serviceInterestMinistryIds: interests,
@@ -696,10 +707,32 @@ export default function MemberRegistrationPage() {
                       separate screen, is usually an allergy never recorded —
                       and the safety card a volunteer opens mid-reaction is
                       only as good as what was captured now. */}
-                  <div className="mt-4 rounded-md border bg-muted/30 p-3 space-y-3">
-                    <p className="text-sm font-medium">
-                      Allergies and medical
-                    </p>
+                  <label className="mt-4 flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={!!child.hasMedical}
+                      onCheckedChange={(v) => {
+                        const on = !!v;
+                        updateChild(
+                          child.key,
+                          on
+                            ? { hasMedical: true }
+                            : // Clear on the way out, so a field typed and then
+                              // unticked is not quietly submitted anyway.
+                              {
+                                hasMedical: false,
+                                allergy_severity: undefined,
+                                allergies: undefined,
+                                medications: undefined,
+                                special_needs: undefined,
+                              }
+                        );
+                      }}
+                    />
+                    This child has allergies or medical needs
+                  </label>
+
+                  {child.hasMedical && (
+                  <div className="mt-3 rounded-md border bg-muted/30 p-3 space-y-3">
                     <Grid>
                       <Field label="Allergy severity">
                         <PickOne
@@ -756,6 +789,7 @@ export default function MemberRegistrationPage() {
                       safety card volunteers open in an emergency.
                     </p>
                   </div>
+                  )}
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={addChild}>
