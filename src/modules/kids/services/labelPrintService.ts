@@ -73,6 +73,10 @@ export function printLabels(
       };
 
       frame.onload = () => {
+        // Chrome needs the frame focused to print IT rather than the page, but
+        // the desk needs focus back on the lookup field: the wedge scanner is a
+        // keyboard, and a scan typed into a detached iframe goes nowhere.
+        const previous = document.activeElement as HTMLElement | null;
         try {
           frame.contentWindow?.focus();
           frame.contentWindow?.print();
@@ -82,6 +86,8 @@ export function printLabels(
             submitted: false,
             error: err instanceof Error ? err.message : "Print failed",
           });
+        } finally {
+          previous?.focus?.();
         }
       };
 
