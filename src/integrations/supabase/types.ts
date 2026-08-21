@@ -1625,6 +1625,95 @@ export type Database = {
         }
         Relationships: []
       }
+      kids_leader_invites: {
+        Row: {
+          claimed_at: string | null
+          claimed_user_id: string | null
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          display_name: string
+          email: string
+          id: string
+          organization_id: string
+          permission: Database["church"]["Enums"]["module_permission"]
+          person_id: string | null
+          scope_room_ids: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          display_name: string
+          email: string
+          id?: string
+          organization_id: string
+          permission?: Database["church"]["Enums"]["module_permission"]
+          person_id?: string | null
+          scope_room_ids?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_user_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          display_name?: string
+          email?: string
+          id?: string
+          organization_id?: string
+          permission?: Database["church"]["Enums"]["module_permission"]
+          person_id?: string | null
+          scope_room_ids?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kids_leader_invites_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kids_leader_scope: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          granted_by_name: string | null
+          id: string
+          organization_id: string
+          room_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          granted_by_name?: string | null
+          id?: string
+          organization_id: string
+          room_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          granted_by_name?: string | null
+          id?: string
+          organization_id?: string
+          room_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       kids_pickup_authorizations: {
         Row: {
           authorized_person_id: string
@@ -3364,6 +3453,10 @@ export type Database = {
           phone: string
         }[]
       }
+      claim_kids_leader_invites: {
+        Args: { _email: string; _user_id: string }
+        Returns: number
+      }
       claim_queued_notifications: {
         Args: { _limit?: number }
         Returns: {
@@ -3548,6 +3641,14 @@ export type Database = {
         }[]
       }
       kids_leader_orgs: { Args: never; Returns: string[] }
+      kids_leader_room_ids: {
+        Args: { _organization_id: string }
+        Returns: string[]
+      }
+      kids_leader_sees_all_rooms: {
+        Args: { _organization_id: string }
+        Returns: boolean
+      }
       kids_live_board: {
         Args: { _organization_id: string }
         Returns: {
@@ -4173,6 +4274,7 @@ export type Database = {
         | "kids_admin"
         | "kids_volunteer"
         | "leadership_viewer"
+        | "kids_leader"
     }
     CompositeTypes: {
       resolved_actor: {
@@ -4661,6 +4763,7 @@ export type Database = {
           full_name: string
           id: string
           ministry_name: string | null
+          must_change_password: boolean
           phone_number: string | null
           updated_at: string
         }
@@ -4671,6 +4774,7 @@ export type Database = {
           full_name: string
           id: string
           ministry_name?: string | null
+          must_change_password?: boolean
           phone_number?: string | null
           updated_at?: string
         }
@@ -4681,6 +4785,7 @@ export type Database = {
           full_name?: string
           id?: string
           ministry_name?: string | null
+          must_change_password?: boolean
           phone_number?: string | null
           updated_at?: string
         }
@@ -4879,6 +4984,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clear_password_change_required: { Args: never; Returns: undefined }
       get_user_branch_id: { Args: never; Returns: string }
       get_user_emails: {
         Args: { user_ids: string[] }
@@ -5081,6 +5187,7 @@ export const Constants = {
         "kids_admin",
         "kids_volunteer",
         "leadership_viewer",
+        "kids_leader",
       ],
     },
   },

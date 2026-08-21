@@ -25,6 +25,7 @@ export const MINISTRY_ROLES = [
   "members_viewer",
   "members_import",
   "kids_admin",
+  "kids_leader",
   "kids_volunteer",
   "leadership_viewer",
 ] as const;
@@ -63,6 +64,19 @@ const ROLE_CAPABILITIES: Record<MinistryRole, readonly Capability[]> = {
   members_viewer: ["members.read"],
   members_import: ["members.read", "members.import"],
   kids_admin: ["kids.read", "kids.write", "kids.checkin", "kids.override", "members.read"],
+  /**
+   * A team lead: runs their own grades and nothing else.
+   *
+   * Everything kids_admin has EXCEPT kids.override. The database enforces the
+   * same split — resolve_actor derives can_override from kids_admin alone — and
+   * church.kids_leader_scope narrows which classrooms they see. This map only
+   * decides what the UI offers; it is not the control.
+   *
+   * Withholding override is the point of the role. The plan calls the
+   * two-person rule "the single most important control in the system", and an
+   * override that four of the six leaders can self-authorise is not one.
+   */
+  kids_leader: ["kids.read", "kids.write", "kids.checkin", "members.read"],
   kids_volunteer: ["kids.checkin"],
   leadership_viewer: ["members.read", "kids.read"],
 };

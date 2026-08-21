@@ -1,0 +1,31 @@
+-- =====================================================
+-- A third kids permission: the team lead
+-- =====================================================
+--
+-- Alone in its own migration on purpose. ALTER TYPE ... ADD VALUE cannot be
+-- used in the same transaction that adds it, so the value has to be committed
+-- before anything can reference it.
+--
+-- WHY IT IS NEEDED. Until now the kids module had two levels: kids_admin, which
+-- is everything, and kids_volunteer, which works the desk. The Children's
+-- Ministry actually has three: two directors, four team leads each running a
+-- band of grades, and the volunteers.
+--
+-- Making the team leads kids_admin and narrowing them with kids_leader_scope
+-- looked like it worked, and did not. resolve_actor derives override rights
+-- from
+--
+--     my_orgs_with_any(ARRAY['kids_admin'])
+--
+-- which is org-wide and never consults the scope table. So a team lead scoped
+-- to Blossom A and B could authorise an override releasing ANY child in the
+-- branch — including one in a classroom she cannot see on her own board. The
+-- scope narrowed what she saw, not what she could authorise.
+--
+-- The plan calls the two-person override "the single most important control in
+-- the system". With four of six leaders able to self-authorise it was not a
+-- two-person rule at all. kids_leader carries everything a team lead needs for
+-- their own grades and stops short of override and pickup restrictions, which
+-- escalate to a director.
+
+ALTER TYPE church.module_permission ADD VALUE IF NOT EXISTS 'kids_leader';
