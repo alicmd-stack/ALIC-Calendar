@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { MedicalCard } from "../components/MedicalCard";
+import { PickupPermissionsCard } from "../components/PickupPermissionsCard";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
@@ -44,6 +45,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/shared/hooks/use-toast";
 import { useAuth } from "@/shared/contexts/AuthContext";
+import { useOrganization } from "@/shared/contexts/OrganizationContext";
 import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import {
   useMemberProfile,
@@ -70,8 +72,10 @@ export default function MemberProfilePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
+  const { currentOrganization } = useOrganization();
   const { can } = useCapabilities();
   const canWrite = isAdmin || can("members.write");
+  const orgId = currentOrganization?.id;
 
   const profileQuery = useMemberProfile(memberId);
   const servingQuery = useMemberServing(memberId);
@@ -297,6 +301,17 @@ export default function MemberProfilePage() {
               isChild={member.is_child}
               canEdit={canWrite}
             />
+
+            {/* Only for children: these two lists are what the checkout gate
+                reads, and they name people for a child, not for a family. */}
+            {member.is_child && (
+              <PickupPermissionsCard
+                childPersonId={member.id}
+                childName={member.first_name}
+                organizationId={orgId}
+                canEdit={canWrite}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="serving" className="mt-4 space-y-4">

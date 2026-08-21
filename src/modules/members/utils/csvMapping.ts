@@ -108,7 +108,9 @@ const HEADER_ALIASES: Record<string, ImportTarget> = {
   household: "household_name",
   householdname: "household_name",
   family: "household_name",
-  familyname: "household_name",
+  // NOT "familyname": that already means the SURNAME (see last_name above),
+  // which is what a church spreadsheet almost always means by it. Claiming it
+  // here would silently redirect everyone's surname into the family grouping.
   familyid: "household_name",
   householdid: "household_name",
   homename: "household_name",

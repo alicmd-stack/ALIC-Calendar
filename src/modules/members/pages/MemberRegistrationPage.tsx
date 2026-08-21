@@ -164,7 +164,7 @@ export default function MemberRegistrationPage() {
       { key: crypto.randomUUID(), first_name: "", last_name: "" },
     ]);
 
-  const updateChild = (key: string, patch: Partial<PersonPayload>) =>
+  const updateChild = (key: string, patch: Partial<ChildRow>) =>
     setChildren((c) => c.map((row) => (row.key === key ? { ...row, ...patch } : row)));
 
   const removeChild = (key: string) =>

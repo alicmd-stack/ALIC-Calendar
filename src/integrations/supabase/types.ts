@@ -1635,6 +1635,9 @@ export type Database = {
           effective_from: string
           effective_to: string | null
           id: string
+          lifted_at: string | null
+          lifted_by: string | null
+          lifted_by_name: string | null
           organization_id: string
           relationship_note: string | null
           updated_at: string
@@ -1648,6 +1651,9 @@ export type Database = {
           effective_from?: string
           effective_to?: string | null
           id?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          lifted_by_name?: string | null
           organization_id: string
           relationship_note?: string | null
           updated_at?: string
@@ -1661,6 +1667,9 @@ export type Database = {
           effective_from?: string
           effective_to?: string | null
           id?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          lifted_by_name?: string | null
           organization_id?: string
           relationship_note?: string | null
           updated_at?: string
@@ -1691,6 +1700,9 @@ export type Database = {
           effective_from: string
           effective_to: string | null
           id: string
+          lifted_at: string | null
+          lifted_by: string | null
+          lifted_by_name: string | null
           organization_id: string
           reason_restricted: string | null
           restricted_person_id: string | null
@@ -1705,6 +1717,9 @@ export type Database = {
           effective_from?: string
           effective_to?: string | null
           id?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          lifted_by_name?: string | null
           organization_id: string
           reason_restricted?: string | null
           restricted_person_id?: string | null
@@ -1719,6 +1734,9 @@ export type Database = {
           effective_from?: string
           effective_to?: string | null
           id?: string
+          lifted_at?: string | null
+          lifted_by?: string | null
+          lifted_by_name?: string | null
           organization_id?: string
           reason_restricted?: string | null
           restricted_person_id?: string | null
@@ -3259,6 +3277,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      authorize_pickup: {
+        Args: { _child_person_id: string; _note?: string; _person_id: string }
+        Returns: string
+      }
       backfill_people_from_profiles: {
         Args: { _organization_id: string }
         Returns: {
@@ -3327,6 +3349,20 @@ export type Database = {
         Args: { _child_person_id: string }
         Returns: boolean
       }
+      child_pickup_permissions: {
+        Args: { _child_person_id: string }
+        Returns: {
+          created_by_name: string
+          display_name: string
+          effective_from: string
+          id: string
+          is_name_only: boolean
+          kind: string
+          note: string
+          person_id: string
+          phone: string
+        }[]
+      }
       claim_queued_notifications: {
         Args: { _limit?: number }
         Returns: {
@@ -3375,6 +3411,10 @@ export type Database = {
         Returns: undefined
       }
       dispatch_kids_notifications: { Args: never; Returns: undefined }
+      end_pickup_permission: {
+        Args: { _id: string; _kind: string }
+        Returns: undefined
+      }
       end_session_staff: { Args: { _staffing_id: string }; Returns: undefined }
       expire_stale_check_ins: { Args: never; Returns: number }
       find_duplicate_person: {
@@ -3725,6 +3765,15 @@ export type Database = {
           status: string
           tag_number: number
         }[]
+      }
+      restrict_pickup: {
+        Args: {
+          _child_person_id: string
+          _person_id?: string
+          _person_name?: string
+          _reason?: string
+        }
+        Returns: string
       }
       restriction_names_person: {
         Args: {

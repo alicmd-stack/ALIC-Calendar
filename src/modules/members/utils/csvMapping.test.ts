@@ -240,13 +240,20 @@ describe("family column", () => {
       "Household",
       "household_name",
       "Family",
-      "Family Name",
-      "FAMILY-NAME",
+      "Family ID",
       "Home Name",
     ]) {
       const mapping = autoMapColumns([header]);
       expect(mapping[header]).toBe("household_name");
     }
+  });
+
+  it("leaves 'Family Name' meaning the surname", () => {
+    // A church spreadsheet almost always means the SURNAME by this, and it was
+    // already mapped that way. Claiming it for the household would silently
+    // redirect everyone's surname into the family grouping and leave the
+    // directory with no last names at all.
+    expect(autoMapColumns(["Family Name"])["Family Name"]).toBe("last_name");
   });
 
   it("carries the family name through to the parsed row", () => {

@@ -257,8 +257,8 @@ function HouseholdSheet({
   };
 
   const members = data?.members ?? [];
-  const adults = members.filter((m) => !m.person?.is_child);
-  const children = members.filter((m) => m.person?.is_child);
+  const adults = members.filter((m) => !m.is_child);
+  const children = members.filter((m) => m.is_child);
 
   return (
     <>
@@ -297,14 +297,14 @@ function HouseholdSheet({
                     <UserRound className="h-4 w-4 text-muted-foreground shrink-0" />
                     <button
                       className="min-w-0 flex-1 text-left"
-                      onClick={() => m.person && navigate(`/members/${m.person.id}`)}
+                      onClick={() => navigate(`/members/${m.id}`)}
                     >
                       <p className="text-sm font-medium truncate">
-                        {m.person?.first_name} {m.person?.last_name}
+                        {m.first_name} {m.last_name}
                       </p>
-                      {m.person?.phone && (
+                      {m.phone && (
                         <p className="text-xs text-muted-foreground truncate">
-                          {m.person.phone}
+                          {m.phone}
                         </p>
                       )}
                     </button>
@@ -320,11 +320,11 @@ function HouseholdSheet({
                           size="sm"
                           className="shrink-0"
                           onClick={async () => {
-                            if (!householdId || !m.person) return;
+                            if (!householdId) return;
                             try {
                               await setPrimary.mutateAsync({
                                 householdId,
-                                personId: m.person.id,
+                                personId: m.id,
                               });
                               toast.success("Main contact updated");
                               refresh();
@@ -369,16 +369,16 @@ function HouseholdSheet({
                   <button
                     key={m.id}
                     className="flex w-full items-center gap-2 rounded-md border p-2.5 text-left hover:bg-muted/50"
-                    onClick={() => m.person && navigate(`/members/${m.person.id}`)}
+                    onClick={() => navigate(`/members/${m.id}`)}
                   >
                     <Baby className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
-                        {m.person?.first_name} {m.person?.last_name}
+                        {m.first_name} {m.last_name}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {m.person?.birth_year
-                          ? `Born ${m.person.birth_year}`
+                        {m.birth_year
+                          ? `Born ${m.birth_year}`
                           : "No birth year — cannot be placed in a classroom"}
                       </p>
                     </div>
