@@ -2,8 +2,13 @@
  * Label template tests.
  *
  * The safety-relevant assertions here are about what must NOT appear on the
- * parent's label: no classroom, no medical detail. A dropped label should not
- * tell a stranger where a named child is sitting.
+ * PARENT's label: no classroom, no medical detail. A slip dropped in a car park
+ * should not tell a stranger where a named child is sitting.
+ *
+ * The child's tag now carries the same pickup code as the parent slip, by the
+ * ministry lead's decision — see the note at the top of labelTemplate.ts. The
+ * test below pins that deliberately, so a future reader does not restore the
+ * old two-namespace rule by accident.
  */
 
 import { describe, it, expect } from "vitest";
@@ -18,6 +23,7 @@ const CHILD = {
   childName: "Noah Bekele",
   roomName: "Blossom A",
   tagNumber: 1000,
+  pickupCode: "3R6F4T",
   allergyLabel: "Peanut allergy",
   serviceLabel: "9:00 AM Service",
   sessionDate: "Aug 24",
@@ -37,10 +43,8 @@ describe("child label", () => {
     const html = buildChildLabel(CHILD);
     expect(html).toContain("Noah Bekele");
     expect(html).toContain("Blossom A");
-    // The tag number lives in the edge tab, stacked upright by CSS, so the
-    // word and the number are separate elements.
-    expect(html).toContain('class="tabword">TAG<');
-    expect(html).toContain('class="tabnum">1000<');
+    // The tag number sits on the detail line now; the edge tab holds the code.
+    expect(html).toContain("Tag 1000");
   });
 
   it("prints the guardian at the foot when one is known", () => {
@@ -79,10 +83,24 @@ describe("child label", () => {
     expect(buildChildLabel(CHILD)).not.toContain("FIRST TIME");
   });
 
-  it("carries no pickup code — the child label authorises nothing", () => {
+  it("carries the pickup code in the edge tab", () => {
+    // A REVERSAL, pinned on purpose. The tab used to hold the tag number so
+    // that seeing a child told you nothing about how to release them. The
+    // ministry lead chose the matching-key model instead: both halves show the
+    // same code, and the control moved to the desk, which names and records
+    // whoever collects.
     const html = buildChildLabel(CHILD);
-    expect(html).not.toContain("3R6F4T");
-    expect(html).not.toContain("PICKUP");
+    expect(html).toContain('class="tabword">CODE<');
+    expect(html).toContain('class="tabcode">3R6F4T<');
+    // The tag number survives as reference data — the live board lists by tag.
+    expect(html).toContain("Tag 1000");
+  });
+
+  it("prints a dialable phone, not a masked one", () => {
+    // A masked number is useless to the volunteer holding a crying child,
+    // which is the situation the number is on the tag for.
+    const html = buildChildLabel({ ...CHILD, guardianPhone: "301-555-0102" });
+    expect(html).toContain("301-555-0102");
   });
 });
 

@@ -4,15 +4,25 @@
  * Pure: builds an HTML document as a string. Printing it is a separate,
  * impure concern (see labelPrintService), so the layout can be unit-tested.
  *
- * TWO SEPARATE LABELS, and the distinction is a safety property:
+ * TWO LABELS PER FAMILY:
  *
- *   CHILD label  — name, classroom, guardian, a short room TAG. Authorises nothing.
- *   PARENT label — the pickup CODE and QR. Authorises release.
+ *   CHILD label  — name, classroom, guardian and phone, and the pickup code.
+ *   PARENT label — the pickup code and its QR.
  *
- * They carry different values on purpose. If they shared one code, anyone who
- * could see a child could read the code that releases them. Per KID-010 the
- * parent label also carries no classroom and no medical information: a dropped
- * label must not tell a stranger where a named child is sitting.
+ * BOTH NOW CARRY THE SAME CODE. That is a deliberate reversal by the ministry
+ * lead, and it removes a property the original design had: the child used to
+ * wear a tag NUMBER while the parent held a separate code, so seeing a child
+ * told you nothing about how to release them. It now does.
+ *
+ * What still stands in the way is at the desk, not on the label: check_out
+ * refuses to release a child with a restriction on file unless the collector is
+ * named, the volunteer records who is collecting, and every attempt is audited.
+ * The code is a matching key now, not a secret from anyone in the room.
+ *
+ * The parent label still carries no classroom and no medical information, per
+ * KID-010 — a slip dropped in a car park must not say where a named child is
+ * sitting. The child's own tag necessarily does, because it is worn in that
+ * classroom by that child.
  *
  * The layout follows the standard church check-in tag: name dominant, details
  * beneath a rule, guardian at the foot, and a black tab down the right edge
@@ -27,13 +37,15 @@ export interface ChildLabelData {
   childName: string;
   roomName: string | null;
   tagNumber: number;
+  /** Printed down the edge tab. Same code as the parent slip — see the note above. */
+  pickupCode: string;
   allergyLabel: string | null;
   isFirstTime?: boolean;
   serviceLabel: string;
   sessionDate: string;
   /** Who dropped the child off, printed at the foot of the tag. */
   guardianName?: string | null;
-  /** Masked at the station by design — useful to cross-check, not to dial. */
+  /** A dialable number: the volunteer holding a crying child has to call it. */
   guardianPhone?: string | null;
 }
 
@@ -130,15 +142,26 @@ export const LABEL_CSS = `
 
   .rule { border-top: 0.5mm solid #000; margin: 2mm 0 1.5mm; }
 
-  /* The classroom. Read by a volunteer walking a child down a corridor, so it
+  /* Classroom and tag share a line: both are routing information, and the tag
+     is what the live board lists by. */
+  .roomrow { display: flex; align-items: baseline; justify-content: space-between; gap: 2mm; }
+  /* The classroom, read by a volunteer walking a child down a corridor, so it
      is the largest thing after the name. */
-  .room { font-size: 15pt; font-weight: 800; line-height: 1.1; }
-  .when { font-size: 9pt; margin-top: 0.6mm; }
+  /* Wraps rather than truncates. "Redeemed A" ellipsised to "Redee…", and the
+     classroom is the one field on this label that must never be cut — it is
+     the whole reason a volunteer picks the tag up. */
+  .room { font-size: 15pt; font-weight: 800; line-height: 1.1; min-width: 0; }
+  .tagno { font-size: 8.5pt; white-space: nowrap; flex: 0 0 auto; }
+  .when { font-size: 8.5pt; margin-top: 0.6mm; }
 
-  /* Guardian, at the foot where a nurse or a volunteer looks for it. */
-  .guardian { display: flex; justify-content: space-between; gap: 2mm; font-size: 8.5pt; }
+  /* Guardian at the foot, name over number.
+     Stacked rather than side by side because they were fighting for one line:
+     "Dawit Bekele" next to "301-555-0102" truncated the name to "Dawit Bek…",
+     and the name is how a volunteer knows who to ask for. The number is the
+     larger of the two — someone reads it while holding a crying child. */
+  .guardian { font-size: 8.5pt; line-height: 1.25; }
   .guardian .gname { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .guardian .gphone { white-space: nowrap; }
+  .guardian .gphone { font-size: 11pt; font-weight: 700; white-space: nowrap; }
 
   /* The edge tab: solid black, knockout, running down the right-hand side.
      A worn tag curls and the flat face stops being readable; the edge does not. */
@@ -150,10 +173,13 @@ export const LABEL_CSS = `
     padding: 1.5mm 0; box-sizing: border-box;
   }
   .tab .tabword { font-size: 7pt; font-weight: 800; letter-spacing: 0.3mm; }
-  /* Stacked upright, so it reads without turning the label sideways. */
-  .tab .tabnum {
+  /* Stacked upright, so it reads without turning the label sideways.
+     Monospaced to match the parent slip: the two get held side by side at the
+     door, and a code has to be comparable at a glance. */
+  .tab .tabcode {
     writing-mode: vertical-rl; text-orientation: upright;
-    font-size: 17pt; font-weight: 800; letter-spacing: -0.4mm;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 17pt; font-weight: 700; letter-spacing: -0.2mm;
     margin: 1mm 0;
   }
   .tab .tabmark { font-size: 11pt; line-height: 1; }
@@ -230,20 +256,24 @@ export function buildChildLabel(data: ChildLabelData): string {
           <div class="${nameClass(data.childName)}">${esc(data.childName)}</div>
           <div class="rule"></div>
           <div class="room">${esc(data.roomName ?? "Check-in")}</div>
-          <div class="when">${esc(data.serviceLabel)} · ${esc(data.sessionDate)}</div>
+          <div class="when">
+            ${esc(data.serviceLabel)} · ${esc(data.sessionDate)}<br>Tag ${esc(
+              data.tagNumber
+            )}
+          </div>
           ${
             guardian || phone
               ? `<div class="rule"></div>
           <div class="guardian">
-            <span class="gname">${esc(guardian)}</span>
-            <span class="gphone">${esc(phone)}</span>
+            ${guardian ? `<div class="gname">${esc(guardian)}</div>` : ""}
+            ${phone ? `<div class="gphone">${esc(phone)}</div>` : ""}
           </div>`
               : ""
           }
         </div>
         <div class="tab">
-          <span class="tabword">TAG</span>
-          <span class="tabnum">${esc(data.tagNumber)}</span>
+          <span class="tabword">CODE</span>
+          <span class="tabcode">${esc(data.pickupCode)}</span>
           <span class="tabmark">✓</span>
         </div>
       </div>

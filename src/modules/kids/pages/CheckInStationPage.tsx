@@ -454,7 +454,13 @@ export default function CheckInStationPage() {
   const doPrint = async (
     code: string,
     token: string,
-    rows: { child_name: string; room_name: string | null; tag_number: number; allergy_label: string | null }[]
+    rows: {
+      child_name: string;
+      room_name: string | null;
+      tag_number: number;
+      allergy_label: string | null;
+      guardian_phone?: string | null;
+    }[]
   ) => {
     const qr = await renderQrSvg(token);
     const dateLabel = formatSessionDate(session?.session_date);
@@ -464,13 +470,15 @@ export default function CheckInStationPage() {
         roomName: r.room_name,
         tagNumber: r.tag_number,
         allergyLabel: r.allergy_label,
+        pickupCode: code,
         serviceLabel: session?.service_label ?? "",
         sessionDate: dateLabel,
-        // Whoever the desk is serving. The station holds only a MASKED phone
-        // by design — enough to check the last four against the parent's
-        // number at the door, not enough to dial from a tag a child is wearing.
+        // The real number, returned by check_in_children specifically for the
+        // label. It is deliberately NOT in the search results, which render on
+        // screen for every hit — so the full number reaches paper, not the
+        // lobby display. Falls back to the masked one if the RPC is older.
         guardianName: ctx.household?.household_name ?? null,
-        guardianPhone: ctx.household?.masked_phone ?? null,
+        guardianPhone: r.guardian_phone ?? ctx.household?.masked_phone ?? null,
       })),
       {
         householdName: ctx.household?.household_name ?? "",
