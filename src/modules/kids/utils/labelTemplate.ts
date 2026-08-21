@@ -96,8 +96,23 @@ function esc(value: string | number | null | undefined): string {
  * misconfigured desk looks like — the labels still print, one per page, at the
  * correct physical size, rather than collapsing into an unreadable corner.
  */
+/**
+ * The printed page, in millimetres.
+ *
+ * 62mm is the tape. 90mm is the LABEL LENGTH, and it is derived rather than
+ * guessed: the tallest label the template can produce, with every field at its
+ * limit at once, measures 84.4mm. Everything is bounded — the name shrinks in
+ * tiers, the allergy string is capped, the classroom is the only thing allowed
+ * to wrap freely — so that bound is real and not a hope.
+ *
+ * It used to be 100mm, which meant 20 to 43mm of blank tape on every label.
+ * On a continuous roll that is not cosmetic: a busy Sunday is several hundred
+ * labels.
+ */
+export const LABEL_PAGE_MM = { width: 62, length: 90 } as const;
+
 export const LABEL_CSS = `
-  @page { size: 62mm 100mm; margin: 0; }
+  @page { size: 62mm 90mm; margin: 0; }
 
   html, body {
     margin: 0; padding: 0; background: #fff;
@@ -112,9 +127,21 @@ export const LABEL_CSS = `
   }
 
   .label {
+    /* 58 + 2 + 2 = the full 62mm tape, stated explicitly rather than left to
+       "margin: 0 auto". Centring rounded to whole device pixels and landed
+       1.75mm from one edge and 2.31mm from the other — harmless on tape with a
+       millimetre of feed play, but there is no reason to be lopsided. */
     width: 58mm;
-    margin: 0 auto;
-    /* The reference's outlined card. A border also gives the volunteer a
+    margin: 2mm;
+    /* A FIXED height, so every label is the same physical size and the card
+       matches the piece of tape it is printed on. */
+    height: 86mm;
+    /* The backstop. Content is bounded, but a machine that substitutes a font
+       with different metrics could still overflow — and overflow here means the
+       label paginates, so the desk hands out one label cut in half and one
+       nearly blank. Clipping a millimetre is the lesser failure. */
+    overflow: hidden;
+    /* The reference's outlined card. The border also gives the volunteer a
        cutting guide when the roll is fed through a manual cutter. */
     border: 0.5mm solid #000; border-radius: 2mm;
     padding: 2.5mm;
@@ -189,6 +216,7 @@ export const LABEL_CSS = `
   .allergy {
     background: #000; color: #fff;
     font-size: 13pt; font-weight: 800; line-height: 1.2;
+    /* size drops in tiers below — see allergyClass() */
     letter-spacing: 0.3mm;
     padding: 1.8mm 2mm;
     margin-top: 2.5mm;
@@ -196,7 +224,10 @@ export const LABEL_CSS = `
     text-align: center;
     text-transform: uppercase;
   }
+  .allergy.long { font-size: 11pt; letter-spacing: 0.2mm; }
+  .allergy.verylong { font-size: 9pt; letter-spacing: 0; }
   .allergy .word { display: block; font-size: 9pt; letter-spacing: 0.6mm; }
+  .allergy.long .word, .allergy.verylong .word { font-size: 8pt; }
 
   .firsttime {
     font-size: 11pt; font-weight: 700; margin-top: 2mm;
@@ -205,25 +236,35 @@ export const LABEL_CSS = `
 
   /* ---- parent label ---- */
 
-  .service { font-size: 16pt; font-weight: 800; text-align: center; line-height: 1.15; }
+  /* Only the parent slip centres in its card, and it uses flex with every
+     child at flex:0 0 auto. A fixed-height flex COLUMN shrinks its children to
+     fit by default, which would silently squash the allergy bar rather than
+     letting the overflow guard catch it — so the child tag stays a plain block
+     with its content top-aligned, name first. */
+  .label.parent { display: flex; flex-direction: column; justify-content: center; }
+  .label.parent > * { flex: 0 0 auto; }
+
+  .service { font-size: 14pt; font-weight: 800; text-align: center; line-height: 1.15; }
   /* The whole reason the parent label exists, in the strongest treatment on
      either label: knockout on solid black, monospaced so 8 and B cannot be
      confused when the code is read aloud across a busy corridor. */
   .codebar {
     background: #000; color: #fff;
     font-family: "Courier New", Courier, monospace;
-    font-size: 34pt; font-weight: 700; letter-spacing: 1.5mm;
-    text-align: center; line-height: 1.2;
+    font-size: 30pt; font-weight: 700; letter-spacing: 1.5mm;
+    text-align: center; line-height: 1.15;
     border-radius: 1.5mm;
-    padding: 2mm 1mm; margin-top: 2.5mm;
+    padding: 1.5mm 1mm; margin-top: 2mm;
   }
-  .qr { text-align: center; margin-top: 2.5mm; }
-  .qr svg { width: 26mm; height: 26mm; display: inline-block; }
+  .qr { text-align: center; margin-top: 2mm; }
+  /* 22mm carries a 4-character payload with room to spare at 300dpi, and the
+     printed code below it is the fallback if a scanner ever struggles. */
+  .qr svg { width: 22mm; height: 22mm; display: inline-block; }
   .retain {
     text-align: center; font-size: 9pt; font-weight: 700;
     margin-top: 1.5mm;
   }
-  .who { text-align: center; font-size: 9pt; margin-top: 2mm; }
+  .who { text-align: center; font-size: 9pt; margin-top: 1.5mm; }
   .who .hh { font-weight: 700; }
 `;
 
@@ -243,6 +284,36 @@ function nameClass(name: string): string {
   if (longest <= 7 && total <= 13) return "name";
   if (longest <= 10 && total <= 22) return "name long";
   return "name verylong";
+}
+
+/**
+ * Keeps the allergy bar inside the label.
+ *
+ * allergy_label_short is unbounded free text — nothing stops a volunteer typing
+ * a paragraph into it — so the bar has to be bounded here, where the space is
+ * finite. Size drops in tiers first, because shrinking loses nothing.
+ *
+ * The CAP is a last resort. 60 characters holds a real allergen list with room
+ * to spare — the longest on file at ALIC is 21 ("Peanuts and tree nuts"), and
+ * "Peanuts, tree nuts, shellfish, dairy and eggs" is 44. Past that the tag
+ * stops being the record and the black bar does its actual job, which is to say
+ * STOP AND ASK — the full detail is on the safety card at the desk, where
+ * reading it is audited.
+ *
+ * The cap is what makes the label's height BOUNDED, which is what lets the page
+ * be sized to the tape instead of guessing. See LABEL_PAGE_MM below.
+ */
+const ALLERGY_CAP = 60;
+
+function allergyClass(text: string): string {
+  if (text.length > 44) return "allergy verylong";
+  if (text.length > 22) return "allergy long";
+  return "allergy";
+}
+
+function allergyText(raw: string): string {
+  const t = raw.toUpperCase().trim();
+  return t.length <= ALLERGY_CAP ? t : t.slice(0, ALLERGY_CAP - 1).trimEnd() + "\u2026";
 }
 
 export function buildChildLabel(data: ChildLabelData): string {
@@ -279,8 +350,8 @@ export function buildChildLabel(data: ChildLabelData): string {
       </div>
       ${
         data.allergyLabel
-          ? `<div class="allergy"><span class="word">Allergy</span>${esc(
-              data.allergyLabel.toUpperCase()
+          ? `<div class="${allergyClass(data.allergyLabel.trim())}"><span class="word">Allergy</span>${esc(
+              allergyText(data.allergyLabel)
             )}</div>`
           : ""
       }
@@ -296,7 +367,7 @@ export function buildParentLabel(data: ParentLabelData): string {
     : data.pickupCode;
 
   return `
-    <div class="label">
+    <div class="label parent">
       <div class="service">${esc(data.serviceLabel)}<br>${esc(data.sessionDate)}</div>
       <div class="codebar">${esc(code)}</div>
       ${data.qrSvg ? `<div class="qr">${data.qrSvg}</div>` : ""}

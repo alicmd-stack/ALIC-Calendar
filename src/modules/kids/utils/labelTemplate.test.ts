@@ -17,6 +17,7 @@ import {
   buildParentLabel,
   buildLabelDocument,
   LABEL_CSS,
+  LABEL_PAGE_MM,
 } from "./labelTemplate";
 
 const CHILD = {
@@ -175,9 +176,41 @@ describe("label document", () => {
     expect(doc).toContain("3R6-F4T");
   });
 
-  it("sets the 62mm page size the Brother QL driver expects", () => {
+  it("sets the page the Brother QL driver expects for 62mm tape", () => {
     const doc = buildLabelDocument([CHILD], PARENT);
-    expect(doc).toContain("@page { size: 62mm 100mm; margin: 0; }");
+    expect(doc).toContain("@page { size: 62mm 90mm; margin: 0; }");
+  });
+
+  it("keeps the declared page and the CSS in step", () => {
+    // The length is derived from the tallest label the template can build
+    // (measured at 84.4mm), not guessed. If one moves, the other must.
+    expect(LABEL_PAGE_MM).toEqual({ width: 62, length: 90 });
+    expect(LABEL_CSS).toContain(
+      `@page { size: ${LABEL_PAGE_MM.width}mm ${LABEL_PAGE_MM.length}mm; margin: 0; }`
+    );
+  });
+
+  it("caps the allergy text so a label cannot grow without bound", () => {
+    // allergy_label_short is unbounded free text in the database.
+    const long = "Peanuts, ".repeat(40);
+    const html = buildChildLabel({ ...CHILD, allergyLabel: long });
+    const bar = /<div class="allergy[^"]*"><span class="word">Allergy<\/span>([^<]*)</.exec(html);
+    expect(bar).toBeTruthy();
+    expect(bar![1].length).toBeLessThanOrEqual(60);
+    expect(bar![1].endsWith("\u2026")).toBe(true);
+  });
+
+  it("shrinks the allergy bar in tiers rather than truncating early", () => {
+    expect(buildChildLabel({ ...CHILD, allergyLabel: "Dairy" })).toContain('class="allergy"');
+    expect(
+      buildChildLabel({ ...CHILD, allergyLabel: "Peanuts, tree nuts and shellfish" })
+    ).toContain('class="allergy long"');
+    expect(
+      buildChildLabel({
+        ...CHILD,
+        allergyLabel: "Peanuts, tree nuts, shellfish, dairy, eggs and sesame seeds",
+      })
+    ).toContain('class="allergy verylong"');
   });
 
   it("is a complete standalone document", () => {
