@@ -12,6 +12,16 @@ import type { KidsSession, KidsCheckIn } from "../types";
 
 const church = () => supabase.schema("church");
 
+export interface OpenSessionResult {
+  session_id: string;
+  service_label: string;
+  was_created: boolean;
+  /** Classrooms this call added to the session, or brought back after a retire. */
+  rooms_attached: number;
+  /** Rooms dropped because they are no longer classrooms. Never one holding a child. */
+  rooms_closed: number;
+}
+
 export interface OpenSessionRoom {
   room_id: string;
   room_name: string;
@@ -24,23 +34,29 @@ export interface OpenSessionRoom {
 export const kidsSessionService = {
   /**
    * Open today's session, attaching every configured classroom.
-   * Idempotent: calling it twice returns the session already open rather than
-   * creating a duplicate.
+   *
+   * The scheduler already does this every Sunday morning, so in normal use this
+   * is a manual override: a second service, a midweek programme, or a leader
+   * who has just changed the classrooms and wants the board to catch up.
+   *
+   * Idempotent, and it reconciles either way. Calling it on a session that is
+   * already open returns that session with was_created false, having brought
+   * its room list back in line with the configured classrooms — which is the
+   * point of pressing it twice.
+   *
+   * Omitting serviceLabel uses the label configured on the event, so the button
+   * and the scheduler converge on one session rather than two.
    */
   async openToday(
     organizationId: string,
-    serviceLabel = "Sunday Service"
-  ): Promise<{ session_id: string; service_label: string; was_created: boolean }> {
+    serviceLabel?: string
+  ): Promise<OpenSessionResult> {
     const { data, error } = await church().rpc("open_todays_session", {
       _organization_id: organizationId,
-      _service_label: serviceLabel,
+      _service_label: serviceLabel ?? null,
     });
     throwRpc(error);
-    const rows = (data ?? []) as unknown as {
-      session_id: string;
-      service_label: string;
-      was_created: boolean;
-    }[];
+    const rows = (data ?? []) as unknown as OpenSessionResult[];
     if (rows.length === 0) throw new Error("Could not open a session");
     return rows[0];
   },

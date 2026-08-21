@@ -404,7 +404,7 @@ export default function CheckInStationPage() {
     // Naming the collector is what makes the restricted-pickup list mean
     // anything: the database can only check a person it has been told about.
     // It refuses to release a restricted child when nobody is named.
-    if (!ctx.collectorName) {
+    if (!ctx.collectorName?.trim()) {
       dispatch({ type: "ERROR", message: "Choose who is collecting first." });
       return;
     }
@@ -414,7 +414,7 @@ export default function CheckInStationPage() {
         checkInIds: ctx.checkoutMatches.map((m) => m.check_in_id),
         presented: ctx.checkoutInput.trim(),
         pickedUpByPersonId: ctx.collectorPersonId,
-        pickedUpByName: ctx.collectorName,
+        pickedUpByName: ctx.collectorName?.trim() || null,
       });
       if (released.length === 0) {
         // One generic denial for every reason — wrong code, expired, already
@@ -440,14 +440,31 @@ export default function CheckInStationPage() {
     }
   };
 
-  /** Load who may collect, as soon as a code resolves to children. */
+  /**
+   * Load who may collect — for EVERY child in the batch, not just the first.
+   *
+   * Fetching only matches[0] was wrong in both directions: with an unrestricted
+   * sibling first, the screen offered a person barred for the OTHER child (and
+   * suppressed the warning), and it never offered the grandmother authorised
+   * for the restricted child. Checkout is all-or-nothing across the batch, so
+   * the desk must be shown the INTERSECTION — only people approved for all of
+   * these children.
+   */
   useEffect(() => {
     if (ctx.state !== "checkout_confirm" || ctx.checkoutMatches.length === 0) return;
     let cancelled = false;
-    kidsStationService
-      .pickupCandidates(ctx.checkoutMatches[0].check_in_id)
-      .then((candidates) => {
-        if (!cancelled) dispatch({ type: "CHECKOUT_CANDIDATES", candidates });
+    const ids = ctx.checkoutMatches.map((m) => m.check_in_id);
+
+    Promise.all(ids.map((id) => kidsStationService.pickupCandidates(id)))
+      .then((lists) => {
+        if (cancelled) return;
+        const [first = [], ...rest] = lists;
+        const intersection = first.filter((candidate) =>
+          rest.every((list) =>
+            list.some((other) => other.person_id === candidate.person_id)
+          )
+        );
+        dispatch({ type: "CHECKOUT_CANDIDATES", candidates: intersection });
       })
       .catch(() => {
         // An empty list is safe: it leaves only "Someone else", which the
@@ -455,6 +472,7 @@ export default function CheckInStationPage() {
         // mean guessing, so we do not.
         if (!cancelled) dispatch({ type: "CHECKOUT_CANDIDATES", candidates: [] });
       });
+
     return () => {
       cancelled = true;
     };
@@ -503,8 +521,10 @@ export default function CheckInStationPage() {
         {!session && (
           <Centered title="Start check-in">
             <p className="text-muted-foreground max-w-md">
-              Opens today’s session and makes every kids classroom available.
-              You can start it again later without creating a duplicate.
+              Sunday’s session opens on its own 45 minutes before the service,
+              so this is usually only needed for another day. It opens today’s
+              session and makes every kids classroom available — starting it
+              again later never creates a duplicate.
             </p>
             {startError && (
               <p className="text-destructive text-sm mt-4 max-w-md">{startError}</p>
@@ -876,7 +896,9 @@ export default function CheckInStationPage() {
                     dispatch({
                       type: "COLLECTOR_SELECTED",
                       personId: null,
-                      name: e.target.value.trim() || null,
+                      // NOT trimmed here: trimming each keystroke ate the
+                      // space, so "John Smith" could only ever be "JohnSmith".
+                      name: e.target.value || null,
                     });
                   }}
                 />
@@ -899,7 +921,7 @@ export default function CheckInStationPage() {
                 size="lg"
                 className="flex-1"
                 onClick={doCheckout}
-                disabled={busy || !ctx.collectorName}
+                disabled={busy || !ctx.collectorName?.trim()}
               >
                 {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
                 Release to {ctx.collectorName || "\u2026"}
@@ -949,9 +971,17 @@ export default function CheckInStationPage() {
             <Button
               size="lg"
               disabled={busy}
-              onClick={() =>
-                void doCheckIn(true, "Room at capacity — checked in anyway at the desk")
-              }
+              onClick={() => {
+                // Back into `confirming` first: CHECKED_IN used to be guarded
+                // on that state while CAPACITY_BLOCKED had moved us to
+                // `selecting`, so the commit succeeded, the label printed, and
+                // the screen never advanced — the volunteer's obvious second
+                // tap then rotated the code on the label already in the
+                // parent's hand.
+                dispatch({ type: "DISMISS_CAPACITY" });
+                dispatch({ type: "CONFIRM_REQUESTED" });
+                void doCheckIn(true, "Room at capacity — checked in anyway at the desk");
+              }}
             >
               {busy && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
               Check in anyway

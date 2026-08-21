@@ -3424,6 +3424,8 @@ export type Database = {
       open_todays_session: {
         Args: { _organization_id: string; _service_label?: string }
         Returns: {
+          rooms_attached: number
+          rooms_closed: number
           service_label: string
           session_id: string
           was_created: boolean

@@ -252,13 +252,20 @@ export function reduce(ctx: MachineContext, event: MachineEvent): MachineContext
 
     case "CONFIRM_REQUESTED":
       if (ctx.state !== "selecting" || ctx.selectedChildIds.length === 0) return ctx;
-      return { ...ctx, state: "confirming", error: null };
+      return { ...ctx, state: "confirming", error: null, capacityBlocked: null };
 
     case "CHECKED_IN":
-      if (ctx.state !== "confirming") return ctx;
+      // Accepted from `selecting` as well as `confirming`. A committed
+      // check-in must not be discarded because the screen moved on — the
+      // pickup code is stored as a peppered hash, so this is the only copy
+      // that will ever exist. Still refused from idle/locked/unconfigured:
+      // reaching "checked in" without a family on screen is the hole the
+      // machine exists to prevent.
+      if (ctx.state !== "confirming" && ctx.state !== "selecting") return ctx;
       return {
         ...ctx,
         state: "success",
+        capacityBlocked: null,
         pickupCode: event.code,
         pickupToken: event.token,
         checkedIn: event.children,

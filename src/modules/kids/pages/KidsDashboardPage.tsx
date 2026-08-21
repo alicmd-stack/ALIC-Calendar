@@ -97,10 +97,28 @@ export default function KidsDashboardPage() {
     setOpening(true);
     try {
       const result = await kidsSessionService.openToday(orgId);
+      // Reconciling is the reason to press this on an already-open session, so
+      // say what moved rather than only "it was already open".
+      const changes = [
+        result.rooms_attached > 0 &&
+          `${result.rooms_attached} classroom${
+            result.rooms_attached === 1 ? "" : "s"
+          } added`,
+        result.rooms_closed > 0 &&
+          `${result.rooms_closed} room${
+            result.rooms_closed === 1 ? "" : "s"
+          } closed`,
+      ].filter(Boolean) as string[];
+
       toast.success(
         result.was_created
           ? `${result.service_label} is open`
-          : `${result.service_label} was already open`
+          : `${result.service_label} was already open`,
+        {
+          description: changes.length
+            ? `Classrooms brought up to date: ${changes.join(", ")}.`
+            : undefined,
+        }
       );
       await refetch();
     } catch (error) {
@@ -206,12 +224,14 @@ export default function KidsDashboardPage() {
                   <div>
                     <p className="font-medium">No session is open</p>
                     <p className="text-sm text-muted-foreground">
-                      Open today's session to start checking children in.
+                      Sunday opens itself 45 minutes before the service. Open one
+                      here for anything else — a second service, or a midweek
+                      programme.
                     </p>
                   </div>
                   {canManage && (
                     <Button onClick={openSession} disabled={opening}>
-                      Open today's session
+                      Open a session now
                     </Button>
                   )}
                 </CardContent>

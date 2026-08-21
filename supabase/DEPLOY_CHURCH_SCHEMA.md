@@ -75,7 +75,7 @@ foreign keys can reference them.
 npx supabase db push
 ```
 
-Applies the eleven `20260320*` migrations. Every one has been verified to run
+Applies the `20260320*` migrations. Every one has been verified to run
 cleanly against Postgres 15 from a clean slate.
 
 ## Step 3 — expose the schema (REQUIRED, and easy to miss)
@@ -178,6 +178,26 @@ WHERE table_schema = 'church'
    (`kids_admin`, `members_admin`, `kids_volunteer`, ...). Org admins already
    have everything implicitly.
 5. **Set volunteer PINs** via `church.set_volunteer_pin(volunteer_id, pin)`.
+6. **Enable `pg_cron`** (Dashboard → Database → Extensions). Two jobs depend on
+   it: `send-kids-notifications` (every minute, `20260320002100`) and
+   `kids-session-tick` (every ten minutes, `20260320010000`). The second is what
+   opens Sunday's session on its own; without the extension both migrations skip
+   with a NOTICE and every session has to be opened by hand. Verify:
+
+   ```sql
+   SELECT jobname, schedule, active FROM cron.job
+   WHERE jobname IN ('send-kids-notifications', 'kids-session-tick');
+   ```
+
+7. **Check the service times** in `church.kids_events`. They are seeded from the
+   published schedule — Silver Spring 11:00, Springfield 10:30, both 150
+   minutes — and check-in opens `check_in_opens_minutes_before` (45) earlier. If
+   a branch moves its service, change the row; there is no second place to edit.
+
+   ```sql
+   SELECT o.slug, e.auto_open_dow, e.service_starts_local, e.service_minutes
+   FROM church.kids_events e JOIN public.organizations o ON o.id = e.organization_id;
+   ```
 
 ## Known issues NOT fixed by this deploy
 
