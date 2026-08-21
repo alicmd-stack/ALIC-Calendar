@@ -18,6 +18,8 @@ import {
   useOrganization,
 } from "@/shared/contexts";
 import { SearchProvider } from "@/shared/contexts/SearchContext";
+import { useCapabilities } from "@/shared/hooks/useCapabilities";
+import type { Capability } from "@/shared/lib/capabilities";
 
 // Module page imports
 import {
@@ -36,7 +38,13 @@ import { Rooms } from "@/modules/rooms";
 import { Users } from "@/modules/users";
 import { InventoryDashboard } from "@/modules/inventory";
 import { BudgetDashboard } from "@/modules/budget";
-import { MembersDashboard } from "@/modules/members";
+import {
+  MembersDashboard,
+  MemberRegistrationPage,
+  MemberProfilePage,
+  MemberImportPage,
+} from "@/modules/members";
+import { CheckInStationPage, KidsDashboardPage } from "@/modules/kids";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -62,9 +70,19 @@ function ScrollToTop() {
 const ProtectedRoute = ({
   children,
   adminOnly = false,
+  requireAny,
+  fallbackTo = "/dashboard",
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
+  /**
+   * Module capabilities, any one of which admits the user. Omit for routes
+   * gated only by authentication (or by `adminOnly`). Existing call sites are
+   * unaffected.
+   */
+  requireAny?: Capability[];
+  /** Where to send an authenticated user who lacks the capability. */
+  fallbackTo?: string;
 }) => {
   const { user, loading, isAdmin } = useAuth();
   const {
@@ -72,8 +90,11 @@ const ProtectedRoute = ({
     currentOrganization,
     error: orgError,
   } = useOrganization();
+  const { canAny, loading: capabilitiesLoading } = useCapabilities();
 
-  if (loading || orgLoading) {
+  // Only block on capability loading for routes that actually gate on them,
+  // so existing routes keep their current timing.
+  if (loading || orgLoading || (requireAny && capabilitiesLoading)) {
     return <PageLoader message="Authenticating..." />;
   }
 
@@ -112,6 +133,10 @@ const ProtectedRoute = ({
 
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireAny && !canAny(requireAny)) {
+    return <Navigate to={fallbackTo} replace />;
   }
 
   return <>{children}</>;
@@ -218,12 +243,65 @@ const App = () => (
                   }
                 />
 
-                {/* Members module routes (Coming Soon) */}
+                {/* Members module. Open to any authenticated user, like
+                    /budget: the page itself renders the full directory for
+                    admins and a self-only view for everyone else. */}
                 <Route
                   path="/members"
                   element={
-                    <ProtectedRoute adminOnly>
+                    <ProtectedRoute>
                       <MembersDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/members/new"
+                  element={
+                    <ProtectedRoute requireAny={["members.write"]}>
+                      <MemberRegistrationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/members/import"
+                  element={
+                    <ProtectedRoute requireAny={["members.import", "members.write"]}>
+                      <MemberImportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* Declared AFTER the literal /members/* paths so they win
+                    over the :memberId parameter. */}
+                <Route
+                  path="/members/:memberId"
+                  element={
+                    <ProtectedRoute requireAny={["members.read"]}>
+                      <MemberProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Kids Ministry leader view: live board, classrooms,
+                    volunteers and reports. Requires kids.read, which a
+                    kids_volunteer deliberately does NOT hold — a volunteer at
+                    the desk can check children in but cannot browse the
+                    ministry's records. */}
+                <Route
+                  path="/kids"
+                  element={
+                    <ProtectedRoute requireAny={["kids.read", "kids.write"]}>
+                      <KidsDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Kids check-in station — full-screen kiosk, deliberately
+                    OUTSIDE DashboardLayout so there is no nav to wander into. */}
+                <Route
+                  path="/checkin"
+                  element={
+                    <ProtectedRoute requireAny={["kids.checkin", "kids.write"]}>
+                      <CheckInStationPage />
                     </ProtectedRoute>
                   }
                 />

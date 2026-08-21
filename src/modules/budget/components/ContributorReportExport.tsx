@@ -14,6 +14,7 @@ import { Download, Printer, FileText } from "lucide-react";
 import type { ExpenseRequestWithRelations } from "../types";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { escapeCSVValue, downloadFile } from "@/shared/lib/exportPrimitives";
 
 interface ContributorReportExportProps {
   expenses: ExpenseRequestWithRelations[];
@@ -232,19 +233,17 @@ export const ContributorReportExport = ({
       ]),
     ];
 
-    const csvContent = rows.map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `My_Expenses_${new Date().toISOString().split("T")[0]}.csv`
+    // Each field must be escaped individually — a bare row.join(",") corrupts
+    // any expense title or ministry name containing a comma.
+    const csvContent = rows
+      .map((row) => row.map(escapeCSVValue).join(","))
+      .join("\r\n");
+
+    downloadFile(
+      csvContent,
+      `My_Expenses_${new Date().toISOString().split("T")[0]}.csv`,
+      "text/csv"
     );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const printReport = () => {

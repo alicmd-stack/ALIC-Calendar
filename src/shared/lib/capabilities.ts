@@ -1,0 +1,137 @@
+/**
+ * Capability resolution for the Members and Kids Ministry modules.
+ *
+ * WHY THIS EXISTS
+ * ---------------
+ * `public.user_organizations` has UNIQUE(user_id, organization_id), so a user
+ * holds exactly ONE `app_role` per branch. Adding kids roles to that enum
+ * would take away someone's `treasury` or `contributor`. Module permissions
+ * are therefore additive rows in `church.module_grants`, resolved here into a
+ * flat capability set the UI can gate on.
+ *
+ * THIS IS NOT THE SECURITY BOUNDARY.
+ * Hiding a button is not authorization. Every capability below has a matching
+ * RLS policy or SECURITY DEFINER RPC check in the database, and that is what
+ * actually enforces access. This module exists so the UI does not offer
+ * actions that will fail, and so route gating is testable.
+ *
+ * Everything here is pure — no React, no Supabase — so it runs in the node
+ * test environment.
+ */
+
+/** Additive per-organization module roles (mirrors `church.module_permission`). */
+export const MINISTRY_ROLES = [
+  "members_admin",
+  "members_viewer",
+  "members_import",
+  "kids_admin",
+  "kids_volunteer",
+  "leadership_viewer",
+] as const;
+
+export type MinistryRole = (typeof MINISTRY_ROLES)[number];
+
+export const CAPABILITIES = [
+  "members.read",
+  "members.write",
+  "members.import",
+  "kids.read",
+  "kids.write",
+  "kids.checkin",
+  "kids.override",
+] as const;
+
+export type Capability = (typeof CAPABILITIES)[number];
+
+/** One additive grant, always scoped to a single organization. */
+export interface ModuleGrant {
+  organization_id: string;
+  role: MinistryRole;
+}
+
+/**
+ * What each role grants, before the admin override.
+ *
+ * `kids_volunteer` deliberately does NOT get `kids.read`: a volunteer holding
+ * the station tablet can check children in and out, but cannot browse the
+ * member directory or the kids admin screens. `kids.override` is likewise
+ * withheld — authorizing a checkout override is a `kids_admin` act, which is
+ * what makes the two-person rule meaningful.
+ */
+const ROLE_CAPABILITIES: Record<MinistryRole, readonly Capability[]> = {
+  members_admin: ["members.read", "members.write"],
+  members_viewer: ["members.read"],
+  members_import: ["members.read", "members.import"],
+  kids_admin: ["kids.read", "kids.write", "kids.checkin", "kids.override", "members.read"],
+  kids_volunteer: ["kids.checkin"],
+  leadership_viewer: ["members.read", "kids.read"],
+};
+
+export interface ResolveCapabilitiesInput {
+  /**
+   * Whether the user is an admin **of the organization being resolved**.
+   *
+   * Note: `useAuth().isAdmin` is currently computed across ALL of the user's
+   * organizations without filtering, so it is not safe to pass directly.
+   * Use the org-scoped value.
+   */
+  isOrgAdmin: boolean;
+  /** All of the user's grants, across every organization. */
+  grants: ModuleGrant[];
+  /** The organization currently in context. Grants for other orgs are ignored. */
+  organizationId: string | null | undefined;
+}
+
+/**
+ * Resolve the capability set for one organization.
+ *
+ * Grants belonging to other organizations are discarded, so a kids_admin at
+ * Silver Spring gets nothing at Springfield.
+ */
+export function resolveCapabilities({
+  isOrgAdmin,
+  grants,
+  organizationId,
+}: ResolveCapabilitiesInput): Set<Capability> {
+  // With no organization in context there is nothing to authorize against.
+  if (!organizationId) return new Set();
+
+  // Product decision: an org admin implies every module capability, including
+  // access to children's sensitive data. Access is still written to
+  // church.check_in_audit, so it remains traceable after the fact.
+  if (isOrgAdmin) return new Set(CAPABILITIES);
+
+  const resolved = new Set<Capability>();
+  for (const grant of grants) {
+    if (grant.organization_id !== organizationId) continue;
+    const caps = ROLE_CAPABILITIES[grant.role];
+    // Ignore unknown roles rather than throwing — a role added to the database
+    // ahead of a frontend deploy must not blank the UI.
+    if (!caps) continue;
+    for (const cap of caps) resolved.add(cap);
+  }
+  return resolved;
+}
+
+/** Does this capability set include `capability`? */
+export function can(capabilities: Set<Capability>, capability: Capability): boolean {
+  return capabilities.has(capability);
+}
+
+/** Does this capability set include at least one of `required`? */
+export function canAny(
+  capabilities: Set<Capability>,
+  required: readonly Capability[]
+): boolean {
+  // An empty requirement means "no capability needed", not "denied".
+  if (required.length === 0) return true;
+  return required.some((capability) => capabilities.has(capability));
+}
+
+/** Does this capability set include every one of `required`? */
+export function canAll(
+  capabilities: Set<Capability>,
+  required: readonly Capability[]
+): boolean {
+  return required.every((capability) => capabilities.has(capability));
+}

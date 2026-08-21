@@ -3,7 +3,12 @@ project_id = "oyewjuvpnavwhmdiqfve"
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "graphql_public", "budget"]
+# Must stay in step with the hosted project's Settings -> API -> Exposed schemas.
+# Production currently exposes: public, graphql_public, inventory, budget.
+# `inventory` belongs to the separate inventory app and was missing from this
+# file; `church` must be ADDED in the Dashboard after the migrations apply, or
+# every supabase.schema("church") call returns 404 PGRST106.
+schemas = ["public", "graphql_public", "inventory", "budget", "church"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
@@ -80,4 +85,9 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-connect-message]
+verify_jwt = false
+
+# Drains church.notification_log. Invoked by pg_cron via pg_net, which sends
+# the service-role key as a bearer token rather than a user JWT.
+[functions.send-kids-notification]
 verify_jwt = false

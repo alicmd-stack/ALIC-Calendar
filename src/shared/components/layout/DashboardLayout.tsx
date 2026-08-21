@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/popover";
 import { Input } from "@/shared/components/ui/input";
 import { useSearch } from "@/shared/contexts/SearchContext";
+import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import { getLogoSrc } from "@/shared/constants/branding";
 import {
   LogOut,
@@ -33,6 +34,9 @@ import {
   Package,
   DollarSign,
   UserCheck,
+  UsersRound,
+  ScanLine,
+  Baby,
   Building,
   X,
   LayoutDashboard,
@@ -65,6 +69,10 @@ interface NavSection {
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
+  const { can } = useCapabilities();
+  const canViewMembers = can("members.read");
+  const canViewKids = can("kids.read") || can("kids.write");
+  const canRunStation = can("kids.checkin");
   const { currentOrganization } = useOrganization();
   const {
     searchQuery,
@@ -218,23 +226,52 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           },
         ]
       : []),
-    ...(isAdmin
+    // Shown to anyone who can see the ministry's records (kids_admin or
+    // leadership_viewer), not only org admins. A kids_volunteer holds
+    // kids.checkin but not kids.read, so they get the station and no dashboard.
+    ...(canViewKids || canRunStation
       ? [
           {
-            title: "Coming Soon",
+            title: "Kids Ministry",
             items: [
-              {
-                name: "Members",
-                href: "/members",
-                icon: UserCheck,
-                description: "Church membership",
-                comingSoon: true,
-                adminOnly: true,
-              },
+              ...(canViewKids
+                ? [
+                    {
+                      name: "Kids Ministry",
+                      href: "/kids",
+                      icon: Baby,
+                      description: "Live board, classrooms and reports",
+                    },
+                  ]
+                : []),
+              ...(canRunStation
+                ? [
+                    {
+                      name: "Check-In Station",
+                      href: "/checkin",
+                      icon: ScanLine,
+                      description: "Open the kiosk",
+                    },
+                  ]
+                : []),
             ],
           },
         ]
       : []),
+    // Visible to everyone, like Budget. The page renders the full directory
+    // for admins and a self-only view for everyone else; RLS enforces the same
+    // split server-side, so the label is a hint rather than the control.
+    {
+      title: "People",
+      items: [
+        {
+          name: "Members",
+          href: "/members",
+          icon: UsersRound,
+          description: isAdmin ? "Church directory" : "My information",
+        },
+      ],
+    },
   ];
 
   // Flatten all navigation items for page title lookup
