@@ -5,17 +5,12 @@
 
 import type { ExpenseRequestWithRelations, MinistryBudgetSummary } from "../types";
 import { EXPENSE_STATUS_CONFIG, REIMBURSEMENT_TYPE_LABELS } from "../types";
-
-// CSV Export Helper
-const escapeCSVValue = (value: string | number | null | undefined): string => {
-  if (value === null || value === undefined) return "";
-  const stringValue = String(value);
-  // Escape quotes and wrap in quotes if contains comma, quote, or newline
-  if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
-    return `"${stringValue.replace(/"/g, '""')}"`;
-  }
-  return stringValue;
-};
+import {
+  escapeCSVValue,
+  escapeHTML,
+  getDateStamp,
+  downloadFile,
+} from "@/shared/lib/exportPrimitives";
 
 const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat("en-US", {
@@ -443,30 +438,6 @@ export const generatePrintableExpenseReport = (
 // =====================================================
 // Helper Functions
 // =====================================================
-
-const getDateStamp = (): string => {
-  const now = new Date();
-  return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-};
-
-const downloadFile = (content: string, filename: string, mimeType: string): void => {
-  const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.visibility = "hidden";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
-
-const escapeHTML = (str: string): string => {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-};
 
 const generateExcelXML = (
   headers: string[],

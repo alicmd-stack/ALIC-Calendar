@@ -17,6 +17,7 @@ import type {
 } from "../types";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { escapeCSVValue, downloadFile } from "@/shared/lib/exportPrimitives";
 
 interface BudgetReportExportProps {
   budgetSummary: OrganizationBudgetSummary;
@@ -220,21 +221,19 @@ export const BudgetReportExport = ({
       ]),
     ];
 
-    const csvContent = rows.map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
+    // Each field must be escaped individually — a bare row.join(",") corrupts
+    // any ministry name or label containing a comma.
+    const csvContent = rows
+      .map((row) => row.map(escapeCSVValue).join(","))
+      .join("\r\n");
+
+    downloadFile(
+      csvContent,
       `Budget_Report_${budgetSummary.fiscal_year_name.replace(/\s+/g, "_")}_${
         new Date().toISOString().split("T")[0]
-      }.csv`
+      }.csv`,
+      "text/csv"
     );
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   };
 
   const printReport = () => {

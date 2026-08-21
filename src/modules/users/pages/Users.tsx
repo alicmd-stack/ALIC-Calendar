@@ -14,12 +14,77 @@ import { useToast } from "@/shared/hooks/use-toast";
 import { UserPlus, Shield, UserCog, Pencil, Trash2 } from "lucide-react";
 import { useOrganization } from "@/shared/contexts/OrganizationContext";
 
+/**
+ * Every public.app_role tier, most privileged first.
+ *
+ * This screen used to offer two of them, which is why branch roles were being
+ * set by hand in the Supabase table editor: treasury and finance existed in the
+ * enum with nowhere in the app to choose them, and 'member' did not exist yet.
+ *
+ * app_role is EXCLUSIVE — public.user_organizations has
+ * UNIQUE(user_id, organization_id) — so picking one here replaces whatever the
+ * person held in this branch. Anything additive (kids volunteer, members admin)
+ * is a module grant instead, set from Members -> Manage access, and is not
+ * affected by anything on this screen.
+ */
+const APP_ROLES = [
+  {
+    value: "admin",
+    label: "Admin",
+    description: "Everything in this branch, including children's medical data.",
+  },
+  {
+    value: "treasury",
+    label: "Treasury",
+    description: "Approves expenses at the treasury stage.",
+  },
+  {
+    value: "finance",
+    label: "Finance",
+    description: "Approves expenses at the finance stage.",
+  },
+  {
+    value: "contributor",
+    label: "Contributor",
+    description: "Staff baseline: raise requests, see the calendar and the budget.",
+  },
+  {
+    value: "member",
+    label: "Member",
+    description:
+      "A login and nothing else. Sees only their own record \u2014 no calendar, no budget, no inventory, no directory.",
+  },
+] as const;
+
+const roleLabel = (role?: string | null) =>
+  APP_ROLES.find((r) => r.value === role)?.label ?? "Member";
+
+/**
+ * Reads the tier straight off the row.
+ *
+ * The two badges this replaces asked `some(r => r.role === 'admin')` and
+ * printed "Contributor" for everything else, so treasury, finance and member
+ * all displayed as Contributor.
+ */
+const RoleBadge = ({
+  role,
+  className,
+}: {
+  role?: string | null;
+  className?: string;
+}) => (
+  <Badge variant={role === "admin" ? "default" : "secondary"} className={className}>
+    {role === "admin" && <Shield className="h-3 w-3 mr-1" />}
+    {roleLabel(role)}
+  </Badge>
+);
+
 const Users = () => {
   const { toast } = useToast();
   const { currentOrganization } = useOrganization();
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
-  const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", ministry_name: "", role: "contributor" });
+  const [newUser, setNewUser] = useState({ email: "", password: "", full_name: "", ministry_name: "", role: "member" });
   const [editingUser, setEditingUser] = useState<{ id: string; email: string; full_name: string; phone_number?: string; ministry_name?: string; role: string } | null>(null);
 
   const { data: users, refetch: refetchUsers, error: usersError } = useQuery({
@@ -103,7 +168,7 @@ const Users = () => {
 
       toast({ title: "User created successfully" });
       setIsAddUserOpen(false);
-      setNewUser({ email: "", password: "", full_name: "", ministry_name: "", role: "contributor" });
+      setNewUser({ email: "", password: "", full_name: "", ministry_name: "", role: "member" });
       refetchUsers();
     } catch (error) {
       toast({
@@ -134,7 +199,7 @@ const Users = () => {
       // Update role in user_organizations table
       const { error: roleError } = await supabase
         .from("user_organizations")
-        .update({ role: editingUser.role as "admin" | "contributor" })
+        .update({ role: editingUser.role as (typeof APP_ROLES)[number]["value"] })
         .eq("user_id", editingUser.id)
         .eq("organization_id", currentOrganization.id);
 
@@ -203,7 +268,10 @@ const Users = () => {
       full_name: user.full_name,
       phone_number: user.phone_number || "",
       ministry_name: user.ministry_name || "",
-      role: user.user_roles && user.user_roles.some(r => r.role === 'admin') ? "admin" : "contributor",
+      // The real tier, not "admin or else contributor". Collapsing it here meant
+      // opening this dialog on a treasury user and pressing Update silently
+      // demoted them to contributor.
+      role: user.user_roles?.[0]?.role ?? "contributor",
     });
     setIsEditUserOpen(true);
   };
@@ -283,8 +351,11 @@ const Users = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="contributor">Contributor</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          {APP_ROLES.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {r.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -344,8 +415,11 @@ const Users = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="contributor">Contributor</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          {APP_ROLES.map((r) => (
+                            <SelectItem key={r.value} value={r.value}>
+                              {r.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -375,14 +449,10 @@ const Users = () => {
                             <p className="font-medium text-sm truncate">{user.full_name}</p>
                             <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
                           </div>
-                          {user.user_roles && user.user_roles.some(r => r.role === 'admin') ? (
-                            <Badge variant="default" className="text-xs shrink-0">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Admin
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs shrink-0">Contributor</Badge>
-                          )}
+                          <RoleBadge
+                            role={user.user_roles?.[0]?.role}
+                            className="text-xs shrink-0"
+                          />
                         </div>
                         {(user.phone_number || user.ministry_name) && (
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -435,14 +505,7 @@ const Users = () => {
                             <TableCell>{user.phone_number || "-"}</TableCell>
                             <TableCell>{user.ministry_name || "-"}</TableCell>
                             <TableCell>
-                              {user.user_roles && user.user_roles.some(r => r.role === 'admin') ? (
-                                <Badge variant="default">
-                                  <Shield className="h-3 w-3 mr-1" />
-                                  Admin
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary">Contributor</Badge>
-                              )}
+                              <RoleBadge role={user.user_roles?.[0]?.role} />
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-2">

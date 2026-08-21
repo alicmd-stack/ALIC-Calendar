@@ -52,6 +52,25 @@ const authSchema = z.object({
     .optional(),
 });
 
+/**
+ * Self-registration, off.
+ *
+ * The Sign Up tab created a real account in the VA branch for anyone on the
+ * internet who confirmed an email. Every ALIC account that should exist is
+ * created deliberately — by an administrator through the create-user function,
+ * or by the Children's Ministry invite flow that handle_new_user redeems — so
+ * there is nothing legitimate for a stranger to sign up to.
+ *
+ * THIS FLAG IS THE UI ONLY. supabase.auth.signUp still answers over the network;
+ * turn self-registration off in Supabase Auth settings as well. What makes that
+ * survivable meanwhile is 20260321001500/1600: a signup that does get through
+ * lands on the 'member' tier and reaches no internal tool.
+ *
+ * The form below is kept rather than deleted because a member portal would want
+ * it back. Flip this to true to restore it.
+ */
+const PUBLIC_SIGNUP_ENABLED = false;
+
 const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -113,6 +132,17 @@ const Auth = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The form is not rendered when self-registration is off, so this only
+    // catches a stale tab left open across a deploy.
+    if (!PUBLIC_SIGNUP_ENABLED) {
+      toast({
+        title: "Accounts are created by an administrator",
+        description:
+          "Ask your ministry lead or the church office to set up your access.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
 
     try {
@@ -305,20 +335,24 @@ const Auth = () => {
                 onValueChange={setActiveTab}
                 className="w-full"
               >
-                <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                  <TabsTrigger
-                    value="signin"
-                    className="text-sm font-medium rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
-                  >
-                    Sign In
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="signup"
-                    className="text-sm font-medium rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
-                  >
-                    Sign Up
-                  </TabsTrigger>
-                </TabsList>
+                {/* With self-registration off there is only one tab, and a
+                    tab strip of one is just a heading that looks clickable. */}
+                {PUBLIC_SIGNUP_ENABLED && (
+                  <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                    <TabsTrigger
+                      value="signin"
+                      className="text-sm font-medium rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
+                    >
+                      Sign In
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="signup"
+                      className="text-sm font-medium rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 data-[state=active]:shadow-sm transition-all duration-200"
+                    >
+                      Sign Up
+                    </TabsTrigger>
+                  </TabsList>
+                )}
 
                 <TabsContent value="signin" className="mt-0 space-y-6">
                   <form onSubmit={handleSignIn} className="space-y-5">
@@ -420,6 +454,7 @@ const Auth = () => {
                   </form>
                 </TabsContent>
 
+                {PUBLIC_SIGNUP_ENABLED && (
                 <TabsContent value="signup" className="mt-0 space-y-6">
                   <form onSubmit={handleSignUp} className="space-y-5">
                     <div className="space-y-4">
@@ -567,6 +602,7 @@ const Auth = () => {
                     </LoadingButton>
                   </form>
                 </TabsContent>
+                )}
               </Tabs>
             </CardContent>
           </Card>

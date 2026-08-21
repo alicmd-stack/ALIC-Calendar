@@ -18,6 +18,8 @@ import {
   useOrganization,
 } from "@/shared/contexts";
 import { SearchProvider } from "@/shared/contexts/SearchContext";
+import { useCapabilities } from "@/shared/hooks/useCapabilities";
+import type { Capability } from "@/shared/lib/capabilities";
 
 // Module page imports
 import {
@@ -36,7 +38,14 @@ import { Rooms } from "@/modules/rooms";
 import { Users } from "@/modules/users";
 import { InventoryDashboard } from "@/modules/inventory";
 import { BudgetDashboard } from "@/modules/budget";
-import { MembersDashboard } from "@/modules/members";
+import {
+  MembersDashboard,
+  MemberRegistrationPage,
+  MemberProfilePage,
+  MemberImportPage,
+  HouseholdsPage,
+} from "@/modules/members";
+import { CheckInStationPage, KidsDashboardPage } from "@/modules/kids";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -59,26 +68,69 @@ function ScrollToTop() {
   return null;
 }
 
+import { usePasswordChangeRequired } from "@/shared/hooks/usePasswordChangeRequired";
+import { ForcePasswordChange } from "@/shared/components/ForcePasswordChange";
+
 const ProtectedRoute = ({
   children,
   adminOnly = false,
+  staffOnly = false,
+  requireAny,
+  fallbackTo = "/dashboard",
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
+  /**
+   * Require a staff app_role tier — admin, contributor, treasury or finance.
+   *
+   * Everything internal carries this. Without it these routes were gated on
+   * authentication alone, so anyone holding the 'member' floor tier could open
+   * the budget, the inventory and the approval agenda. The RESTRICTIVE policies
+   * in 20260321001600 are what actually deny the data; this stops the app
+   * rendering a shell full of empty tables on top of them.
+   */
+  staffOnly?: boolean;
+  /**
+   * Module capabilities, any one of which admits the user. Omit for routes
+   * gated only by authentication (or by `adminOnly`). Existing call sites are
+   * unaffected.
+   */
+  requireAny?: Capability[];
+  /** Where to send an authenticated user who lacks the capability. */
+  fallbackTo?: string;
 }) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isStaff } = useAuth();
   const {
     loading: orgLoading,
     currentOrganization,
     error: orgError,
   } = useOrganization();
+  const { canAny, loading: capabilitiesLoading } = useCapabilities();
+  const {
+    required: mustChangePassword,
+    loading: passwordCheckLoading,
+    recheck: recheckPassword,
+  } = usePasswordChangeRequired();
 
-  if (loading || orgLoading) {
+  // Only block on capability loading for routes that actually gate on them,
+  // so existing routes keep their current timing.
+  if (loading || orgLoading || (requireAny && capabilitiesLoading)) {
     return <PageLoader message="Authenticating..." />;
   }
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Before ANY other check, including the organization ones below.
+  //
+  // Someone handed a temporary password must replace it before they reach the
+  // app, and they must not be shown "No Organization Found" first — that reads
+  // as a broken account and sends them to an administrator instead of to the
+  // one screen that would fix it. Placed inside ProtectedRoute so it covers
+  // every authenticated route at once, with no URL to skip past.
+  if (!passwordCheckLoading && mustChangePassword) {
+    return <ForcePasswordChange onChanged={() => void recheckPassword()} />;
   }
 
   if (orgError) {
@@ -110,8 +162,20 @@ const ProtectedRoute = ({
     );
   }
 
+  // Before adminOnly and requireAny. Not to "/" — /members already renders a
+  // self-only "My Information" view for anyone without members.read, so that is
+  // a member's real home in this app, and it keeps them signed in rather than
+  // dumping them back on the public site.
+  if (staffOnly && !isStaff) {
+    return <Navigate to="/members" replace />;
+  }
+
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  if (requireAny && !canAny(requireAny)) {
+    return <Navigate to={fallbackTo} replace />;
   }
 
   return <>{children}</>;
@@ -152,27 +216,27 @@ const App = () => (
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <Dashboard />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Admin module routes - accessible to all authenticated users */}
+                {/* Admin module routes - staff tiers only */}
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <Admin />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Event Review route - accessible to all authenticated users */}
+                {/* Event Review route - staff tiers only */}
                 <Route
                   path="/event-reviews"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <Admin />
                     </ProtectedRoute>
                   }
@@ -198,32 +262,96 @@ const App = () => (
                   }
                 />
 
-                {/* Inventory module routes (Coming Soon) - accessible to all authenticated users */}
+                {/* Inventory module routes (Coming Soon) - staff tiers only */}
                 <Route
                   path="/inventory"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <InventoryDashboard />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Budget module routes (Coming Soon) - accessible to all authenticated users */}
+                {/* Budget module routes (Coming Soon) - staff tiers only */}
                 <Route
                   path="/budget"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <BudgetDashboard />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Members module routes (Coming Soon) */}
+                {/* Members module. Deliberately NOT staffOnly — this is the
+                    one internal route a 'member' may open, because the page
+                    renders the full directory for admins and grant holders and
+                    a self-only "My Information" view for everyone else. It is
+                    where staffOnly redirects a member to. */}
                 <Route
                   path="/members"
                   element={
-                    <ProtectedRoute adminOnly>
+                    <ProtectedRoute>
                       <MembersDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/members/new"
+                  element={
+                    <ProtectedRoute requireAny={["members.write"]}>
+                      <MemberRegistrationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/members/import"
+                  element={
+                    <ProtectedRoute requireAny={["members.import", "members.write"]}>
+                      <MemberImportPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/members/households"
+                  element={
+                    <ProtectedRoute requireAny={["members.read"]}>
+                      <HouseholdsPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Declared AFTER the literal /members/* paths so they win
+                    over the :memberId parameter. */}
+                <Route
+                  path="/members/:memberId"
+                  element={
+                    <ProtectedRoute requireAny={["members.read"]}>
+                      <MemberProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Kids Ministry leader view: live board, classrooms,
+                    volunteers and reports. Requires kids.read, which a
+                    kids_volunteer deliberately does NOT hold — a volunteer at
+                    the desk can check children in but cannot browse the
+                    ministry's records. */}
+                <Route
+                  path="/kids"
+                  element={
+                    <ProtectedRoute requireAny={["kids.read", "kids.write"]}>
+                      <KidsDashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Kids check-in station — full-screen kiosk, deliberately
+                    OUTSIDE DashboardLayout so there is no nav to wander into. */}
+                <Route
+                  path="/checkin"
+                  element={
+                    <ProtectedRoute requireAny={["kids.checkin", "kids.write"]}>
+                      <CheckInStationPage />
                     </ProtectedRoute>
                   }
                 />

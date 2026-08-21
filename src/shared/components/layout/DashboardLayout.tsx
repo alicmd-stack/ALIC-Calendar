@@ -18,6 +18,7 @@ import {
 } from "@/shared/components/ui/popover";
 import { Input } from "@/shared/components/ui/input";
 import { useSearch } from "@/shared/contexts/SearchContext";
+import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import { getLogoSrc } from "@/shared/constants/branding";
 import {
   LogOut,
@@ -33,6 +34,9 @@ import {
   Package,
   DollarSign,
   UserCheck,
+  UsersRound,
+  ScanLine,
+  Baby,
   Building,
   X,
   LayoutDashboard,
@@ -64,7 +68,11 @@ interface NavSection {
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isStaff, signOut } = useAuth();
+  const { can } = useCapabilities();
+  const canViewMembers = can("members.read");
+  const canViewKids = can("kids.read") || can("kids.write");
+  const canRunStation = can("kids.checkin");
   const { currentOrganization } = useOrganization();
   const {
     searchQuery,
@@ -218,27 +226,82 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           },
         ]
       : []),
-    ...(isAdmin
+    // Shown to anyone who can see the ministry's records (kids_admin or
+    // leadership_viewer), not only org admins. A kids_volunteer holds
+    // kids.checkin but not kids.read, so they get the station and no dashboard.
+    ...(canViewKids || canRunStation
       ? [
           {
-            title: "Coming Soon",
+            title: "Kids Ministry",
             items: [
-              {
-                name: "Members",
-                href: "/members",
-                icon: UserCheck,
-                description: "Church membership",
-                comingSoon: true,
-                adminOnly: true,
-              },
+              ...(canViewKids
+                ? [
+                    {
+                      name: "Kids Ministry",
+                      href: "/kids",
+                      icon: Baby,
+                      description: "Live board, classrooms and reports",
+                    },
+                  ]
+                : []),
+              ...(canRunStation
+                ? [
+                    {
+                      name: "Check-In Station",
+                      href: "/checkin",
+                      icon: ScanLine,
+                      description: "Open the kiosk",
+                    },
+                  ]
+                : []),
             ],
           },
         ]
       : []),
+    // Visible to everyone, like Budget. The page renders the full directory
+    // for admins and a self-only view for everyone else; RLS enforces the same
+    // split server-side, so the label is a hint rather than the control.
+    {
+      title: "People",
+      items: [
+        {
+          name: "Members",
+          href: "/members",
+          icon: UsersRound,
+          description: isAdmin ? "Church directory" : "My information",
+        },
+        ...(canViewMembers
+          ? [
+              {
+                name: "Families",
+                href: "/members/households",
+                icon: Home,
+                description: "Households and who is in them",
+              },
+            ]
+          : []),
+      ],
+    },
   ];
 
+  /**
+   * Sections a 'member' has no business seeing.
+   *
+   * ProtectedRoute now sends a non-staff tier straight back to /members from
+   * every route in these four, so leaving the links in the sidebar would just
+   * be a row of trapdoors. "People" stays because /members renders their own
+   * record, and "Kids Ministry" stays because it is gated on module grants,
+   * which are additive and independent of the tier.
+   */
+  const STAFF_ONLY_SECTIONS = ["Calendar", "Financial", "Inventory", "Administration"];
+  const visibleSections = isStaff
+    ? navigationSections
+    : navigationSections.filter(
+        (section) => !STAFF_ONLY_SECTIONS.includes(section.title)
+      );
+
   // Flatten all navigation items for page title lookup
-  const allNavItems = navigationSections.flatMap((section) => section.items);
+  const allNavItems = visibleSections.flatMap((section) => section.items);
 
   // Get user initials for avatar
   const getUserInitials = (name?: string) => {
@@ -275,7 +338,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Auto-expand section containing the current route
   useEffect(() => {
-    const matchingSection = navigationSections.find((section) =>
+    const matchingSection = visibleSections.find((section) =>
       section.items.some((item) => {
         if (item.href === "/dashboard") {
           return location.pathname === item.href;
@@ -292,7 +355,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         return new Set([...prev, matchingSection.title]);
       });
     }
-  }, [location.pathname, isAdmin]); // Re-run when isAdmin changes (auth loads)
+    // isStaff too: it also arrives asynchronously, and it decides which
+    // sections exist to match against.
+  }, [location.pathname, isAdmin, isStaff]);
 
   // Check if a path is active (exact match or starts with for nested routes)
   const isPathActive = (href: string) => {
@@ -421,10 +486,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {/* Standalone Dashboard link */}
-            <div className="mb-2">{renderNavItem(dashboardItem)}</div>
+            {/* /dashboard is staffOnly; a member would bounce off it. */}
+            {isStaff && (
+              <div className="mb-2">{renderNavItem(dashboardItem)}</div>
+            )}
 
             {/* Collapsible sections */}
-            {navigationSections.map((section) => {
+            {visibleSections.map((section) => {
               const isExpanded = expandedSections.has(section.title);
               return (
                 <div key={section.title} className="space-y-1">

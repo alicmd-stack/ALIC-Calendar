@@ -35,3 +35,9 @@ user-credentials.json
 # Supabase
 .branches
 .temp
+
+# Local database backups (may contain personal data - never commit)
+.backups/
+
+# Claude Code agent worktrees (scratch, never source)
+.claude/worktrees/

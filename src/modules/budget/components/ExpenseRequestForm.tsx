@@ -49,6 +49,7 @@ import {
   OTHER_JUSTIFICATION_VALUE,
   OTHER_JUSTIFICATION_LABEL,
 } from "../constants/ministryJustifications";
+import type { Json } from "@/integrations/supabase/types";
 
 // Form validation schema
 const expenseFormSchema = z.object({
@@ -478,7 +479,7 @@ export function ExpenseRequestForm({
             recipient_name: values.is_different_recipient ? values.recipient_name || null : null,
             recipient_phone: values.is_different_recipient ? values.recipient_phone || null : null,
             recipient_email: values.is_different_recipient ? values.recipient_email || null : null,
-            attachments: attachments as unknown as Record<string, unknown>[],
+            attachments: attachments as unknown as Json,
           },
           adminId: user.id,
           adminName: profile?.full_name || "Unknown",
@@ -507,7 +508,7 @@ export function ExpenseRequestForm({
             requester_name: profile?.full_name || "Unknown",
             requester_phone: profile?.phone_number || null,
             requester_email: profile?.email || null,
-            attachments: attachments as unknown as Record<string, unknown>[],
+            attachments: attachments as unknown as Json,
           },
         });
 
@@ -547,7 +548,7 @@ export function ExpenseRequestForm({
             requester_phone: profile?.phone_number || null,
             requester_email: profile?.email || null,
             status: "draft",
-            attachments: attachments as unknown as Record<string, unknown>[],
+            attachments: attachments as unknown as Json,
           },
           actorId: user.id,
           actorName: profile?.full_name || "Unknown",

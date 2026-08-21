@@ -1,0 +1,319 @@
+/**
+ * Attendance history and the exceptions review.
+ *
+ * The exceptions report is sourced from check_in_audit rather than from the
+ * check-in rows, because a DENIED attempt leaves no check-in row at all — a
+ * report built only from check-ins would show a clean sheet on exactly the
+ * Sundays that most need reviewing.
+ */
+
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/shared/components/ui/card";
+import { Button } from "@/shared/components/ui/button";
+import { Input } from "@/shared/components/ui/input";
+import { Label } from "@/shared/components/ui/label";
+import { Badge } from "@/shared/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/components/ui/table";
+import { Download, Loader2 } from "lucide-react";
+import {
+  toCSV,
+  withUTF8BOM,
+  downloadFile,
+  getDateStamp,
+} from "@/shared/lib/exportPrimitives";
+import { useKidsAttendance, useKidsExceptions } from "../hooks/useKidsLeader";
+
+/** Default window: the last 12 weeks, which is about a quarter of Sundays. */
+function defaultRange() {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(from.getDate() - 84);
+  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+}
+
+interface KidsReportsTabProps {
+  organizationId: string | undefined;
+}
+
+export function KidsReportsTab({ organizationId }: KidsReportsTabProps) {
+  const initial = defaultRange();
+  const [from, setFrom] = useState(initial.from);
+  const [to, setTo] = useState(initial.to);
+
+  const attendance = useKidsAttendance(organizationId, from, to);
+  const exceptions = useKidsExceptions(organizationId, from, to);
+
+  function exportAttendance() {
+    const rows = (attendance.data ?? []).map((row) => [
+      row.session_date,
+      row.service_label,
+      row.room_name,
+      row.age_band_name,
+      row.children,
+      row.first_time_visitors,
+      row.volunteers,
+      row.overrides,
+      row.not_checked_out,
+      row.avg_minutes,
+    ]);
+    downloadFile(
+      withUTF8BOM(
+        toCSV(
+          [
+            "Date",
+            "Service",
+            "Room",
+            "Age group",
+            "Children",
+            "First-time",
+            "Volunteers",
+            "Overrides",
+            "Not collected",
+            "Avg minutes",
+          ],
+          rows
+        )
+      ),
+      `kids-attendance-${getDateStamp()}.csv`,
+      "text/csv"
+    );
+  }
+
+  function exportExceptions() {
+    const rows = (exceptions.data ?? []).map((row) => [
+      row.occurred_at,
+      row.session_date,
+      row.action,
+      row.outcome,
+      row.child_name,
+      row.room_name,
+      row.actor_name,
+      row.reason,
+    ]);
+    downloadFile(
+      withUTF8BOM(
+        toCSV(
+          ["When", "Service date", "Event", "Outcome", "Child", "Room", "By", "Reason"],
+          rows
+        )
+      ),
+      `kids-exceptions-${getDateStamp()}.csv`,
+      "text/csv"
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">From</Label>
+          <Input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-40"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">To</Label>
+          <Input
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="w-40"
+          />
+        </div>
+      </div>
+
+      <Tabs defaultValue="attendance">
+        <TabsList>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="exceptions">
+            Exceptions
+            {(exceptions.data?.length ?? 0) > 0 && (
+              <Badge variant="secondary" className="ml-1.5">
+                {exceptions.data?.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="attendance" className="pt-4">
+          <Card>
+            <CardHeader className="flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle className="text-base">Attendance by Sunday</CardTitle>
+                <CardDescription>
+                  One row per room per service.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportAttendance}
+                disabled={!attendance.data?.length}
+              >
+                <Download className="h-4 w-4" />
+                CSV
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {attendance.isLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (attendance.data?.length ?? 0) === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  No check-ins in this period.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Room</TableHead>
+                        <TableHead className="text-right">Children</TableHead>
+                        <TableHead className="text-right">New</TableHead>
+                        <TableHead className="text-right">Volunteers</TableHead>
+                        <TableHead className="text-right">Overrides</TableHead>
+                        <TableHead className="text-right">Not collected</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {attendance.data?.map((row, index) => (
+                        <TableRow key={`${row.session_date}-${row.room_name}-${index}`}>
+                          <TableCell className="whitespace-nowrap">
+                            {row.session_date}
+                            <span className="block text-xs text-muted-foreground">
+                              {row.service_label}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {row.room_name}
+                            <span className="block text-xs text-muted-foreground">
+                              {row.age_band_name ?? "—"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {row.children}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {row.first_time_visitors}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {row.volunteers}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {row.overrides > 0 ? (
+                              <Badge variant="outline" className="border-amber-400">
+                                {row.overrides}
+                              </Badge>
+                            ) : (
+                              0
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {row.not_checked_out > 0 ? (
+                              <Badge variant="destructive">{row.not_checked_out}</Badge>
+                            ) : (
+                              0
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="exceptions" className="pt-4">
+          <Card>
+            <CardHeader className="flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle className="text-base">Exceptions</CardTitle>
+                <CardDescription>
+                  Overrides, blocked pickups and failed codes — including
+                  attempts that were refused.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportExceptions}
+                disabled={!exceptions.data?.length}
+              >
+                <Download className="h-4 w-4" />
+                CSV
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {exceptions.isLoading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (exceptions.data?.length ?? 0) === 0 ? (
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Nothing to review in this period.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {exceptions.data?.map((row, index) => (
+                    <div
+                      key={`${row.occurred_at}-${index}`}
+                      className="rounded-md border p-3 space-y-1"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant={
+                            row.outcome === "denied" ? "destructive" : "outline"
+                          }
+                        >
+                          {row.action.replace(/_/g, " ")}
+                        </Badge>
+                        <span className="text-sm font-medium">{row.child_name}</span>
+                        {row.room_name && (
+                          <span className="text-xs text-muted-foreground">
+                            {row.room_name}
+                          </span>
+                        )}
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {new Date(row.occurred_at).toLocaleString()}
+                        </span>
+                      </div>
+                      {row.reason && (
+                        <p className="text-sm text-muted-foreground">{row.reason}</p>
+                      )}
+                      {row.actor_name && (
+                        <p className="text-xs text-muted-foreground">
+                          by {row.actor_name}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

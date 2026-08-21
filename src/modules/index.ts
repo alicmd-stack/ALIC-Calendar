@@ -33,3 +33,6 @@ export * as budget from "./budget";
 
 // Members Module - Church membership (Coming Soon)
 export * as members from "./members";
+
+// Kids Module - Secure Sunday check-in / check-out
+export * as kids from "./kids";

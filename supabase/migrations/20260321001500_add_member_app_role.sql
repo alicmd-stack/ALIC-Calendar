@@ -1,0 +1,27 @@
+-- =====================================================
+-- A role below contributor: 'member'
+-- =====================================================
+--
+-- Alone in its own migration on purpose. ALTER TYPE ... ADD VALUE cannot be
+-- used in the same transaction that adds it, so the value has to be committed
+-- before 20260321001600 can reference it. Same reason as 20260321001000.
+--
+-- WHY IT IS NEEDED. public.app_role had no floor. Its lowest value,
+-- 'contributor', is what handle_new_user hands to every confirmed signup, and
+-- ~26 RLS policies grant on mere membership in user_organizations without ever
+-- looking at the role. The two together meant a stranger who used the Sign Up
+-- tab and confirmed their email landed inside the VA branch able to open
+-- /dashboard, /admin, /budget, /inventory, /members and /event-reviews, and to
+-- read budget.ministries, budget.fiscal_years and budget.budget_allocations
+-- through PostgREST.
+--
+-- 'member' is that floor: a real login with no claim on any internal tool.
+--
+-- NOTE ON WHERE ROLES BELONG. This is the ONE enum that may gain a value for
+-- this purpose, because app_role is a TIER and user_organizations has
+-- UNIQUE(user_id, organization_id) — a person holds exactly one per branch.
+-- Anything a person should be able to hold *alongside* their tier (kids
+-- volunteer, members admin, a ministry lead) is additive and belongs in
+-- church.module_permission instead. See 20260320000200 for that argument.
+
+ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'member';
