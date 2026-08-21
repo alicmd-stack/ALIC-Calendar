@@ -129,3 +129,12 @@ export interface StationIdentity {
 export const STATION_STORAGE_KEY = "alic-kids-station";
 /** Shift tokens are session-scoped: closing the tab ends the shift. */
 export const SHIFT_STORAGE_KEY = "alic-kids-shift";
+
+/** One row from church.station_register_visitor_family — one per child. */
+export interface VisitorFamilyRow {
+  household_id: string;
+  household_name: string;
+  guardian_person_id: string;
+  child_person_id: string;
+  child_display_name: string;
+}

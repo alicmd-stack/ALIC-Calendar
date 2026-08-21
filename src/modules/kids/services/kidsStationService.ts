@@ -18,6 +18,7 @@ import type {
   StationRoom,
   StationRosterRow,
   SafetyCard,
+  VisitorFamilyRow,
 } from "../types";
 import type { PickupCandidate } from "../utils/checkInMachine";
 
@@ -222,6 +223,40 @@ export const kidsStationService = {
       _reason: reason || null,
     });
     throwRpc(error);
+  },
+
+  /**
+   * Register a visiting family at the desk and hand back their children.
+   *
+   * The express lane. Everything needed to put a child safely in a room and
+   * nothing else — the full member record is a pastoral job for later, not
+   * something to type with a queue behind you.
+   *
+   * Throws `family_already_exists:<household name>` rather than writing, so a
+   * returning visitor becomes a search instead of a duplicate. A duplicate
+   * would split their pickup whitelist, which is how a parent gets refused at
+   * the classroom door for a child they just dropped off.
+   */
+  async registerVisitorFamily(
+    guardian: { first_name: string; last_name: string; phone: string; email?: string | null },
+    children: {
+      first_name: string;
+      last_name?: string | null;
+      birth_year: string;
+      birth_month?: string | null;
+      school_grade_id?: string | null;
+      allergies?: string | null;
+      allergy_severity?: string | null;
+    }[],
+    token?: string | null
+  ): Promise<VisitorFamilyRow[]> {
+    const { data, error } = await church().rpc("station_register_visitor_family", {
+      _guardian: guardian,
+      _children: children,
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as VisitorFamilyRow[];
   },
 
   /** Zero rows means denied — wrong, expired, locked or already used. */

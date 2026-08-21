@@ -196,20 +196,19 @@ describe("label document", () => {
     const html = buildChildLabel({ ...CHILD, allergyLabel: long });
     const bar = /<div class="allergy[^"]*"><span class="word">Allergy<\/span>([^<]*)</.exec(html);
     expect(bar).toBeTruthy();
-    expect(bar![1].length).toBeLessThanOrEqual(60);
+    expect(bar![1].length).toBeLessThanOrEqual(44);
     expect(bar![1].endsWith("\u2026")).toBe(true);
   });
 
   it("shrinks the allergy bar in tiers rather than truncating early", () => {
+    // Tiers at 18 and 30 characters. Sized so the tallest possible label still
+    // fits the 86mm card — see LABEL_PAGE_MM.
     expect(buildChildLabel({ ...CHILD, allergyLabel: "Dairy" })).toContain('class="allergy"');
     expect(
-      buildChildLabel({ ...CHILD, allergyLabel: "Peanuts, tree nuts and shellfish" })
+      buildChildLabel({ ...CHILD, allergyLabel: "Peanuts and tree nuts" })
     ).toContain('class="allergy long"');
     expect(
-      buildChildLabel({
-        ...CHILD,
-        allergyLabel: "Peanuts, tree nuts, shellfish, dairy, eggs and sesame seeds",
-      })
+      buildChildLabel({ ...CHILD, allergyLabel: "Peanuts, tree nuts and shellfish" })
     ).toContain('class="allergy verylong"');
   });
 

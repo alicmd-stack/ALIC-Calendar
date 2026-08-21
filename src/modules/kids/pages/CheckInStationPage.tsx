@@ -29,6 +29,7 @@ import {
   ShieldAlert,
   WifiOff,
   Baby,
+  UserPlus,
   Play,
   DoorOpen,
   HeartPulse,
@@ -47,6 +48,7 @@ import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { kidsStationService, kidsSessionService, printLabels, renderQrSvg } from "../services";
 import { StationRoomsPanel } from "../components/StationRoomsPanel";
+import { VisitorFamilyDialog } from "../components/VisitorFamilyDialog";
 import { errorMessage, isDbError } from "../services/rpcError";
 import { cn } from "@/lib/utils";
 
@@ -108,6 +110,8 @@ export default function CheckInStationPage() {
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideCheck, setOverrideCheck] = useState("");
   const [safety, setSafety] = useState<SafetyCard | null>(null);
+  /** The New Family desk: a visitor who is not in the directory yet. */
+  const [addingVisitor, setAddingVisitor] = useState(false);
   const [safetyFor, setSafetyFor] = useState<string | null>(null);
   const searchInput = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<number | null>(null);
@@ -728,9 +732,17 @@ export default function CheckInStationPage() {
                 </button>
               ))}
               {ctx.state === "searching" && households.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">
-                  No family found. Check the number, or try their name.
-                </p>
+                <div className="text-center py-8 space-y-3">
+                  <p className="text-muted-foreground">
+                    No family found. Check the number, or try their name.
+                  </p>
+                  {/* The dead end this replaces: a visiting family arrived and
+                      the desk had nowhere to go. */}
+                  <Button size="lg" disabled={!online} onClick={() => setAddingVisitor(true)}>
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    They are visiting — add them
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -742,6 +754,15 @@ export default function CheckInStationPage() {
                 onClick={() => dispatch({ type: "CHECKOUT_STARTED" })}
               >
                 Check out a child
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                disabled={!online}
+                onClick={() => setAddingVisitor(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                Visiting family
               </Button>
               <Button
                 variant="outline"
@@ -1440,6 +1461,40 @@ export default function CheckInStationPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* The New Family desk. Registering hands straight over to the normal
+          check-in flow — the family is in the directory now, so nothing about
+          the rest of the morning is special-cased. */}
+      <VisitorFamilyDialog
+        open={addingVisitor}
+        onOpenChange={setAddingVisitor}
+        initialQuery={ctx.query}
+        onRegistered={(rows) => {
+          setAddingVisitor(false);
+          if (rows.length === 0) return;
+          // A fresh attempt key: reusing the previous one makes
+          // check_in_children replay a finished batch.
+          attemptKey.current = attemptId();
+          dispatch({
+            type: "HOUSEHOLD_SELECTED",
+            household: {
+              household_id: rows[0].household_id,
+              household_name: rows[0].household_name,
+              masked_phone: null,
+              children: rows.map((r) => ({
+                child_person_id: r.child_person_id,
+                child_display_name: r.child_display_name,
+                // A visiting child has no school grade on file, so placement
+                // falls back to the age band derived from their birth year.
+                age_band_code: null,
+                grade_name: null,
+                already_checked_in: false,
+                needs_staff: false,
+              })),
+            },
+          });
+        }}
+      />
     </div>
   );
 }
@@ -1469,6 +1524,7 @@ function Centered({ title, children }: { title: string; children: React.ReactNod
     <div className="h-full flex flex-col items-center justify-center text-center">
       <h2 className="text-2xl font-semibold mb-4">{title}</h2>
       {children}
+
     </div>
   );
 }

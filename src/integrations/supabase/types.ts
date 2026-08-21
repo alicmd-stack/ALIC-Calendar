@@ -3306,6 +3306,7 @@ export type Database = {
           check_in_id: string
           child_name: string
           child_person_id: string
+          guardian_phone: string
           has_restriction: boolean
           pickup_code: string
           pickup_token: string
@@ -3443,6 +3444,10 @@ export type Database = {
         Returns: boolean
       }
       hash_pickup: { Args: { _value: string }; Returns: string }
+      household_contact_phone: {
+        Args: { _household_id: string }
+        Returns: string
+      }
       household_summaries: {
         Args: { _organization_id: string }
         Returns: {
@@ -3952,6 +3957,16 @@ export type Database = {
           is_guardian: boolean
           person_id: string
           relationship: string
+        }[]
+      }
+      station_register_visitor_family: {
+        Args: { _children: Json; _guardian: Json; _shift_token?: string }
+        Returns: {
+          child_display_name: string
+          child_person_id: string
+          guardian_person_id: string
+          household_id: string
+          household_name: string
         }[]
       }
       station_room_roster: {

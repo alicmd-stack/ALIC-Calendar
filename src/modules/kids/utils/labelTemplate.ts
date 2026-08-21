@@ -87,8 +87,33 @@ function esc(value: string | number | null | undefined): string {
  *   * The cutter has roughly a millimetre of play, so nothing important sits
  *     within 3mm of an edge.
  *
- * WIDTH. DK-2205 tape is 62mm wide with about 2mm unprintable on each side, so
- * the printable strip is ~58mm. The page is 62 x 100mm because that is the
+ * WIDTH, from Brother's Raster Command Reference for the QL-800/810W/820NWB
+ * (v1.01, media ID 259) rather than from guesswork:
+ *
+ *   tape width          62.0mm   732 dots
+ *   printable width     58.9mm   696 dots
+ *   width offset         1.5mm    18 dots per side
+ *   pin layout          12 | 696 | 12  of the head's 720 pins at 300dpi
+ *
+ * The head is 60.96mm, NARROWER than the tape, which is where 1.5mm rather
+ * than 2mm comes from. 58.9mm is a hard ceiling: the printer's high-resolution
+ * mode doubles resolution along the FEED direction only, never across.
+ *
+ * So the card is 58mm inside FIXED 2mm gutters: the ink spans 2.0 to 60.0mm,
+ * inside Brother's 1.524 to 60.476mm window, with 0.476mm — about 5 dots —
+ * clear on each side.
+ *
+ * The gutters are fixed rather than `margin: 0 auto` because auto-centring
+ * split the remainder across whole device pixels and landed 1.75mm from one
+ * edge and 2.31mm from the other. That put the left border 0.23mm inside
+ * Brother's boundary, on a rounding that is not stable across Chrome versions
+ * or scale factors. Explicit margins remove the rounding entirely.
+ *
+ * 57mm inside 2.5mm gutters would give a full millimetre of clearance, but a
+ * narrower card wraps more, and the extra wrapping pushed the tallest label
+ * past the page — costing more tape than the millimetre was worth. If a real
+ * print ever shows an edge clipping, that is the change to make, together with
+ * a ~4mm longer page. The page is 62 x 100mm because that is the
  * page the QL driver presents for DK-2205; content is top-aligned, so a short
  * label simply leaves the tail of the page blank rather than stretching.
  *
@@ -128,9 +153,7 @@ export const LABEL_CSS = `
 
   .label {
     /* 58 + 2 + 2 = the full 62mm tape, stated explicitly rather than left to
-       "margin: 0 auto". Centring rounded to whole device pixels and landed
-       1.75mm from one edge and 2.31mm from the other — harmless on tape with a
-       millimetre of feed play, but there is no reason to be lopsided. */
+       "margin: 0 auto". See the WIDTH note above for the clearance arithmetic. */
     width: 58mm;
     margin: 2mm;
     /* A FIXED height, so every label is the same physical size and the card
@@ -225,7 +248,7 @@ export const LABEL_CSS = `
     text-transform: uppercase;
   }
   .allergy.long { font-size: 11pt; letter-spacing: 0.2mm; }
-  .allergy.verylong { font-size: 9pt; letter-spacing: 0; }
+  .allergy.verylong { font-size: 8pt; letter-spacing: 0; }
   .allergy .word { display: block; font-size: 9pt; letter-spacing: 0.6mm; }
   .allergy.long .word, .allergy.verylong .word { font-size: 8pt; }
 
@@ -293,9 +316,9 @@ function nameClass(name: string): string {
  * a paragraph into it — so the bar has to be bounded here, where the space is
  * finite. Size drops in tiers first, because shrinking loses nothing.
  *
- * The CAP is a last resort. 60 characters holds a real allergen list with room
- * to spare — the longest on file at ALIC is 21 ("Peanuts and tree nuts"), and
- * "Peanuts, tree nuts, shellfish, dairy and eggs" is 44. Past that the tag
+ * The CAP is a last resort. 44 characters is exactly
+ * "Peanuts, tree nuts, shellfish, dairy and eggs" — a full realistic list — and
+ * the longest actually on file at ALIC is 21 ("Peanuts and tree nuts"). Past that the tag
  * stops being the record and the black bar does its actual job, which is to say
  * STOP AND ASK — the full detail is on the safety card at the desk, where
  * reading it is audited.
@@ -303,11 +326,11 @@ function nameClass(name: string): string {
  * The cap is what makes the label's height BOUNDED, which is what lets the page
  * be sized to the tape instead of guessing. See LABEL_PAGE_MM below.
  */
-const ALLERGY_CAP = 60;
+const ALLERGY_CAP = 44;
 
 function allergyClass(text: string): string {
-  if (text.length > 44) return "allergy verylong";
-  if (text.length > 22) return "allergy long";
+  if (text.length > 30) return "allergy verylong";
+  if (text.length > 18) return "allergy long";
   return "allergy";
 }
 
