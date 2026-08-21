@@ -48,6 +48,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { kidsStationService, kidsSessionService, printLabels, renderQrSvg } from "../services";
 import { StationRoomsPanel } from "../components/StationRoomsPanel";
 import { errorMessage, isDbError } from "../services/rpcError";
+import { cn } from "@/lib/utils";
 
 /**
  * crypto.randomUUID() exists only in a SECURE CONTEXT. A lobby tablet on the
@@ -526,6 +527,12 @@ export default function CheckInStationPage() {
 
   const doCheckout = async (override?: { reason: string; verification: string }) => {
     if (ctx.checkoutMatches.length === 0) return;
+    // Only the children at this door. Releasing the whole batch would record
+    // siblings as collected while they are still sitting in another classroom.
+    if (ctx.checkoutSelected.length === 0) {
+      dispatch({ type: "ERROR", message: "Tick which children are being collected." });
+      return;
+    }
     // Naming the collector is what makes the restricted list mean anything:
     // the database can only check a person it has been told about, and it
     // refuses to release a restricted child when nobody is named.
@@ -536,7 +543,7 @@ export default function CheckInStationPage() {
     setBusy(true);
     try {
       const released = await kidsStationService.checkOut({
-        checkInIds: ctx.checkoutMatches.map((m) => m.check_in_id),
+        checkInIds: ctx.checkoutSelected,
         presented: ctx.checkoutInput.trim(),
         pickedUpByPersonId: ctx.collectorPersonId,
         pickedUpByName: ctx.collectorName?.trim() || null,
@@ -978,14 +985,57 @@ export default function CheckInStationPage() {
               Who is collecting?
             </h2>
 
-            <ul className="my-5 space-y-1 text-center">
-              {ctx.checkoutMatches.map((m) => (
-                <li key={m.check_in_id} className="text-xl">
-                  {m.child_name}
-                  <span className="text-muted-foreground"> · {m.room_name}</span>
-                </li>
-              ))}
+            {/* Siblings are routinely split across classrooms, so the parent
+                works round the building with one code. Tick only the children
+                actually standing at THIS door — the rest keep the code alive
+                and stay on their room's roster. */}
+            <ul className="my-5 space-y-2">
+              {ctx.checkoutMatches.map((m) => {
+                const picked = ctx.checkoutSelected.includes(m.check_in_id);
+                return (
+                  <li key={m.check_in_id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        dispatch({ type: "TOGGLE_CHECKOUT_CHILD", checkInId: m.check_in_id })
+                      }
+                      aria-pressed={picked}
+                      className={cn(
+                        "w-full flex items-center gap-3 rounded-lg border-2 p-3 text-left transition",
+                        picked ? "border-primary bg-primary/5" : "border-muted opacity-60"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded border-2",
+                          picked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
+                        )}
+                      >
+                        {picked && <CheckCircle2 className="h-4 w-4" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xl font-medium truncate">
+                          {m.child_name}
+                        </span>
+                        <span className="block text-sm text-muted-foreground">
+                          {m.room_name ?? "No room"} · Tag {m.tag_number}
+                        </span>
+                      </span>
+                      {m.has_restriction && (
+                        <ShieldAlert className="h-5 w-5 shrink-0 text-destructive" />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
+
+            {ctx.checkoutSelected.length < ctx.checkoutMatches.length && (
+              <p className="mb-4 text-center text-sm text-muted-foreground">
+                {ctx.checkoutMatches.length - ctx.checkoutSelected.length} staying
+                in class. This code keeps working until everyone is collected.
+              </p>
+            )}
 
             {/* A restriction on file is the reason this screen exists, so it
                 is stated plainly — without naming the restricted person, who
@@ -1097,14 +1147,42 @@ export default function CheckInStationPage() {
           </div>
         )}
 
-        {ctx.state === "checkout_done" && (
-          <Centered title="Released">
-            <CheckCircle2 className="h-16 w-16 text-green-600" />
-            <Button size="lg" className="mt-6" onClick={() => dispatch({ type: "RESET" })}>
-              Done
-            </Button>
-          </Centered>
-        )}
+        {ctx.state === "checkout_done" && (() => {
+          const staying = ctx.checkoutMatches.filter(
+            (m) => !ctx.checkoutSelected.includes(m.check_in_id)
+          );
+          return (
+            <Centered title="Released">
+              <CheckCircle2 className="h-16 w-16 text-green-600" />
+
+              {/* The parent is about to walk away. If siblings are still in
+                  other rooms, the one thing they must not do is throw the slip
+                  away — it is the only thing that releases the others. */}
+              {staying.length > 0 && (
+                <div className="mt-6 w-full max-w-md rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-left">
+                  <p className="font-semibold">
+                    Keep the pickup slip — {staying.length}{" "}
+                    {staying.length === 1 ? "child is" : "children are"} still in class
+                  </p>
+                  <ul className="mt-2 space-y-0.5 text-sm">
+                    {staying.map((m) => (
+                      <li key={m.check_in_id}>
+                        {m.child_name} · {m.room_name ?? "No room"}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    The same code works at their classroom door.
+                  </p>
+                </div>
+              )}
+
+              <Button size="lg" className="mt-6" onClick={() => dispatch({ type: "RESET" })}>
+                Done
+              </Button>
+            </Centered>
+          );
+        })()}
       </main>
 
       {/* ------------------------------------------- room full: warn, allow */}
@@ -1228,7 +1306,10 @@ export default function CheckInStationPage() {
             </DialogTitle>
             <DialogDescription>
               Releasing{" "}
-              {ctx.checkoutMatches.map((m) => m.child_name).join(", ")} to{" "}
+              {ctx.checkoutMatches
+                .filter((m) => ctx.checkoutSelected.includes(m.check_in_id))
+                .map((m) => m.child_name)
+                .join(", ")} to{" "}
               <strong>{ctx.collectorName}</strong>. This is recorded against
               your name and appears on the Kids Ministry exceptions report.
             </DialogDescription>

@@ -266,6 +266,62 @@ describe("checkout", () => {
     expect(ctx.checkoutMatches).toHaveLength(1);
   });
 
+  /**
+   * Siblings are routinely split across classrooms, so a parent works round
+   * the building with one code. Releasing the whole batch at the first door
+   * would record two children as collected while they are still in Joy B.
+   */
+  describe("siblings in different classrooms", () => {
+    const THREE = [
+      { check_in_id: "a", child_name: "Naod Abebe", room_name: "Joy A", tag_number: 1003, allergy_label: null, has_restriction: false },
+      { check_in_id: "b", child_name: "Sara Abebe", room_name: "Blossom B", tag_number: 1004, allergy_label: null, has_restriction: false },
+      { check_in_id: "c", child_name: "Yosef Abebe", room_name: "Redeemed A", tag_number: 1005, allergy_label: null, has_restriction: false },
+    ];
+
+    const resolved = () => {
+      let ctx = reduce(onShift(), { type: "CHECKOUT_STARTED" });
+      ctx = reduce(ctx, { type: "CHECKOUT_INPUT", value: "3R5F" });
+      return reduce(ctx, { type: "CHECKOUT_RESOLVED", matches: THREE });
+    };
+
+    it("selects everyone by default", () => {
+      // The common case is one room, or a parent doing the whole round at once.
+      expect(resolved().checkoutSelected).toEqual(["a", "b", "c"]);
+    });
+
+    it("releases only the children ticked at this door", () => {
+      let ctx = resolved();
+      ctx = reduce(ctx, { type: "TOGGLE_CHECKOUT_CHILD", checkInId: "b" });
+      ctx = reduce(ctx, { type: "TOGGLE_CHECKOUT_CHILD", checkInId: "c" });
+      expect(ctx.checkoutSelected).toEqual(["a"]);
+      // The others stay on the screen so the volunteer can see who is left.
+      expect(ctx.checkoutMatches).toHaveLength(3);
+    });
+
+    it("toggles back on", () => {
+      let ctx = resolved();
+      ctx = reduce(ctx, { type: "TOGGLE_CHECKOUT_CHILD", checkInId: "a" });
+      expect(ctx.checkoutSelected).not.toContain("a");
+      ctx = reduce(ctx, { type: "TOGGLE_CHECKOUT_CHILD", checkInId: "a" });
+      expect(ctx.checkoutSelected).toContain("a");
+    });
+
+    it("allows every child to be unticked, so the desk cannot release by accident", () => {
+      let ctx = resolved();
+      for (const id of ["a", "b", "c"]) {
+        ctx = reduce(ctx, { type: "TOGGLE_CHECKOUT_CHILD", checkInId: id });
+      }
+      // The page refuses to submit an empty selection; the machine simply
+      // records it rather than silently re-selecting everyone.
+      expect(ctx.checkoutSelected).toEqual([]);
+    });
+
+    it("ignores a toggle outside the confirm step", () => {
+      const ctx = reduce(onShift(), { type: "TOGGLE_CHECKOUT_CHILD", checkInId: "a" });
+      expect(ctx.checkoutSelected).toEqual([]);
+    });
+  });
+
   it("cannot start checkout unless a volunteer is on shift", () => {
     const locked = reduce(initialContext, {
       type: "STATION_SET",

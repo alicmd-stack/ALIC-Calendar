@@ -73,6 +73,15 @@ export interface MachineContext {
   checkedIn: CheckedInChild[];
   checkoutInput: string;
   checkoutMatches: CheckedInChild[];
+  /**
+   * Which of the matched children are being collected AT THIS DOOR.
+   *
+   * Siblings are routinely in different classrooms, so a parent works their
+   * way round the building with one code. Releasing the whole batch at the
+   * first door would mark two children collected while they are still sitting
+   * in Joy B and Redeemed A — the roster would say they had gone home.
+   */
+  checkoutSelected: string[];
   /** Who the database says may collect the matched children. */
   pickupCandidates: PickupCandidate[];
   /** The person the volunteer says is collecting. */
@@ -112,6 +121,7 @@ export const initialContext: MachineContext = {
   checkedIn: [],
   checkoutInput: "",
   checkoutMatches: [],
+  checkoutSelected: [],
   pickupCandidates: [],
   collectorPersonId: null,
   collectorName: null,
@@ -134,6 +144,7 @@ export type MachineEvent =
   | { type: "CHECKOUT_STARTED" }
   | { type: "CHECKOUT_INPUT"; value: string }
   | { type: "CHECKOUT_RESOLVED"; matches: CheckedInChild[] }
+  | { type: "TOGGLE_CHECKOUT_CHILD"; checkInId: string }
   | { type: "CHECKOUT_CANDIDATES"; candidates: PickupCandidate[] }
   | { type: "COLLECTOR_SELECTED"; personId: string | null; name: string | null }
   | { type: "CHECKOUT_DONE" }
@@ -161,6 +172,7 @@ function clearFamily(ctx: MachineContext): MachineContext {
     checkedIn: [],
     checkoutInput: "",
     checkoutMatches: [],
+  checkoutSelected: [],
     pickupCandidates: [],
     collectorPersonId: null,
     collectorName: null,
@@ -293,10 +305,25 @@ export function reduce(ctx: MachineContext, event: MachineEvent): MachineContext
         ...ctx,
         state: "checkout_confirm",
         checkoutMatches: event.matches,
+        // Everyone by default: the common case is one room, or a parent doing
+        // the whole round at once. The volunteer unticks whoever is not here.
+        checkoutSelected: event.matches.map((m) => m.check_in_id),
         pickupCandidates: [],
         collectorPersonId: null,
         collectorName: null,
       };
+
+    case "TOGGLE_CHECKOUT_CHILD": {
+      if (ctx.state !== "checkout_confirm") return ctx;
+      const on = ctx.checkoutSelected.includes(event.checkInId);
+      return {
+        ...ctx,
+        checkoutSelected: on
+          ? ctx.checkoutSelected.filter((id) => id !== event.checkInId)
+          : [...ctx.checkoutSelected, event.checkInId],
+        error: null,
+      };
+    }
 
     case "CHECKOUT_CANDIDATES":
       if (ctx.state !== "checkout_confirm") return ctx;
