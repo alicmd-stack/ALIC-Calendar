@@ -65,6 +65,7 @@ function attemptId(): string {
   );
 }
 import { reduce, initialContext, showsFamilyData, type HouseholdMatch } from "../utils/checkInMachine";
+import { formatSessionDate } from "../utils/sessionDate";
 import type {
   HouseholdSearchRow,
   KidsSession,
@@ -431,12 +432,7 @@ export default function CheckInStationPage() {
     rows: { child_name: string; room_name: string | null; tag_number: number; allergy_label: string | null }[]
   ) => {
     const qr = await renderQrSvg(token);
-    const dateLabel = session
-      ? new Date(session.session_date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })
-      : "";
+    const dateLabel = formatSessionDate(session?.session_date);
     const result = await printLabels(
       rows.map((r) => ({
         childName: r.child_name,

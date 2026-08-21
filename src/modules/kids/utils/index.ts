@@ -23,3 +23,5 @@ export {
   LABEL_CSS,
 } from "./labelTemplate";
 export type { ChildLabelData, ParentLabelData } from "./labelTemplate";
+
+export { formatSessionDate, parseIsoDate } from "./sessionDate";
