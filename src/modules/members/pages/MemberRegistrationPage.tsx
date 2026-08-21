@@ -64,7 +64,6 @@ const NONE = "__none__";
 const GENDERS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
-  { value: "unspecified", label: "Prefer not to say" },
 ];
 
 /** Matches the CHECK constraint on church.people.marital_status. */

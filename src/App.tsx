@@ -68,6 +68,9 @@ function ScrollToTop() {
   return null;
 }
 
+import { usePasswordChangeRequired } from "@/shared/hooks/usePasswordChangeRequired";
+import { ForcePasswordChange } from "@/shared/components/ForcePasswordChange";
+
 const ProtectedRoute = ({
   children,
   adminOnly = false,
@@ -92,6 +95,11 @@ const ProtectedRoute = ({
     error: orgError,
   } = useOrganization();
   const { canAny, loading: capabilitiesLoading } = useCapabilities();
+  const {
+    required: mustChangePassword,
+    loading: passwordCheckLoading,
+    recheck: recheckPassword,
+  } = usePasswordChangeRequired();
 
   // Only block on capability loading for routes that actually gate on them,
   // so existing routes keep their current timing.
@@ -101,6 +109,17 @@ const ProtectedRoute = ({
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Before ANY other check, including the organization ones below.
+  //
+  // Someone handed a temporary password must replace it before they reach the
+  // app, and they must not be shown "No Organization Found" first — that reads
+  // as a broken account and sends them to an administrator instead of to the
+  // one screen that would fix it. Placed inside ProtectedRoute so it covers
+  // every authenticated route at once, with no URL to skip past.
+  if (!passwordCheckLoading && mustChangePassword) {
+    return <ForcePasswordChange onChanged={() => void recheckPassword()} />;
   }
 
   if (orgError) {
