@@ -68,7 +68,7 @@ interface NavSection {
 }
 
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isStaff, signOut } = useAuth();
   const { can } = useCapabilities();
   const canViewMembers = can("members.read");
   const canViewKids = can("kids.read") || can("kids.write");
@@ -284,8 +284,24 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
     },
   ];
 
+  /**
+   * Sections a 'member' has no business seeing.
+   *
+   * ProtectedRoute now sends a non-staff tier straight back to /members from
+   * every route in these four, so leaving the links in the sidebar would just
+   * be a row of trapdoors. "People" stays because /members renders their own
+   * record, and "Kids Ministry" stays because it is gated on module grants,
+   * which are additive and independent of the tier.
+   */
+  const STAFF_ONLY_SECTIONS = ["Calendar", "Financial", "Inventory", "Administration"];
+  const visibleSections = isStaff
+    ? navigationSections
+    : navigationSections.filter(
+        (section) => !STAFF_ONLY_SECTIONS.includes(section.title)
+      );
+
   // Flatten all navigation items for page title lookup
-  const allNavItems = navigationSections.flatMap((section) => section.items);
+  const allNavItems = visibleSections.flatMap((section) => section.items);
 
   // Get user initials for avatar
   const getUserInitials = (name?: string) => {
@@ -322,7 +338,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
 
   // Auto-expand section containing the current route
   useEffect(() => {
-    const matchingSection = navigationSections.find((section) =>
+    const matchingSection = visibleSections.find((section) =>
       section.items.some((item) => {
         if (item.href === "/dashboard") {
           return location.pathname === item.href;
@@ -339,7 +355,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         return new Set([...prev, matchingSection.title]);
       });
     }
-  }, [location.pathname, isAdmin]); // Re-run when isAdmin changes (auth loads)
+    // isStaff too: it also arrives asynchronously, and it decides which
+    // sections exist to match against.
+  }, [location.pathname, isAdmin, isStaff]);
 
   // Check if a path is active (exact match or starts with for nested routes)
   const isPathActive = (href: string) => {
@@ -468,10 +486,13 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {/* Standalone Dashboard link */}
-            <div className="mb-2">{renderNavItem(dashboardItem)}</div>
+            {/* /dashboard is staffOnly; a member would bounce off it. */}
+            {isStaff && (
+              <div className="mb-2">{renderNavItem(dashboardItem)}</div>
+            )}
 
             {/* Collapsible sections */}
-            {navigationSections.map((section) => {
+            {visibleSections.map((section) => {
               const isExpanded = expandedSections.has(section.title);
               return (
                 <div key={section.title} className="space-y-1">

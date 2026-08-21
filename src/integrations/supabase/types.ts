@@ -3856,6 +3856,10 @@ export type Database = {
         }
         Returns: number
       }
+      queue_pickup_code_sms: {
+        Args: { _batch_id: string; _code: string }
+        Returns: number
+      }
       refresh_child_allergy_flags: {
         Args: { _person_id: string }
         Returns: number
@@ -3878,6 +3882,21 @@ export type Database = {
         }[]
       }
       remove_classroom_teacher: { Args: { _id: string }; Returns: undefined }
+      reprint_pickup_label: {
+        Args: { _batch_id: string; _reason?: string; _shift_token?: string }
+        Returns: {
+          allergy_label: string
+          batch_id: string
+          check_in_id: string
+          child_name: string
+          guardian_phone: string
+          household_name: string
+          pickup_code: string
+          pickup_token: string
+          room_name: string
+          tag_number: number
+        }[]
+      }
       resolve_actor: {
         Args: { _shift_token?: string }
         Returns: Database["church"]["CompositeTypes"]["resolved_actor"]
@@ -4035,6 +4054,30 @@ export type Database = {
       station_close_shift: {
         Args: { _shift_token: string }
         Returns: undefined
+      }
+      station_find_batch_for_reprint: {
+        Args: {
+          _kids_session_id?: string
+          _query: string
+          _shift_token?: string
+        }
+        Returns: {
+          batch_id: string
+          checked_in_at: string
+          children: string
+          household_name: string
+          masked_phone: string
+        }[]
+      }
+      station_household_adults: {
+        Args: { _household_id: string; _shift_token?: string }
+        Returns: {
+          display_name: string
+          is_primary_contact: boolean
+          masked_phone: string
+          person_id: string
+          relationship: string
+        }[]
       }
       station_list_volunteers: {
         Args: { _station_id: string }
@@ -4874,7 +4917,7 @@ export type Database = {
           is_primary: boolean | null
           joined_at: string | null
           organization_id: string
-          role: Database["public"]["Enums"]["app_role"] | null
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
@@ -4883,7 +4926,7 @@ export type Database = {
           is_primary?: boolean | null
           joined_at?: string | null
           organization_id: string
-          role?: Database["public"]["Enums"]["app_role"] | null
+          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
@@ -4892,7 +4935,7 @@ export type Database = {
           is_primary?: boolean | null
           joined_at?: string | null
           organization_id?: string
-          role?: Database["public"]["Enums"]["app_role"] | null
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
         Relationships: [
@@ -4998,6 +5041,11 @@ export type Database = {
         Args: { _user_id: string }
         Returns: string[]
       }
+      has_internal_access: {
+        Args: { _organization_id: string }
+        Returns: boolean
+      }
+      has_internal_access_anywhere: { Args: never; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -5011,6 +5059,8 @@ export type Database = {
       is_org_admin:
         | { Args: { _org_id: string; _user_id: string }; Returns: boolean }
         | { Args: { org_id: string }; Returns: boolean }
+      is_staff: { Args: { _organization_id: string }; Returns: boolean }
+      is_staff_anywhere: { Args: never; Returns: boolean }
       is_system_admin: { Args: never; Returns: boolean }
       user_belongs_to_org: {
         Args: { _org_id: string; _user_id: string }
@@ -5019,7 +5069,7 @@ export type Database = {
       user_has_role: { Args: { role_name: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "contributor" | "treasury" | "finance"
+      app_role: "admin" | "contributor" | "treasury" | "finance" | "member"
       event_status:
         | "draft"
         | "pending_review"
@@ -5196,7 +5246,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: ["admin", "contributor", "treasury", "finance"],
+      app_role: ["admin", "contributor", "treasury", "finance", "member"],
       event_status: [
         "draft",
         "pending_review",

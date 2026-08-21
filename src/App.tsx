@@ -74,11 +74,22 @@ import { ForcePasswordChange } from "@/shared/components/ForcePasswordChange";
 const ProtectedRoute = ({
   children,
   adminOnly = false,
+  staffOnly = false,
   requireAny,
   fallbackTo = "/dashboard",
 }: {
   children: React.ReactNode;
   adminOnly?: boolean;
+  /**
+   * Require a staff app_role tier — admin, contributor, treasury or finance.
+   *
+   * Everything internal carries this. Without it these routes were gated on
+   * authentication alone, so anyone holding the 'member' floor tier could open
+   * the budget, the inventory and the approval agenda. The RESTRICTIVE policies
+   * in 20260321001600 are what actually deny the data; this stops the app
+   * rendering a shell full of empty tables on top of them.
+   */
+  staffOnly?: boolean;
   /**
    * Module capabilities, any one of which admits the user. Omit for routes
    * gated only by authentication (or by `adminOnly`). Existing call sites are
@@ -88,7 +99,7 @@ const ProtectedRoute = ({
   /** Where to send an authenticated user who lacks the capability. */
   fallbackTo?: string;
 }) => {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isStaff } = useAuth();
   const {
     loading: orgLoading,
     currentOrganization,
@@ -151,6 +162,14 @@ const ProtectedRoute = ({
     );
   }
 
+  // Before adminOnly and requireAny. Not to "/" — /members already renders a
+  // self-only "My Information" view for anyone without members.read, so that is
+  // a member's real home in this app, and it keeps them signed in rather than
+  // dumping them back on the public site.
+  if (staffOnly && !isStaff) {
+    return <Navigate to="/members" replace />;
+  }
+
   if (adminOnly && !isAdmin) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -197,27 +216,27 @@ const App = () => (
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <Dashboard />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Admin module routes - accessible to all authenticated users */}
+                {/* Admin module routes - staff tiers only */}
                 <Route
                   path="/admin"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <Admin />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Event Review route - accessible to all authenticated users */}
+                {/* Event Review route - staff tiers only */}
                 <Route
                   path="/event-reviews"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <Admin />
                     </ProtectedRoute>
                   }
@@ -243,29 +262,31 @@ const App = () => (
                   }
                 />
 
-                {/* Inventory module routes (Coming Soon) - accessible to all authenticated users */}
+                {/* Inventory module routes (Coming Soon) - staff tiers only */}
                 <Route
                   path="/inventory"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <InventoryDashboard />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Budget module routes (Coming Soon) - accessible to all authenticated users */}
+                {/* Budget module routes (Coming Soon) - staff tiers only */}
                 <Route
                   path="/budget"
                   element={
-                    <ProtectedRoute>
+                    <ProtectedRoute staffOnly>
                       <BudgetDashboard />
                     </ProtectedRoute>
                   }
                 />
 
-                {/* Members module. Open to any authenticated user, like
-                    /budget: the page itself renders the full directory for
-                    admins and a self-only view for everyone else. */}
+                {/* Members module. Deliberately NOT staffOnly — this is the
+                    one internal route a 'member' may open, because the page
+                    renders the full directory for admins and grant holders and
+                    a self-only "My Information" view for everyone else. It is
+                    where staffOnly redirects a member to. */}
                 <Route
                   path="/members"
                   element={

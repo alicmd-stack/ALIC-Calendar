@@ -9,12 +9,33 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
+/**
+ * The app_role values that carry internal access, mirroring the allowlist in
+ * public.is_staff(). Keep the two in step: the database one is what actually
+ * enforces, this one is what stops the UI offering an empty screen.
+ */
+const STAFF_ROLES: readonly string[] = ["admin", "contributor", "treasury", "finance"];
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
   isTreasury: boolean;
   isFinance: boolean;
+  /**
+   * Does this person hold a staff TIER in any branch?
+   *
+   * app_role is exclusive — public.user_organizations has
+   * UNIQUE(user_id, organization_id) — so it answers "is there internal work
+   * for you here at all", not "what may you do". 'member' is the floor and is
+   * deliberately absent from the list: it is what every new signup gets, and it
+   * reaches no internal tool.
+   *
+   * NOT the security boundary. public.is_staff() and the RESTRICTIVE policies
+   * added in 20260321001600 are; this only stops the UI offering a screen that
+   * would come back empty.
+   */
+  isStaff: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
@@ -29,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTreasury, setIsTreasury] = useState(false);
   const [isFinance, setIsFinance] = useState(false);
+  const [isStaff, setIsStaff] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   // Track the current user ID so we can skip redundant state updates
@@ -127,6 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIsAdmin(false);
         setIsTreasury(false);
         setIsFinance(false);
+        setIsStaff(false);
         return;
       }
 
@@ -134,11 +157,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsAdmin(roles.includes("admin"));
       setIsTreasury(roles.includes("treasury"));
       setIsFinance(roles.includes("finance"));
+      // Mirrors public.is_staff(). An ALLOWLIST, so a role added to the enum
+      // later is not silently treated as staff by the UI before anyone has
+      // decided it should be.
+      setIsStaff(roles.some((role) => STAFF_ROLES.includes(role as string)));
     } catch (error) {
       console.error("Error checking role status:", error);
       setIsAdmin(false);
       setIsTreasury(false);
       setIsFinance(false);
+      setIsStaff(false);
     } finally {
       setLoading(false);
     }
@@ -192,6 +220,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isAdmin,
         isTreasury,
         isFinance,
+        isStaff,
         loading,
         signOut,
         requestPasswordReset,

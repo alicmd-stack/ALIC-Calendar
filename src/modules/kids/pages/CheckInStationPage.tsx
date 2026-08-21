@@ -49,6 +49,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { kidsStationService, kidsSessionService, printLabels, renderQrSvg } from "../services";
 import { StationRoomsPanel } from "../components/StationRoomsPanel";
 import { VisitorFamilyDialog } from "../components/VisitorFamilyDialog";
+import { ReprintLabelDialog } from "../components/ReprintLabelDialog";
 import { errorMessage, isDbError } from "../services/rpcError";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +71,7 @@ function attemptId(): string {
 import { reduce, initialContext, showsFamilyData, type HouseholdMatch } from "../utils/checkInMachine";
 import { formatSessionDate } from "../utils/sessionDate";
 import type {
+  HouseholdAdultRow,
   HouseholdSearchRow,
   KidsSession,
   SafetyCard,
@@ -112,6 +114,11 @@ export default function CheckInStationPage() {
   const [safety, setSafety] = useState<SafetyCard | null>(null);
   /** The New Family desk: a visitor who is not in the directory yet. */
   const [addingVisitor, setAddingVisitor] = useState(false);
+  /** Household adults, for "who is dropping off?". */
+  const [adults, setAdults] = useState<HouseholdAdultRow[]>([]);
+  const [droppedOffBy, setDroppedOffBy] = useState<string | null>(null);
+  /** A parent has lost their slip and needs a new code. */
+  const [reprinting, setReprinting] = useState(false);
   /**
    * Check-in needs an OPEN session; checking out does not.
    *
@@ -173,6 +180,43 @@ export default function CheckInStationPage() {
       })
       .catch(() => setSession(null));
   }, [orgId, user, profile?.full_name]);
+
+  /**
+   * Who is dropping off. Loaded as soon as a family is chosen, so the answer is
+   * on screen while the volunteer is still selecting children rather than being
+   * one more thing to wait for at the end.
+   */
+  useEffect(() => {
+    const hh = ctx.household?.household_id;
+    if (!hh) {
+      setAdults([]);
+      setDroppedOffBy(null);
+      return;
+    }
+    let cancelled = false;
+    kidsStationService
+      .householdAdults(hh)
+      .then((rows) => {
+        if (cancelled) return;
+        setAdults(rows);
+        // Default to the primary contact — right most of the time, and one tap
+        // to change when it is not. Left null when the household has exactly
+        // one adult only if there are none at all.
+        setDroppedOffBy(
+          rows.find((r) => r.is_primary_contact)?.person_id ??
+            rows[0]?.person_id ??
+            null
+        );
+      })
+      // Never blocks a check-in. A child in a room matters more than knowing
+      // which parent walked them in.
+      .catch(() => {
+        if (!cancelled) setAdults([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ctx.household?.household_id]);
 
   const startToday = async () => {
     if (!orgId) return;
@@ -411,6 +455,7 @@ export default function CheckInStationPage() {
         roomIds: ctx.selectedChildIds.map(
           (id) => ctx.roomOverrides[id] ?? null
         ),
+        droppedOffByPersonId: droppedOffBy,
         overrideCapacity,
         assignmentReason: reason ?? null,
       });
@@ -795,6 +840,18 @@ export default function CheckInStationPage() {
                 <UserPlus className="h-4 w-4 mr-1" />
                 Visiting family
               </Button>
+              {/* Available on a CLOSED session too: losing the slip is a
+                  problem that surfaces at pickup, which is exactly when the
+                  service has already ended. */}
+              <Button
+                variant="outline"
+                size="lg"
+                disabled={!online}
+                onClick={() => setReprinting(true)}
+              >
+                <Printer className="h-4 w-4 mr-1" />
+                Lost slip
+              </Button>
               <Button
                 variant="outline"
                 size="lg"
@@ -824,6 +881,45 @@ export default function CheckInStationPage() {
             <p className="text-muted-foreground text-sm mt-1">
               Tap a child to include or exclude them.
             </p>
+
+            {/* Recorded against every check-in, and shown again at the door.
+                It answers the one question a volunteer actually asks when
+                releasing a child: is this the person who brought them? */}
+            {adults.length > 0 && (
+              <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+                <p className="text-sm font-medium mb-2">Who is dropping off?</p>
+                <div className="flex flex-wrap gap-2">
+                  {adults.map((a) => {
+                    const chosen = droppedOffBy === a.person_id;
+                    return (
+                      <button
+                        key={a.person_id}
+                        type="button"
+                        onClick={() => setDroppedOffBy(chosen ? null : a.person_id)}
+                        className={cn(
+                          "rounded-full border-2 px-3 py-1.5 text-sm transition",
+                          chosen
+                            ? "border-primary bg-primary/10 font-medium"
+                            : "border-muted bg-background"
+                        )}
+                      >
+                        {a.display_name}
+                        {a.masked_phone && (
+                          <span className="text-muted-foreground"> · {a.masked_phone}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Not required. Somebody else can bring a child, and refusing
+                    the check-in over it would be worse than not knowing. */}
+                {!droppedOffBy && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Someone else? Leave this unset — check-in still works.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               {ctx.household.children.map((c) => {
@@ -1496,6 +1592,30 @@ export default function CheckInStationPage() {
       {/* The New Family desk. Registering hands straight over to the normal
           check-in flow — the family is in the directory now, so nothing about
           the rest of the morning is special-cased. */}
+      {/* Reprinting ROTATES the code, so the label that comes out is the only
+          one that now works. Printed here rather than inside the dialog, so it
+          goes through the same path as every other label. */}
+      <ReprintLabelDialog
+        open={reprinting}
+        onOpenChange={setReprinting}
+        sessionId={session?.id ?? null}
+        onReprinted={async (rows) => {
+          setReprinting(false);
+          if (rows.length === 0) return;
+          await doPrint(
+            rows[0].pickup_code,
+            rows[0].pickup_token,
+            rows.map((r) => ({
+              child_name: r.child_name,
+              room_name: r.room_name,
+              tag_number: r.tag_number,
+              allergy_label: r.allergy_label,
+              guardian_phone: r.guardian_phone,
+            }))
+          );
+        }}
+      />
+
       <VisitorFamilyDialog
         open={addingVisitor}
         onOpenChange={setAddingVisitor}

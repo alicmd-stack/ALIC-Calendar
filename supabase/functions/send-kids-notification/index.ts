@@ -23,6 +23,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API");
+
+/**
+ * SMS. Absent until the church buys a number, and that is a supported state:
+ * with these unset every sms row is released with "no provider configured",
+ * exactly as before, and the printed slip remains the credential.
+ */
+const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
+const TWILIO_FROM_NUMBER = Deno.env.get("TWILIO_FROM_NUMBER");
+const SMS_CONFIGURED = !!(TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN && TWILIO_FROM_NUMBER);
 const RESEND_FROM_EMAIL =
   Deno.env.get("RESEND_KIDS_FROM_EMAIL") ||
   Deno.env.get("RESEND_FROM_EMAIL") ||
@@ -167,14 +177,86 @@ serve(async (req) => {
   }
 
   const notifications = (claimed ?? []) as QueuedNotification[];
+/**
+ * Send one text through Twilio.
+ *
+ * E.164 or nothing: Twilio rejects "301-555-0102", and ALIC's numbers are
+ * stored as people type them. A 10-digit US number is prefixed with +1; a
+ * number that is already +… is passed through; anything else is refused here
+ * rather than burning a Twilio request to be told the same thing.
+ */
+function toE164(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("+")) return trimmed.replace(/[^\d+]/g, "");
+  const digits = trimmed.replace(/\D/g, "");
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return null;
+}
+
+async function sendSms(
+  notification: QueuedNotification,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const to = toE164(notification.recipient_phone ?? "");
+  if (!to) {
+    return { ok: false, error: `unusable phone number for SMS` };
+  }
+
+  const body = new URLSearchParams({
+    To: to,
+    From: TWILIO_FROM_NUMBER!,
+    Body: notification.body,
+  });
+
+  const res = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+    {
+      method: "POST",
+      headers: {
+        Authorization:
+          "Basic " + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`),
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    },
+  );
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { ok: false, error: json?.message ?? `Twilio HTTP ${res.status}` };
+  }
+  return { ok: true, id: json?.sid ?? "sent" };
+}
+
   let sent = 0;
   let failed = 0;
   let skipped = 0;
 
   for (const notification of notifications) {
     try {
-      // SMS is queued by the same table but has no provider wired up yet.
-      // Release the row rather than burning an attempt on it, and say so.
+      if (notification.channel === "sms") {
+        // Unconfigured is a release, not a failure: the row is not wrong, the
+        // church simply has no number yet, and the slip still carries the code.
+        if (!SMS_CONFIGURED) {
+          await supabase.rpc("complete_notification", {
+            _id: notification.id,
+            _ok: false,
+            _error: "channel 'sms' has no provider configured",
+          });
+          skipped++;
+          continue;
+        }
+        const smsResult = await sendSms(notification);
+        await supabase.rpc("complete_notification", {
+          _id: notification.id,
+          _ok: smsResult.ok,
+          _provider_message_id: smsResult.ok ? smsResult.id : null,
+          _error: smsResult.ok ? null : smsResult.error,
+        });
+        smsResult.ok ? sent++ : failed++;
+        continue;
+      }
+
       if (notification.channel !== "email") {
         await supabase.rpc("complete_notification", {
           _id: notification.id,

@@ -44,8 +44,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { grantService, type OrgPerson } from "../services/grantService";
 import type { MinistryRole } from "@/shared/lib/capabilities";
 
-/** Ordered so the two most commonly granted sit at the top. */
-const PERMISSIONS: {
+/**
+ * Ordered so the two most commonly granted sit at the top.
+ *
+ * Every value of church.module_permission must appear here. A permission the
+ * database knows and this list does not is unreachable: the tickbox grid is
+ * built from this array, so an admin can neither grant nor revoke it. That is
+ * what happened to kids_leader between 20260321001000, which created it, and
+ * this list gaining it \u2014 the four team leads only held it because
+ * 20260321001300 wrote the rows directly, and a fifth could not have been
+ * appointed without hand-editing the database.
+ */
+export const PERMISSIONS: {
   value: MinistryRole;
   label: string;
   description: string;
@@ -66,6 +76,12 @@ const PERMISSIONS: {
     label: "Kids Ministry leader",
     description:
       "Everything a volunteer can do, plus classrooms, teachers, reports, and authorising a pickup override. Includes children's medical information — every access is logged.",
+  },
+  {
+    value: "kids_leader",
+    label: "Kids team lead",
+    description:
+      "Runs their own grades: the desk, the roster and the reports for the classrooms assigned to them. Cannot authorise a pickup override or set a pickup restriction \u2014 those escalate to a Ministry leader, which is what keeps the two-person rule real.",
   },
   {
     value: "members_admin",

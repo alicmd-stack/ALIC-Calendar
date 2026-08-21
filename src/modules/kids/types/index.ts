@@ -147,3 +147,35 @@ export interface ClassroomGradeRow {
   grade_name: string | null;
   sort_order: number;
 }
+
+/** One adult on a household — "who is dropping off?" at the desk. */
+export interface HouseholdAdultRow {
+  person_id: string;
+  display_name: string;
+  relationship: string;
+  masked_phone: string | null;
+  is_primary_contact: boolean;
+}
+
+/** A live batch a family can have their slip reprinted from. */
+export interface ReprintCandidateRow {
+  batch_id: string;
+  household_name: string;
+  masked_phone: string | null;
+  children: string | null;
+  checked_in_at: string;
+}
+
+/** One child on a reprinted label, with the ROTATED code. */
+export interface ReprintedLabelRow {
+  batch_id: string;
+  pickup_code: string;
+  pickup_token: string;
+  household_name: string;
+  check_in_id: string;
+  child_name: string;
+  room_name: string | null;
+  tag_number: number;
+  allergy_label: string | null;
+  guardian_phone: string | null;
+}

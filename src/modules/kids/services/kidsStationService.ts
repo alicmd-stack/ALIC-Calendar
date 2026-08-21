@@ -20,6 +20,9 @@ import type {
   SafetyCard,
   VisitorFamilyRow,
   ClassroomGradeRow,
+  HouseholdAdultRow,
+  ReprintCandidateRow,
+  ReprintedLabelRow,
 } from "../types";
 import type { PickupCandidate } from "../utils/checkInMachine";
 
@@ -272,6 +275,67 @@ export const kidsStationService = {
     });
     throwRpc(error);
     return (data ?? []) as unknown as VisitorFamilyRow[];
+  },
+
+  /**
+   * The adults on a household, for "who is dropping this child off?".
+   *
+   * dropped_off_by_person_id has existed since the first kids migration and was
+   * populated on zero check-ins, because the desk never asked. It is the most
+   * natural question at pickup — "is this the person who brought them?" — and
+   * the answer is already standing at the desk.
+   */
+  async householdAdults(
+    householdId: string,
+    token?: string | null
+  ): Promise<HouseholdAdultRow[]> {
+    const { data, error } = await church().rpc("station_household_adults", {
+      _household_id: householdId,
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as HouseholdAdultRow[];
+  },
+
+  /**
+   * Find a family whose slip needs reprinting.
+   *
+   * By name or phone, never by code — the code is the thing they have lost.
+   * Only batches with a child still in a room come back.
+   */
+  async findBatchForReprint(
+    query: string,
+    sessionId?: string | null,
+    token?: string | null
+  ): Promise<ReprintCandidateRow[]> {
+    const { data, error } = await church().rpc("station_find_batch_for_reprint", {
+      _query: query,
+      _kids_session_id: sessionId ?? null,
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as ReprintCandidateRow[];
+  },
+
+  /**
+   * Reissue a family's slip with a NEW code.
+   *
+   * Rotation is the point. The previous slip stops resolving the instant this
+   * returns, so paper left in a car — or handed to the wrong person — is dead
+   * rather than live for the rest of the morning.
+   */
+  async reprintLabel(
+    batchId: string,
+    reason?: string | null,
+    token?: string | null
+  ): Promise<ReprintedLabelRow[]> {
+    const { data, error } = await church().rpc("reprint_pickup_label", {
+      _batch_id: batchId,
+      _reason: reason ?? null,
+      _shift_token: token ?? null,
+    });
+    throwRpc(error);
+    return (data ?? []) as unknown as ReprintedLabelRow[];
   },
 
   /** Zero rows means denied — wrong, expired, locked or already used. */
