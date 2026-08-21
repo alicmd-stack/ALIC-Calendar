@@ -1745,6 +1745,7 @@ export type Database = {
       kids_session_rooms: {
         Row: {
           capacity_override: number | null
+          closed_reason: string | null
           created_at: string
           id: string
           is_open: boolean
@@ -1755,6 +1756,7 @@ export type Database = {
         }
         Insert: {
           capacity_override?: number | null
+          closed_reason?: string | null
           created_at?: string
           id?: string
           is_open?: boolean
@@ -1765,6 +1767,7 @@ export type Database = {
         }
         Update: {
           capacity_override?: number | null
+          closed_reason?: string | null
           created_at?: string
           id?: string
           is_open?: boolean
@@ -3604,6 +3607,18 @@ export type Database = {
           was_created: boolean
         }[]
       }
+      org_people_for_grants: {
+        Args: { _organization_id: string }
+        Returns: {
+          app_role: string
+          email: string
+          full_name: string
+          is_org_admin: boolean
+          permissions: Database["church"]["Enums"]["module_permission"][]
+          person_id: string
+          user_id: string
+        }[]
+      }
       pick_room_for_child: {
         Args: {
           _child_person_id: string
@@ -3703,6 +3718,14 @@ export type Database = {
           recipient_name: string
           status: string
         }[]
+      }
+      set_module_grants: {
+        Args: {
+          _organization_id: string
+          _permissions: Database["church"]["Enums"]["module_permission"][]
+          _user_id: string
+        }
+        Returns: Database["church"]["Enums"]["module_permission"][]
       }
       set_room_kids_config: {
         Args: {

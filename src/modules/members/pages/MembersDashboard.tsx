@@ -45,6 +45,7 @@ import { useMembers, useMemberStats, useBirthdays } from "../hooks/useMembers";
 import { useServingTotals } from "../hooks/useServing";
 import { MemberTable } from "../components/MemberTable";
 import { ProfileBackfillCard } from "../components/ProfileBackfillCard";
+import { ModuleGrantsPanel } from "../components/ModuleGrantsPanel";
 import { MEMBER_PAGE_SIZE, MONTH_NAMES, type MemberFilters } from "../types";
 import { displayName } from "../utils/normalize";
 import { formatBirthday } from "../utils/age";
@@ -131,6 +132,11 @@ export default function MembersDashboard() {
         {/* An empty directory is not an empty church — it means the people who
             already sign in have no member record yet. Offered first, because
             nothing else on this page can do anything until it is run. */}
+        {/* Without a grant, only organization admins can reach the directory
+            or the check-in station at all — so this sits beside the backfill,
+            which is the other half of "the module has no users yet". */}
+        <ModuleGrantsPanel organizationId={orgId} canGrant={isAdmin} />
+
         {canWrite && (
           <ProfileBackfillCard
             organizationId={orgId}

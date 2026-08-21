@@ -46,6 +46,22 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { kidsStationService, kidsSessionService, printLabels, renderQrSvg } from "../services";
 import { StationRoomsPanel } from "../components/StationRoomsPanel";
 import { errorMessage, isDbError } from "../services/rpcError";
+
+/**
+ * crypto.randomUUID() exists only in a SECURE CONTEXT. A lobby tablet on the
+ * church LAN over plain http has `crypto` but not `randomUUID`, so calling it
+ * bare during render threw and the kiosk rendered blank — on the one screen
+ * that has to work at 10:15 on a Sunday.
+ *
+ * This value is an idempotency key, not a credential: it only has to be
+ * unique per attempt on one device, so a time-plus-random fallback is fine.
+ */
+function attemptId(): string {
+  return (
+    crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2, 15)}`
+  );
+}
 import { reduce, initialContext, showsFamilyData, type HouseholdMatch } from "../utils/checkInMachine";
 import type { HouseholdSearchRow, KidsSession, SafetyCard } from "../types";
 
@@ -90,7 +106,7 @@ export default function CheckInStationPage() {
    * override), which is the case the idempotency key exists for, and rotated
    * when a new family is started.
    */
-  const attemptKey = useRef<string>(crypto.randomUUID());
+  const attemptKey = useRef<string>(attemptId());
 
   /* ----------------------------------------------------------- connection */
   useEffect(() => {
@@ -563,7 +579,7 @@ export default function CheckInStationPage() {
                   onClick={() => {
                     // New family, new attempt: the previous key must never be
                     // reused, or check_in_children replays the finished batch.
-                    attemptKey.current = crypto.randomUUID();
+                    attemptKey.current = attemptId();
                     dispatch({ type: "HOUSEHOLD_SELECTED", household: h });
                   }}
                 >
