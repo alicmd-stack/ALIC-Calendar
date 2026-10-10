@@ -98,8 +98,9 @@ const VERSE =
   "“Let the little children come to me, and do not hinder them, for the kingdom of heaven belongs to such as these.” Matthew 19:14";
 const CAMPUSES = "Silver Spring, MD · Alexandria, VA";
 /** The sender takes no replies; say so, and say where to go instead. */
+// The last words are held together so "Sunday." never sits alone on a line.
 const NO_REPLY =
-  "Replies to this email are not read. For anything about your children, please speak to the Children's Ministry team on Sunday.";
+  "Replies to this email are not read. For anything about your children, please speak to the Children's Ministry team\u00a0on\u00a0Sunday.";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -303,10 +304,11 @@ function renderEmail(notification: QueuedNotification): string {
             : ""
         }
       </div>
-      <div style="padding:12px 22px;background:#fafafa;border-top:1px solid #e4e4e7;font-size:12px;line-height:1.5;color:${muted};">
-        ${NO_REPLY}<br>
-        ${escapeHtml(CHURCH_NAME)} · ${CAMPUSES}<br>
-        <a href="https://${CHURCH_WEBSITE}" style="color:${muted};">${CHURCH_WEBSITE}</a>
+      <div style="padding:16px 22px 18px;background:#fafafa;border-top:1px solid #e4e4e7;font-size:12px;line-height:1.6;color:${muted};text-align:center;">
+        <p style="margin:0 0 10px;">${NO_REPLY}</p>
+        <p style="margin:0;"><span style="font-weight:600;color:#52525b;">${escapeHtml(CHURCH_NAME)}</span><br>
+        ${CAMPUSES}<br>
+        <a href="https://${CHURCH_WEBSITE}" style="color:#b22222;text-decoration:none;">${CHURCH_WEBSITE}</a></p>
       </div>
     </div>
   </body>
@@ -330,7 +332,7 @@ function renderText(notification: QueuedNotification): string {
     f.sentBy ? `Sent by ${f.sentBy}` : null,
     f.warm ? `Be blessed · ${BLESSING_AM}\nAddis Lidet ${MINISTRY}` : null,
     f.warm ? VERSE : null,
-    `${NO_REPLY}\n${CHURCH_NAME} · ${CAMPUSES}\n${CHURCH_WEBSITE}`,
+    `${NO_REPLY}\n\n${CHURCH_NAME}\n${CAMPUSES}\n${CHURCH_WEBSITE}`,
   ]
     .filter(Boolean)
     .join("\n\n");
