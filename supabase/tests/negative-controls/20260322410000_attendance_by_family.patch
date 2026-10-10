@@ -1,0 +1,10 @@
+--- supabase/migrations/20260322410000_attendance_by_family.sql	2026-10-10 16:19:36
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n1.sql	2026-10-10 16:20:50
+@@ -46,6 +46,7 @@
+ SET search_path = church, public, extensions
+ AS $$
+   SELECT CASE
++           WHEN 'visitor' = ANY (codes) THEN 'visitor'
+            WHEN 'member' = ANY (codes) THEN 'member'
+            WHEN 'regular_attendee' = ANY (codes) THEN 'regular_attendee'
+            WHEN 'visitor' = ANY (codes) THEN 'visitor'

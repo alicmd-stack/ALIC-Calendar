@@ -49,6 +49,17 @@ describe("pivotChildren", () => {
   });
 });
 
+describe("each child's family", () => {
+  it("is carried from the rows, and an older server's missing column reads as not recorded", () => {
+    const rows = [
+      { ...visit("hana", "Hana Bekele", "2026-10-04"), family_status: "visitor" },
+      visit("abel", "Abel Tesfaye", "2026-10-04"),
+    ];
+    const byId = Object.fromEntries(pivotChildren(rows, SUNDAYS).map((k) => [k.id, k.family]));
+    expect(byId).toEqual({ hana: "visitor", abel: "not_recorded" });
+  });
+});
+
 describe("filterChildren and sortChildren", () => {
   const kids = pivotChildren(ROWS, SUNDAYS);
 

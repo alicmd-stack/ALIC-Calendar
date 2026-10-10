@@ -12,6 +12,10 @@
  *
  * Fetched only while this view is open: it is one row per child per date, and
  * the summary tabs above do not need it.
+ *
+ * The report's family filter (members, visitors, ...) narrows the list before
+ * anything here is counted, so "New 4" means four new children among the
+ * families shown.
  */
 
 import { useMemo, useState } from "react";
@@ -43,6 +47,7 @@ import {
   type ChildFilter,
   type ChildSort,
 } from "../utils/childAttendance";
+import { FAMILY_BY_KEY, type FamilyFilter } from "../utils/attendanceFamilies";
 
 interface Props {
   organizationId: string | undefined;
@@ -50,6 +55,8 @@ interface Props {
   to: string;
   /** The report's dates, newest first. */
   dates: string[];
+  /** The report's family filter. */
+  family?: FamilyFilter;
 }
 
 const PAGE = 50;
@@ -62,12 +69,15 @@ const short = (iso: string) =>
 
 const FILTERS: { key: ChildFilter; label: string; hint: string }[] = [
   { key: "all", label: "All children", hint: "Everyone who came in this range" },
-  { key: "regular", label: "Regulars", hint: "Came to three in four of these dates or more" },
+  // "Most weeks", not "Regulars": this is how often a child came, and a
+  // child who comes every week is still a visitor until a parent's status
+  // says otherwise. The family filter above is membership.
+  { key: "regular", label: "Most weeks", hint: "Came to three in four of these dates or more" },
   { key: "new", label: "New", hint: "First ever check-in in this range" },
   { key: "missing", label: "Missing 3+ weeks", hint: "Came at least twice, but not in the last three weeks" },
 ];
 
-export function ChildAttendanceTable({ organizationId, from, to, dates }: Props) {
+export function ChildAttendanceTable({ organizationId, from, to, dates, family = "all" }: Props) {
   const { data, isLoading, isPlaceholderData, error } = useKidsChildAttendance(
     organizationId,
     from,
@@ -80,7 +90,11 @@ export function ChildAttendanceTable({ organizationId, from, to, dates }: Props)
   const [sort, setSort] = useState<ChildSort>("name");
   const [limit, setLimit] = useState(PAGE);
 
-  const children = useMemo(() => pivotChildren(data ?? [], dates), [data, dates]);
+  const everyone = useMemo(() => pivotChildren(data ?? [], dates), [data, dates]);
+  const children = useMemo(
+    () => (family === "all" ? everyone : everyone.filter((c) => c.family === family)),
+    [everyone, family],
+  );
   const rooms = useMemo(() => [...new Set(children.map((c) => c.room))].sort(), [children]);
   const counts = useMemo(
     () => ({
@@ -107,6 +121,7 @@ export function ChildAttendanceTable({ organizationId, from, to, dates }: Props)
           [
             "Child",
             "Classroom",
+            "Family",
             "Attended",
             "Of",
             "Rate",
@@ -119,6 +134,7 @@ export function ChildAttendanceTable({ organizationId, from, to, dates }: Props)
           shown.map((c) => [
             c.name,
             c.room,
+            FAMILY_BY_KEY[c.family].one,
             c.attended,
             c.of,
             `${Math.round(c.rate * 100)}%`,
@@ -130,7 +146,7 @@ export function ChildAttendanceTable({ organizationId, from, to, dates }: Props)
           ]),
         ),
       ),
-      `kids-attendance-by-child-${getDateStamp()}.csv`,
+      `kids-attendance-by-child${family === "all" ? "" : `-${family.replace(/_/g, "-")}`}-${getDateStamp()}.csv`,
       "text/csv",
     );
   }
@@ -264,7 +280,20 @@ export function ChildAttendanceTable({ organizationId, from, to, dates }: Props)
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">{c.room}</span>
+                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {c.room}
+                      {/* The family, unless the filter already says it. */}
+                      {family === "all" && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <span
+                            className={cn("h-1.5 w-1.5 rounded-full", FAMILY_BY_KEY[c.family].bg)}
+                            aria-hidden
+                          />
+                          <span>{FAMILY_BY_KEY[c.family].one}</span>
+                        </>
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

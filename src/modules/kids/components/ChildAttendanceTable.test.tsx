@@ -19,6 +19,7 @@ const rows = [
     session_date: d,
     room_name: "Joy",
     first_check_in: "2026-01-04",
+    family_status: "member",
   })),
   ...["2026-09-13", "2026-09-06"].map((d) => ({
     child_person_id: "abel",
@@ -26,6 +27,7 @@ const rows = [
     session_date: d,
     room_name: "Shine",
     first_check_in: "2026-01-04",
+    family_status: "visitor",
   })),
 ];
 
@@ -54,6 +56,21 @@ describe("ChildAttendanceTable", () => {
     await user.click(screen.getByRole("button", { name: /missing 3\+ weeks/i }));
     expect(screen.getByText("Abel Tesfaye")).toBeInTheDocument();
     expect(screen.queryByText("Hana Bekele")).not.toBeInTheDocument();
+  });
+
+  it("shows only the report's family, and counts within it", () => {
+    render(
+      <ChildAttendanceTable organizationId="org" from="2026-09-01" to="2026-10-09" dates={DATES} family="visitor" />,
+    );
+    expect(screen.getByText("Abel Tesfaye")).toBeInTheDocument();
+    expect(screen.queryByText("Hana Bekele")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /all children/i })).toHaveTextContent("1");
+  });
+
+  it("names each child's family when showing them all", () => {
+    render(<ChildAttendanceTable organizationId="org" from="2026-09-01" to="2026-10-09" dates={DATES} />);
+    expect(within(screen.getByText("Abel Tesfaye").closest("tr")!).getByText("Visitor")).toBeInTheDocument();
+    expect(within(screen.getByText("Hana Bekele").closest("tr")!).getByText("Member")).toBeInTheDocument();
   });
 
   it("finds a child by name", async () => {

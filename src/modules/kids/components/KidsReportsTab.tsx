@@ -43,7 +43,6 @@ import { RetentionPanel } from "./RetentionPanel";
 import { useConsentPolicy } from "../hooks/useConsent";
 import { useCapabilities } from "@/shared/hooks/useCapabilities";
 import type {
-  AttendanceRow,
   ExceptionCategory,
   ExceptionRow,
 } from "../services/kidsLeaderService";
@@ -51,6 +50,14 @@ import {
   groupByDay,
   sumAttendance,
 } from "../utils/attendanceTotals";
+import {
+  FAMILIES,
+  FAMILY_BY_KEY,
+  countFamilies,
+  type FamilyCounts,
+  type FamilyFilter,
+  type MergedAttendanceRow,
+} from "../utils/attendanceFamilies";
 
 /** A local calendar date as YYYY-MM-DD; toISOString would shift it to UTC. */
 function isoDate(d: Date): string {
@@ -224,12 +231,15 @@ export function KidsReportsTab({
     exceptions.data?.[0]?.total_count ?? exceptions.data?.length ?? 0;
   const truncated = exceptionTotal > (exceptions.data?.length ?? 0);
 
-  function exportAttendance(shown: AttendanceRow[]) {
+  function exportAttendance(shown: MergedAttendanceRow[], family: FamilyFilter) {
     // Each day's rooms, then that day's total, then a grand total — the same
     // shape as the screen, and the same rows: Sundays only unless the report
-    // is showing every date.
+    // is showing every date, and only the families the report is showing.
+    // Showing every family, each row also carries its split by family.
+    const split = family === "all";
     const days = groupByDay(shown);
     const grand = sumAttendance(shown);
+    const byFamily = (families: FamilyCounts) => (split ? FAMILIES.map((f) => families[f.key]) : []);
     const rows: (string | number | null)[][] = [];
     for (const day of days) {
       for (const row of day.rows) {
@@ -239,6 +249,7 @@ export function KidsReportsTab({
           row.room_name,
           row.age_band_name,
           row.children,
+          ...byFamily(row.families),
           row.first_time_visitors,
           row.volunteers,
           row.overrides,
@@ -252,6 +263,7 @@ export function KidsReportsTab({
         "",
         "",
         day.totals.children,
+        ...byFamily(countFamilies(day.rows)),
         day.totals.first_time_visitors,
         day.totals.volunteers,
         day.totals.overrides,
@@ -266,6 +278,7 @@ export function KidsReportsTab({
         "",
         "",
         grand.children,
+        ...byFamily(countFamilies(shown)),
         grand.first_time_visitors,
         grand.volunteers,
         grand.overrides,
@@ -281,8 +294,9 @@ export function KidsReportsTab({
             "Service",
             "Room",
             "Age group",
-            "Children",
-            "First-time",
+            split ? "Children" : `Children (${FAMILY_BY_KEY[family].only.toLowerCase()})`,
+            ...(split ? FAMILIES.map((f) => f.label) : []),
+            "New children",
             "Volunteers",
             "Overrides",
             "Not collected",
@@ -291,7 +305,7 @@ export function KidsReportsTab({
           rows
         )
       ),
-      `kids-attendance-${getDateStamp()}.csv`,
+      `kids-attendance${split ? "" : `-${family.replace(/_/g, "-")}`}-${getDateStamp()}.csv`,
       "text/csv"
     );
   }
