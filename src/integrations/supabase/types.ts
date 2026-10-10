@@ -5477,6 +5477,47 @@ export type Database = {
         Args: { _body: string; _incident_id: string }
         Returns: string
       }
+      kids_family_message_audience: {
+        Args: { _came_within_days: number; _organization_id: string }
+        Returns: {
+          emails: number
+          families: number
+          family: string
+          reachable: number
+        }[]
+      }
+      kids_family_messages_sent: {
+        Args: { _limit?: number; _organization_id: string }
+        Returns: {
+          body: string
+          came_within_days: number
+          created_at: string
+          delivered: number
+          emails: number
+          failed: number
+          families: number
+          family: string
+          id: string
+          pending: number
+          sent_by_name: string
+          subject: string
+        }[]
+      }
+      kids_send_family_message: {
+        Args: {
+          _body: string
+          _came_within_days: number
+          _family: string
+          _organization_id: string
+          _subject: string
+          _test?: boolean
+        }
+        Returns: {
+          emails: number
+          families: number
+          message_id: string
+        }[]
+      }
       kids_attendance_by_family: {
         Args: { _from: string; _organization_id: string; _to: string }
         Returns: {

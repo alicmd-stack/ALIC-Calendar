@@ -1,0 +1,13 @@
+--- supabase/migrations/20260322420000_a_letter_to_the_families.sql	2026-10-10 16:50:22
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n6.sql	2026-10-10 16:53:34
+@@ -278,9 +278,7 @@
+ 
+   -- Nobody to write to: the whole call is undone, the record with it, rather
+   -- than a "sent" message that reached no one.
+-  IF _emails = 0 THEN
+-    RAISE EXCEPTION 'no_recipients';
+-  END IF;
++
+ 
+   UPDATE church.kids_family_messages m
+      SET families = _families, emails = _emails

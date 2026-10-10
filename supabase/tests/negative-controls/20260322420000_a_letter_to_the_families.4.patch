@@ -1,0 +1,11 @@
+--- supabase/migrations/20260322420000_a_letter_to_the_families.sql	2026-10-10 16:50:22
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n4.sql	2026-10-10 16:53:34
+@@ -372,7 +372,7 @@
+         OR (n.status = 'sending' AND n.claimed_at < now() - interval '5 minutes')
+       )
+     -- Bulk last: false sorts before true.
+-    ORDER BY (n.kind IN ('kids_family_message', 'kids_consent_requested')), n.created_at
++    ORDER BY n.created_at
+     LIMIT greatest(1, least(coalesce(_limit, 50), 200))
+     FOR UPDATE SKIP LOCKED
+   )
