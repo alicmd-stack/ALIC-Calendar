@@ -8,9 +8,15 @@
  *   the detail             each Sunday's classrooms, or each classroom across
  *                          the range, which is also the chart's table view
  *
- * Everything is computed from the one church.kids_attendance_report result by
- * the pure helpers in utils/attendanceTotals, so the tiles, the chart and the
- * table always agree, and the CSV is the same numbers again.
+ * Everything is computed from the one church.kids_attendance_by_family result
+ * by the pure helpers in utils/attendanceTotals and utils/attendanceFamilies,
+ * so the tiles, the chart and the table always agree, and the CSV is the same
+ * numbers again.
+ *
+ * FAMILIES. One filter at the top narrows every layer, the by-child list
+ * included, to member, regular attendee or visitor families, or those with no
+ * status on record. Showing all of them, the chart and the bars are split by
+ * family instead, so the share of visitors is visible without filtering.
  *
  * VOLUNTEERS. The column only appears once a volunteer has been signed in to a
  * classroom somewhere in the range. Until the desk records staffing, a column
@@ -60,26 +66,39 @@ import {
   Minus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AttendanceRow } from "../services/kidsLeaderService";
 import { ChildAttendanceTable } from "./ChildAttendanceTable";
 import {
+  datesOpen,
   formatStay,
   groupByDay,
+  padDays,
   summarizeDays,
   summarizeRooms,
   type AttendanceTotals,
 } from "../utils/attendanceTotals";
+import {
+  FAMILIES,
+  FAMILY_BY_KEY,
+  countFamilies,
+  countFamilyRows,
+  mergeFamilies,
+  noFamilies,
+  type FamilyAttendanceRow,
+  type FamilyCounts,
+  type FamilyFilter,
+  type MergedAttendanceRow,
+} from "../utils/attendanceFamilies";
 
 interface Props {
   organizationId: string | undefined;
   from: string;
   to: string;
-  rows: AttendanceRow[] | undefined;
+  rows: FamilyAttendanceRow[] | undefined;
   isLoading: boolean;
   /** Showing the previous range while the new one loads. */
   isStale: boolean;
   /** Given exactly the rows on screen, so the spreadsheet and the report agree. */
-  onExport: (rows: AttendanceRow[]) => void;
+  onExport: (rows: MergedAttendanceRow[], family: FamilyFilter) => void;
 }
 
 /** A report date is a calendar date, not an instant: read it as local midnight. */
@@ -121,13 +140,56 @@ function Count({ value, tone }: { value: number; tone?: "warn" | "bad" }) {
   );
 }
 
-/** A number with a thin bar beside it, so a column of counts reads as a shape. */
-function BarCount({ value, max, strong }: { value: number; max: number; strong?: boolean }) {
-  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+/** "Members 20 · Visitors 3", for a bar's tooltip. */
+function familyBreakdown(families: FamilyCounts): string {
+  return FAMILIES.filter((f) => families[f.key] > 0)
+    .map((f) => `${f.label} ${families[f.key]}`)
+    .join(" · ");
+}
+
+/**
+ * A number with a thin bar beside it, so a column of counts reads as a shape.
+ * Showing every family, the bar is split by family in the chart's colours;
+ * filtered to one, it is that family's colour.
+ */
+function BarCount({
+  value,
+  max,
+  strong,
+  families,
+  family = "all",
+}: {
+  value: number;
+  max: number;
+  strong?: boolean;
+  families?: FamilyCounts;
+  family?: FamilyFilter;
+}) {
+  const pct = max > 0 && value > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  const split = family === "all" && families;
   return (
     <div className="flex items-center justify-end gap-3">
-      <div className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block">
-        <div className="h-full rounded-full bg-primary/70" style={{ width: `${pct}%` }} />
+      <div
+        className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-muted sm:block"
+        title={families ? familyBreakdown(families) : undefined}
+      >
+        {split ? (
+          <div className="flex h-full overflow-hidden rounded-full" style={{ width: `${pct}%` }}>
+            {FAMILIES.map((f) =>
+              families[f.key] > 0 ? (
+                <div key={f.key} className={cn("h-full", f.bg)} style={{ flexGrow: families[f.key] }} />
+              ) : null,
+            )}
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "h-full rounded-full",
+              family === "all" ? "bg-primary/70" : FAMILY_BY_KEY[family].bg,
+            )}
+            style={{ width: `${pct}%` }}
+          />
+        )}
       </div>
       <span className={cn("w-10 text-right tabular-nums", strong && "font-semibold")}>
         {number(value)}
@@ -179,7 +241,7 @@ function Change({ now, before, beforeDate }: { now: number; before: number | nul
   );
 }
 
-interface ChartPoint {
+interface ChartPoint extends FamilyCounts {
   date: string;
   label: string;
   children: number;
@@ -189,15 +251,34 @@ interface ChartPoint {
   peak: boolean;
 }
 
-function ChartTip({ active, payload }: { active?: boolean; payload?: { payload: ChartPoint }[] }) {
+function ChartTip({
+  active,
+  payload,
+  split,
+}: {
+  active?: boolean;
+  payload?: { payload: ChartPoint }[];
+  split?: boolean;
+}) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
   return (
     <div className="rounded-md border bg-popover px-3 py-2 text-popover-foreground shadow-md">
       <p className="text-sm font-semibold">{number(p.children)} children</p>
       <p className="text-xs text-muted-foreground">{fmt.medium(p.date)}</p>
+      {split && p.children > 0 && (
+        <ul className="mt-1.5 space-y-0.5">
+          {FAMILIES.map((f) => (
+            <li key={f.key} className="flex items-center gap-1.5 text-xs">
+              <span className={cn("h-2 w-2 rounded-sm", f.bg)} aria-hidden />
+              <span className="text-muted-foreground">{f.label}</span>
+              <span className="ml-auto pl-3 tabular-nums">{p[f.key]}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="mt-1 text-xs text-muted-foreground">
-        {p.first_time_visitors} first-time · {p.rooms} {p.rooms === 1 ? "room" : "rooms"}
+        {p.first_time_visitors} new · {p.rooms} {p.rooms === 1 ? "room" : "rooms"}
       </p>
     </div>
   );
@@ -208,17 +289,27 @@ function TotalsCells({
   showVolunteers,
   strong,
   max,
+  families,
+  family,
 }: {
   totals: AttendanceTotals;
   showVolunteers: boolean;
   strong?: boolean;
   max?: number;
+  families?: FamilyCounts;
+  family?: FamilyFilter;
 }) {
   return (
     <>
       <TableCell className="text-right">
         {max !== undefined ? (
-          <BarCount value={totals.children} max={max} strong={strong} />
+          <BarCount
+            value={totals.children}
+            max={max}
+            strong={strong}
+            families={families}
+            family={family}
+          />
         ) : (
           <span className={cn("tabular-nums", strong && "font-semibold")}>{number(totals.children)}</span>
         )}
@@ -262,27 +353,44 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
    * average. The switch brings them back.
    */
   const [allDates, setAllDates] = useState(false);
+  const [family, setFamily] = useState<FamilyFilter>("all");
   const otherDates = useMemo(
     () => new Set((rows ?? []).map((r) => r.session_date).filter((d) => !isSunday(d))).size,
     [rows],
   );
-  const shown = useMemo(
-    () =>
-      (allDates ? rows ?? [] : (rows ?? []).filter((r) => isSunday(r.session_date))).map((r) =>
-        r.avg_minutes !== null && r.avg_minutes > LONGEST_REAL_STAY ? { ...r, avg_minutes: null } : r,
-      ),
+  const dated = useMemo(
+    () => (allDates ? rows ?? [] : (rows ?? []).filter((r) => isSunday(r.session_date))),
     [rows, allDates],
   );
   const staleStays = useMemo(
-    () =>
-      (allDates ? rows ?? [] : (rows ?? []).filter((r) => isSunday(r.session_date))).some(
-        (r) => r.avg_minutes !== null && r.avg_minutes > LONGEST_REAL_STAY,
-      ),
-    [rows, allDates],
+    () => dated.some((r) => r.avg_minutes !== null && r.avg_minutes > LONGEST_REAL_STAY),
+    [dated],
   );
-  const days = useMemo(() => groupByDay(shown), [shown]);
+  // Check-ins from each kind of family, for the filter's counts and the legend.
+  const familyCounts = useMemo(() => countFamilyRows(dated), [dated]);
+  const allCheckIns = FAMILIES.reduce((n, f) => n + familyCounts[f.key], 0);
+  const merged = useMemo(() => {
+    const cleaned = dated.map((r) =>
+      r.avg_minutes !== null && r.avg_minutes > LONGEST_REAL_STAY ? { ...r, avg_minutes: null } : r,
+    );
+    const everyone = mergeFamilies(cleaned, "all");
+    return {
+      shown: family === "all" ? everyone : mergeFamilies(cleaned, family),
+      // From every family, so a filter keeps the Sundays and the rooms' open
+      // dates of the whole report.
+      dates: groupByDay(everyone).map((d) => d.session_date),
+      open: datesOpen(everyone),
+    };
+  }, [dated, family]);
+  const shown = merged.shown;
+  const days = useMemo(() => padDays(groupByDay(shown), merged.dates), [shown, merged.dates]);
   const summary = useMemo(() => summarizeDays(days), [days]);
-  const rooms = useMemo(() => summarizeRooms(shown), [shown]);
+  const rooms = useMemo(() => summarizeRooms(shown, merged.open), [shown, merged.open]);
+  const roomFamilies = useMemo(() => {
+    const byRoom = new Map<string, MergedAttendanceRow[]>();
+    for (const row of shown) byRoom.set(row.room_name, [...(byRoom.get(row.room_name) ?? []), row]);
+    return new Map([...byRoom].map(([room, roomRows]) => [room, countFamilies(roomRows)]));
+  }, [shown]);
   const per = allDates ? "date" : "Sunday";
   const perPlural = allDates ? "dates" : "Sundays";
   const [view, setView] = useState<"days" | "rooms" | "children">("days");
@@ -290,7 +398,10 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
   const [open, setOpen] = useState<Set<string> | null>(null);
   const expanded = open ?? new Set(days.slice(0, 1).map((d) => d.session_date));
 
-  const showVolunteers = summary.volunteersRecorded;
+  // Volunteers staff a room, not a family: beside one family's children the
+  // column would read as though they had been looking after only them.
+  const showVolunteers = summary.volunteersRecorded && family === "all";
+  const split = family === "all";
   const chart: ChartPoint[] = useMemo(
     () =>
       [...days].reverse().map((d, i, all) => ({
@@ -301,6 +412,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
         rooms: d.rows.length,
         latest: i === all.length - 1,
         peak: summary.peak?.session_date === d.session_date,
+        ...(d.rows.length ? countFamilies(d.rows) : noFamilies()),
       })),
     [days, summary.peak],
   );
@@ -324,31 +436,84 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
     );
   }
 
+  const pctOf = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
   const scope = (
-    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-      <span>
+    <div className="space-y-2">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        {/* One filter for every layer below, the by-child list included. The
+            counts are check-ins, the same number the first tile shows. */}
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Family">
+          <span className="mr-1 text-xs font-medium text-muted-foreground">Family</span>
+          <Button
+            type="button"
+            size="sm"
+            variant={family === "all" ? "secondary" : "ghost"}
+            aria-pressed={family === "all"}
+            onClick={() => setFamily("all")}
+          >
+            All
+            <span className="ml-1.5 tabular-nums text-muted-foreground">{number(allCheckIns)}</span>
+          </Button>
+          {FAMILIES.map((f) => (
+            <Button
+              key={f.key}
+              type="button"
+              size="sm"
+              variant={family === f.key ? "secondary" : "ghost"}
+              aria-pressed={family === f.key}
+              title={f.hint}
+              disabled={familyCounts[f.key] === 0 && family !== f.key}
+              onClick={() => setFamily(f.key)}
+            >
+              <span className={cn("mr-1.5 h-2 w-2 rounded-full", f.bg)} aria-hidden />
+              {f.label}
+              <span className="ml-1.5 tabular-nums text-muted-foreground">
+                {number(familyCounts[f.key])}
+              </span>
+            </Button>
+          ))}
+        </div>
+        {otherDates > 0 && (
+          <Tabs value={allDates ? "all" : "sundays"} onValueChange={(v) => setAllDates(v === "all")}>
+            <TabsList>
+              <TabsTrigger value="sundays">Sundays</TabsTrigger>
+              <TabsTrigger value="all">All dates</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+      </div>
+      <p className="text-sm text-muted-foreground">
         {summary.days} {summary.days === 1 ? per : perPlural}
         {!allDates && otherDates > 0 &&
           ` · ${otherDates} midweek or test ${otherDates === 1 ? "date" : "dates"} not counted`}
-      </span>
-      {otherDates > 0 && (
-        <Tabs value={allDates ? "all" : "sundays"} onValueChange={(v) => setAllDates(v === "all")}>
-          <TabsList>
-            <TabsTrigger value="sundays">Sundays</TabsTrigger>
-            <TabsTrigger value="all">All dates</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {" · "}
+        {family === "all" ? "Every family" : FAMILY_BY_KEY[family].only}, by membership status as
+        recorded today
+      </p>
+      {family === "visitor" && (
+        <p className="text-xs text-muted-foreground">
+          The check-in desk registers every new family as Visitors. A family stays here until a
+          parent&rsquo;s status is changed in Members.
+        </p>
+      )}
+      {family === "not_recorded" && (
+        <p className="text-xs text-muted-foreground">
+          Nobody in these families has a membership status in the directory. Giving a parent one
+          in Members moves their children to the right group.
+        </p>
       )}
     </div>
   );
 
-  if (days.length === 0) {
+  if (days.length === 0 || (family !== "all" && summary.totals.children === 0)) {
     return (
       <div className="space-y-3">
         {scope}
         <Card>
           <CardContent className="py-16 text-center text-sm text-muted-foreground">
-            No check-ins in this period. Choose a wider range above.
+            {days.length === 0
+              ? "No check-ins in this period. Choose a wider range above."
+              : `No children from ${FAMILY_BY_KEY[family as Exclude<FamilyFilter, "all">].only.toLowerCase()} in this period.`}
           </CardContent>
         </Card>
       </div>
@@ -363,9 +528,13 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
       {/* The headline numbers ------------------------------------------- */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatTile
-          label="Check-ins"
+          label={family === "all" ? "Check-ins" : `Check-ins · ${FAMILY_BY_KEY[family].label}`}
           value={number(summary.totals.children)}
-          detail={`Across ${summary.days} ${summary.days === 1 ? per : perPlural}`}
+          detail={
+            family === "all"
+              ? `Across ${summary.days} ${summary.days === 1 ? per : perPlural}`
+              : `${pctOf(summary.totals.children, allCheckIns)}% of all ${number(allCheckIns)} check-ins`
+          }
         />
         <StatTile
           label={`Average per ${per}`}
@@ -389,12 +558,15 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
             )
           }
         />
+        {/* "New", not "first-time visitors": a member's toddler at their
+            first Sunday is new too, and the Visitors filter means something
+            else. */}
         <StatTile
-          label="First-time visitors"
+          label="New children"
           value={number(summary.totals.first_time_visitors)}
           detail={
             summary.totals.children > 0
-              ? `${Math.round((summary.totals.first_time_visitors / summary.totals.children) * 100)}% of check-ins`
+              ? `First check-in ever · ${pctOf(summary.totals.first_time_visitors, summary.totals.children)}% of check-ins`
               : ""
           }
         />
@@ -423,9 +595,26 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Children per {per}</CardTitle>
           <CardDescription>
-            Every classroom together. The latest date is highlighted; hover a column for its
-            details.
+            {split
+              ? "Every classroom together, split by family. Hover a column for its details."
+              : `${FAMILY_BY_KEY[family].only}, every classroom together. The latest date is in full colour; hover a column for its details.`}
           </CardDescription>
+          {/* The legend carries each family's share of the range, so the
+              question "how many of our children are visitors" is answered
+              without touching the filter. */}
+          {split && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-2">
+              {FAMILIES.map((f) => (
+                <span key={f.key} className="inline-flex items-center gap-1.5 text-xs">
+                  <span className={cn("h-2.5 w-2.5 rounded-sm", f.bg)} aria-hidden />
+                  <span className="text-muted-foreground">{f.label}</span>
+                  <span className="font-medium tabular-nums">
+                    {pctOf(familyCounts[f.key], allCheckIns)}%
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <div className="h-64 w-full">
@@ -447,42 +636,57 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                   axisLine={false}
                   tick={{ fontSize: 12, className: "fill-muted-foreground" }}
                 />
-                <Tooltip cursor={{ className: "fill-muted", opacity: 0.6 }} content={<ChartTip />} />
+                <Tooltip
+                  cursor={{ className: "fill-muted", opacity: 0.6 }}
+                  content={<ChartTip split={split} />}
+                />
                 {/* No grow-in animation: a report is read, not watched, and an
-                    animation that never runs (a background tab) leaves no bars. */}
-                <Bar
-                  dataKey="children"
-                  maxBarSize={24}
-                  radius={[4, 4, 0, 0]}
-                  isAnimationActive={false}
-                >
-                  {chart.map((p) => (
-                    <Cell
-                      key={p.date}
-                      className={p.latest ? "fill-primary" : "fill-primary/35"}
-                    />
-                  ))}
-                  {/* Labelled sparingly: the latest and the highest. */}
-                  <LabelList
-                    dataKey="children"
-                    content={({ x, y, width, value, index }) => {
-                      const p = typeof index === "number" ? chart[index] : undefined;
-                      if (!p || (!p.latest && !p.peak)) return null;
-                      return (
-                        <text
-                          x={Number(x) + Number(width) / 2}
-                          y={Number(y) - 6}
-                          textAnchor="middle"
-                          fontSize={12}
-                          fontWeight={600}
-                          className="fill-foreground"
-                        >
-                          {value}
-                        </text>
-                      );
-                    }}
-                  />
-                </Bar>
+                    animation that never runs (a background tab) leaves no bars.
+                    Every family: one stack per date, members at the bottom.
+                    One family: a single bar in its colour. The total goes on
+                    top of the last segment either way. */}
+                {(split ? FAMILIES : [FAMILY_BY_KEY[family]]).map((f, i, all) => {
+                  const top = i === all.length - 1;
+                  return (
+                    <Bar
+                      key={f.key}
+                      dataKey={split ? f.key : "children"}
+                      stackId="families"
+                      maxBarSize={24}
+                      radius={top ? [4, 4, 0, 0] : 0}
+                      isAnimationActive={false}
+                    >
+                      {/* Split, every date in full colour: a faded amber on a
+                          faded blue is unreadable, and the split is the point.
+                          The latest is still labelled. */}
+                      {chart.map((p) => (
+                        <Cell key={p.date} className={split || p.latest ? f.fill : f.faded} />
+                      ))}
+                      {/* Labelled sparingly: the latest and the highest. */}
+                      {top && (
+                        <LabelList
+                          dataKey="children"
+                          content={({ x, y, width, index }) => {
+                            const p = typeof index === "number" ? chart[index] : undefined;
+                            if (!p || (!p.latest && !p.peak)) return null;
+                            return (
+                              <text
+                                x={Number(x) + Number(width) / 2}
+                                y={Number(y) - 6}
+                                textAnchor="middle"
+                                fontSize={12}
+                                fontWeight={600}
+                                className="fill-foreground"
+                              >
+                                {p.children}
+                              </text>
+                            );
+                          }}
+                        />
+                      )}
+                    </Bar>
+                  );
+                })}
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -499,7 +703,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                 ? "Each date, and its classrooms underneath."
                 : view === "rooms"
                   ? "Each classroom across the whole range, busiest first."
-                  : `Each child across these ${perPlural.toLowerCase()}, newest first.`}
+                  : `Each child across these ${perPlural}, newest first.`}
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -523,7 +727,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
             )}
             {/* The by-child view has its own export, in its own shape. */}
             {view !== "children" && (
-              <Button variant="outline" size="sm" onClick={() => onExport(shown)}>
+              <Button variant="outline" size="sm" onClick={() => onExport(shown, family)}>
                 <Download className="h-4 w-4" />
                 CSV
               </Button>
@@ -537,6 +741,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
               from={from}
               to={to}
               dates={days.map((d) => d.session_date)}
+              family={family}
             />
           ) : (
           <div className="overflow-x-auto rounded-md border">
@@ -546,7 +751,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                   <TableRow>
                     <TableHead className="min-w-[16rem]">Date / classroom</TableHead>
                     <TableHead className="text-right">Children</TableHead>
-                    <TableHead className="text-right">First-time</TableHead>
+                    <TableHead className="text-right">New</TableHead>
                     {showVolunteers && <TableHead className="text-right">Volunteers</TableHead>}
                     <TableHead className="text-right">Avg stay</TableHead>
                     <TableHead className="text-right">Overrides</TableHead>
@@ -581,8 +786,11 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                               <span>
                                 <span className="font-semibold">{fmt.long(day.session_date)}</span>
                                 <span className="block text-xs text-muted-foreground">
-                                  {services.join(" · ") || "Service"} · {day.rows.length}{" "}
-                                  {day.rows.length === 1 ? "classroom" : "classrooms"}
+                                  {day.rows.length === 0
+                                    ? `No children from ${FAMILY_BY_KEY[family === "all" ? "not_recorded" : family].only.toLowerCase()}`
+                                    : `${services.join(" · ") || "Service"} · ${day.rows.length} ${
+                                        day.rows.length === 1 ? "classroom" : "classrooms"
+                                      }`}
                                   {day.serviceCount > 1 &&
                                     " · a child at more than one service counts once per service"}
                                 </span>
@@ -594,6 +802,8 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                             showVolunteers={showVolunteers}
                             strong
                             max={busiestDay}
+                            families={countFamilies(day.rows)}
+                            family={family}
                           />
                         </TableRow>
                         {isOpen &&
@@ -618,6 +828,8 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                                 }}
                                 showVolunteers={showVolunteers}
                                 max={busiestRoomOnAnyDay}
+                                families={row.families}
+                                family={family}
                               />
                             </TableRow>
                           ))}
@@ -644,7 +856,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                     <TableHead className="text-right">Average</TableHead>
                     <TableHead className="text-right">Highest</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">First-time</TableHead>
+                    <TableHead className="text-right">New</TableHead>
                     <TableHead className="text-right">Avg stay</TableHead>
                     <TableHead className="text-right">Dates open</TableHead>
                   </TableRow>
@@ -661,7 +873,13 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <BarCount value={room.average} max={busiestRoomAverage} strong />
+                        <BarCount
+                          value={room.average}
+                          max={busiestRoomAverage}
+                          strong
+                          families={roomFamilies.get(room.room_name)}
+                          family={family}
+                        />
                       </TableCell>
                       <TableCell className="text-right tabular-nums">{number(room.peak)}</TableCell>
                       <TableCell className="text-right tabular-nums">{number(room.total)}</TableCell>
@@ -679,7 +897,7 @@ export function AttendanceReport({ organizationId, from, to, rows, isLoading, is
             )}
           </div>
           )}
-          {view !== "children" && !showVolunteers && (
+          {view !== "children" && !summary.volunteersRecorded && (
             <p className="mt-3 text-xs text-muted-foreground">
               Volunteers are not being signed in to classrooms yet, so staffing is not shown. The
               column appears here once they are.

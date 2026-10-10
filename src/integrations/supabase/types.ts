@@ -5477,6 +5477,22 @@ export type Database = {
         Args: { _body: string; _incident_id: string }
         Returns: string
       }
+      kids_attendance_by_family: {
+        Args: { _from: string; _organization_id: string; _to: string }
+        Returns: {
+          age_band_name: string
+          avg_minutes: number
+          children: number
+          family_status: string
+          first_time_visitors: number
+          not_checked_out: number
+          overrides: number
+          room_name: string
+          service_label: string
+          session_date: string
+          volunteers: number
+        }[]
+      }
       kids_attendance_report: {
         Args: { _from: string; _organization_id: string; _to: string }
         Returns: {
@@ -5511,6 +5527,7 @@ export type Database = {
         Returns: {
           child_name: string
           child_person_id: string
+          family_status: string
           first_check_in: string
           room_name: string
           session_date: string
@@ -5674,6 +5691,10 @@ export type Database = {
       kids_family_notice: {
         Args: { _check_in_ids: string[]; _kind: string; _with_code: boolean }
         Returns: Record<string, unknown>
+      }
+      kids_family_status: {
+        Args: { _child_person_id: string }
+        Returns: string
       }
       kids_grant_consent_exception: {
         Args: {

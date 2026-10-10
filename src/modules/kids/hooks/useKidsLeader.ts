@@ -17,7 +17,7 @@ export const kidsLeaderKeys = {
   roster: (sessionId: string, roomId: string | null) =>
     [...kidsLeaderKeys.all, "roster", sessionId, roomId ?? "all"] as const,
   attendance: (orgId: string, from: string, to: string) =>
-    [...kidsLeaderKeys.all, "attendance", orgId, from, to] as const,
+    [...kidsLeaderKeys.all, "attendance-by-family", orgId, from, to] as const,
   childAttendance: (orgId: string, from: string, to: string) =>
     [...kidsLeaderKeys.all, "child-attendance", orgId, from, to] as const,
   retention: (orgId: string) => [...kidsLeaderKeys.all, "retention", orgId] as const,

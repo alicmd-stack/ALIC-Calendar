@@ -1,0 +1,10 @@
+--- supabase/migrations/20260322410000_attendance_by_family.sql	2026-10-10 16:19:36
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n2.sql	2026-10-10 16:20:50
+@@ -63,7 +63,6 @@
+       JOIN church.household_members ha
+         ON ha.household_id = hc.household_id
+        AND ha.person_id <> hc.person_id
+-       AND ha.end_date IS NULL
+       JOIN church.people a ON a.id = ha.person_id AND NOT a.is_child
+       WHERE hc.person_id = _child_person_id
+         AND hc.end_date IS NULL

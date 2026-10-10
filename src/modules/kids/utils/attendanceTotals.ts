@@ -127,6 +127,32 @@ export function groupByDay<T extends AttendanceTotalsRow>(
 }
 
 /**
+ * Put back the dates a filter emptied. Visitor families on a Sunday with none
+ * is a zero, not a missing Sunday: the average divides by every Sunday, the
+ * chart keeps its spacing, and "latest" is still the latest Sunday.
+ *
+ * @param dates every date the unfiltered report has, newest first
+ */
+export function padDays<T extends AttendanceTotalsRow>(
+  days: readonly AttendanceDay<T>[],
+  dates: readonly string[]
+): AttendanceDay<T>[] {
+  const byDate = new Map(days.map((d) => [d.session_date, d]));
+  const all = new Set([...dates, ...byDate.keys()]);
+  return [...all]
+    .sort((a, b) => b.localeCompare(a))
+    .map(
+      (session_date) =>
+        byDate.get(session_date) ?? {
+          session_date,
+          rows: [],
+          totals: { ...ZERO },
+          serviceCount: 0,
+        }
+    );
+}
+
+/**
  * The headline numbers for a range, read off the grouped days.
  *
  * `perDay` is the average children per date in the range, not per room, which
@@ -186,10 +212,15 @@ export interface RoomSummary {
  * The same report turned on its side: one row per classroom, busiest first.
  * "Which rooms are growing" is a question the by-date view cannot answer
  * without a pencil.
+ *
+ * @param openDates dates each room was open, from the unfiltered report. A
+ *   room's visitor families average over the Sundays the room was open, not
+ *   over the Sundays a visitor happened to come, which would make two
+ *   visitors on one Sunday an average of two.
  */
 export function summarizeRooms<
   T extends AttendanceTotalsRow & { room_name: string; age_band_name?: string | null },
->(rows: readonly T[]): RoomSummary[] {
+>(rows: readonly T[], openDates?: ReadonlyMap<string, number>): RoomSummary[] {
   const byRoom = new Map<string, T[]>();
   for (const row of rows) {
     const bucket = byRoom.get(row.room_name);
@@ -199,7 +230,8 @@ export function summarizeRooms<
   return [...byRoom.entries()]
     .map(([room_name, roomRows]) => {
       const totals = sumAttendance(roomRows);
-      const sessions = new Set(roomRows.map((r) => r.session_date)).size;
+      const sessions =
+        openDates?.get(room_name) ?? new Set(roomRows.map((r) => r.session_date)).size;
       return {
         room_name,
         age_band_name: roomRows.find((r) => r.age_band_name)?.age_band_name ?? null,
@@ -212,6 +244,17 @@ export function summarizeRooms<
       };
     })
     .sort((a, b) => b.average - a.average || a.room_name.localeCompare(b.room_name));
+}
+
+/** How many dates each room had any child, for summarizeRooms. */
+export function datesOpen(rows: readonly { room_name: string; session_date: string }[]): Map<string, number> {
+  const seen = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const dates = seen.get(row.room_name);
+    if (dates) dates.add(row.session_date);
+    else seen.set(row.room_name, new Set([row.session_date]));
+  }
+  return new Map([...seen].map(([room, dates]) => [room, dates.size]));
 }
 
 /** "1h 52m", "48m", or an em dash when nobody was collected. */

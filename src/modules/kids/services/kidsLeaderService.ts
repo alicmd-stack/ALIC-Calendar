@@ -17,6 +17,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { throwRpc } from "./rpcError";
+import type { FamilyAttendanceRow } from "../utils/attendanceFamilies";
 
 const church = () => supabase.schema("church");
 
@@ -96,6 +97,8 @@ export interface ChildAttendanceRow {
   room_name: string;
   /** The child's first check-in ever, at this church. */
   first_check_in: string;
+  /** member | regular_attendee | visitor | not_recorded, as recorded today. */
+  family_status?: string | null;
 }
 
 /** One row from church.kids_exceptions_report. */
@@ -361,18 +364,22 @@ export const kidsLeaderService = {
     return (data ?? []) as unknown as RosterRow[];
   },
 
+  /**
+   * The room report split by family: a room on a date is one row per kind of
+   * family that came. utils/attendanceFamilies adds them back up.
+   */
   async attendance(
     organizationId: string,
     from: string,
     to: string
-  ): Promise<AttendanceRow[]> {
-    const { data, error } = await church().rpc("kids_attendance_report", {
+  ): Promise<FamilyAttendanceRow[]> {
+    const { data, error } = await church().rpc("kids_attendance_by_family", {
       _organization_id: organizationId,
       _from: from,
       _to: to,
     });
     throwRpc(error);
-    return (data ?? []) as unknown as AttendanceRow[];
+    return (data ?? []) as unknown as FamilyAttendanceRow[];
   },
 
   /** One row per child per date they were checked in. */

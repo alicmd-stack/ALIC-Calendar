@@ -11,7 +11,12 @@
  *
  * "The dates shown" is the report's own list (Sundays only unless the report
  * shows every date), so a child's "4 of 6" and the grid's columns agree.
+ *
+ * Each child also carries their family (member, visitor, ...); the screen
+ * narrows to the report's family filter before any of the above is counted.
  */
+
+import { asFamily, type FamilyStatus } from "./attendanceFamilies";
 
 export interface ChildVisitRow {
   child_person_id: string;
@@ -19,6 +24,7 @@ export interface ChildVisitRow {
   session_date: string;
   room_name: string;
   first_check_in: string;
+  family_status?: string | null;
 }
 
 export interface ChildAttendance {
@@ -35,6 +41,7 @@ export interface ChildAttendance {
   rate: number;
   lastSeen: string;
   firstCheckIn: string;
+  family: FamilyStatus;
   isNew: boolean;
   isRegular: boolean;
   isMissing: boolean;
@@ -79,6 +86,7 @@ export function pivotChildren(rows: readonly ChildVisitRow[], dates: readonly st
       rate,
       lastSeen: last.session_date,
       firstCheckIn: last.first_check_in,
+      family: asFamily(last.family_status),
       isNew: last.first_check_in >= earliest,
       isRegular: attended >= 2 && rate >= 0.75,
       isMissing: attended >= 2 && days(latest, last.session_date) >= 21,

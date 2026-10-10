@@ -1,0 +1,11 @@
+--- supabase/migrations/20260322410000_attendance_by_family.sql	2026-10-10 16:19:36
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n3.sql	2026-10-10 16:20:50
+@@ -74,7 +74,7 @@
+ 
+ -- Called only from the reports below, which run as their owner. Not a lookup
+ -- anyone should be able to run on an arbitrary person.
+-REVOKE ALL ON FUNCTION church.kids_family_status(UUID) FROM PUBLIC, anon, authenticated;
++GRANT EXECUTE ON FUNCTION church.kids_family_status(UUID) TO authenticated;
+ 
+ -- ---------------------------------------------------------------------------
+ -- The room report, split by family.

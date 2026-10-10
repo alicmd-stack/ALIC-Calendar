@@ -1,0 +1,11 @@
+--- supabase/migrations/20260322410000_attendance_by_family.sql	2026-10-10 16:19:36
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n4.sql	2026-10-10 16:20:50
+@@ -137,7 +137,7 @@
+     (SELECT count(DISTINCT st.person_id) FROM church.kids_session_staffing st
+       WHERE st.kids_session_id = s.id
+         AND (st.room_id = r.id OR (st.room_id IS NULL AND r.id IS NULL))),
+-    count(*) FILTER (WHERE c.checkout_method = 'operator_override'),
++    count(*) FILTER (WHERE c.checkout_method = 'operator_override' OR f.status = 'visitor'),
+     count(*) FILTER (WHERE c.status = 'checked_in'),
+     (avg(EXTRACT(EPOCH FROM (c.checked_out_at - c.checked_in_at)) / 60)
+       FILTER (WHERE c.checked_out_at IS NOT NULL))::INTEGER
