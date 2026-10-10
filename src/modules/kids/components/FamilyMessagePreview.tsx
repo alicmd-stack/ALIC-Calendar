@@ -12,7 +12,7 @@ const RED = "#b22222";
 const VERSE =
   "“Let the little children come to me, and do not hinder them, for the kingdom of heaven belongs to such as these.” Matthew 19:14";
 const NO_REPLY =
-  "Replies to this email are not read. For anything about your children, please speak to the Children's Ministry team on Sunday.";
+  "Replies to this email are not read. For anything about your children, please speak to the Children's Ministry team\u00a0on\u00a0Sunday.";
 
 interface Props {
   subject: string;
@@ -38,7 +38,7 @@ export function FamilyMessagePreview({ subject, body, firstName = "Meseret" }: P
             <div className="text-[12.5px] opacity-90">Children&rsquo;s Ministry · የልጆች አገልግሎት</div>
           </div>
         </div>
-        <div className="space-y-4 px-5 pb-1 pt-5 text-[15px] leading-relaxed">
+        <div className="space-y-4 px-5 pb-5 pt-5 text-[15px] leading-relaxed">
           <p className="text-lg font-semibold leading-snug">
             {subject.trim() || "Children's Ministry"}
           </p>
@@ -61,12 +61,15 @@ export function FamilyMessagePreview({ subject, body, firstName = "Meseret" }: P
             {VERSE}
           </p>
         </div>
-        <div className="border-t border-[#e4e4e7] bg-[#fafafa] px-5 py-3 text-xs leading-normal text-[#71717a]">
-          {NO_REPLY}
-          <br />
-          Addis Lidet International Church · Silver Spring, MD · Alexandria, VA
-          <br />
-          alic.org
+        <div className="border-t border-[#e4e4e7] bg-[#fafafa] px-5 pb-[18px] pt-4 text-center text-xs leading-relaxed text-[#71717a]">
+          <p className="mb-2.5">{NO_REPLY}</p>
+          <p>
+            <span className="font-semibold text-[#52525b]">Addis Lidet International Church</span>
+            <br />
+            Silver Spring, MD · Alexandria, VA
+            <br />
+            <span style={{ color: RED }}>alic.org</span>
+          </p>
         </div>
       </div>
     </div>
