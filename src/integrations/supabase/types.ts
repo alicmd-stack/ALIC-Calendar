@@ -5692,6 +5692,10 @@ export type Database = {
         Args: { _check_in_ids: string[]; _kind: string; _with_code: boolean }
         Returns: Record<string, unknown>
       }
+      kids_family_status: {
+        Args: { _child_person_id: string }
+        Returns: string
+      }
       kids_grant_consent_exception: {
         Args: {
           _child_person_id: string
