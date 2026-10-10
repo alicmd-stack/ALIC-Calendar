@@ -1,0 +1,11 @@
+--- supabase/migrations/20260322420000_a_letter_to_the_families.sql	2026-10-10 16:50:22
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n3.sql	2026-10-10 16:53:34
+@@ -202,7 +202,7 @@
+   _families INTEGER;
+ BEGIN
+   IF NOT church.has_permission_in_org(
+-           _organization_id, ARRAY['kids_admin']::church.module_permission[]) THEN
++           _organization_id, ARRAY['kids_admin','kids_volunteer']::church.module_permission[]) THEN
+     RAISE EXCEPTION 'not_permitted' USING ERRCODE = '42501';
+   END IF;
+   IF _family IS NULL OR _family NOT IN

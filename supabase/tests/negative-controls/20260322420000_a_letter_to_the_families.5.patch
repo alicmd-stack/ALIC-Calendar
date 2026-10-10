@@ -1,0 +1,11 @@
+--- supabase/migrations/20260322420000_a_letter_to_the_families.sql	2026-10-10 16:50:22
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n5.sql	2026-10-10 16:53:34
+@@ -92,8 +92,6 @@
+     ON cm.person_id = c.id AND cm.end_date IS NULL
+   WHERE c.organization_id = _organization_id
+     AND c.is_child AND c.is_active AND c.merged_into_person_id IS NULL
+-    AND NOT church.kids_is_past_eighth_grade(
+-              c.organization_id, c.school_grade_id, c.birth_year, c.birth_month)
+     AND (_came_within_days IS NULL OR EXISTS (
+           SELECT 1 FROM church.kids_check_ins ci
+           WHERE ci.child_person_id = c.id

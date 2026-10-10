@@ -42,6 +42,7 @@ export const CAPABILITIES = [
   "kids.write",
   "kids.checkin",
   "kids.override",
+  "kids.message",
   "giving.read",
   "giving.write",
 ] as const;
@@ -82,7 +83,7 @@ const ROLE_CAPABILITIES: Record<MinistryRole, readonly Capability[]> = {
    *
    * Someone who genuinely needs both holds both grants — they are additive.
    */
-  kids_admin: ["kids.read", "kids.write", "kids.checkin", "kids.override"],
+  kids_admin: ["kids.read", "kids.write", "kids.checkin", "kids.override", "kids.message"],
   /**
    * A team lead: runs their own grades and nothing else.
    *
@@ -95,6 +96,9 @@ const ROLE_CAPABILITIES: Record<MinistryRole, readonly Capability[]> = {
    * two-person rule "the single most important control in the system", and an
    * override that four of the six leaders can self-authorise is not one.
    */
+  // Nor kids.message: one email to every family is the ministry's voice, and
+  // the ministry asked for it to be the admins'. church.kids_send_family_message
+  // checks kids_admin the same way.
   kids_leader: ["kids.read", "kids.write", "kids.checkin"],
   kids_volunteer: ["kids.checkin"],
   leadership_viewer: ["members.read", "kids.read"],

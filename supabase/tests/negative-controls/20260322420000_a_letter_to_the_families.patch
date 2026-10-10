@@ -1,0 +1,11 @@
+--- supabase/migrations/20260322420000_a_letter_to_the_families.sql	2026-10-10 16:50:22
++++ /private/tmp/claude-501/-Users-mulukenmekuriya-Library-Mobile-Documents-com-apple-CloudDocs-Documents-Coding-approval-agenda/8d2a7488-35b0-4b3c-bf61-5da83fde4a20/scratchpad/n1.sql	2026-10-10 16:53:34
+@@ -122,7 +122,7 @@
+     ON am.household_id = h.household_id AND am.end_date IS NULL
+   JOIN church.people a ON a.id = am.person_id
+   WHERE NOT a.is_child AND a.is_active AND a.merged_into_person_id IS NULL
+-    AND a.notify_by_email AND a.email IS NOT NULL AND btrim(a.email) <> ''
++    AND a.email IS NOT NULL AND btrim(a.email) <> ''
+   ORDER BY lower(btrim(a.email)), a.id;
+ $$;
+ 

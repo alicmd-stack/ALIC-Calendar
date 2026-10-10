@@ -88,6 +88,7 @@ const PARENT_KINDS = new Set([
   "kids_consent_resign_reminder",
   "kids_consent_resign_overdue",
   "kids_consent_requested",
+  "kids_family_message",
 ]);
 
 const MINISTRY = "Children's Ministry";
@@ -133,7 +134,8 @@ interface QueuedNotification {
     | "kids_consent_resign_overdue"
     | "kids_consent_signed"
     | "kids_consent_filed"
-    | "kids_consent_requested";
+    | "kids_consent_requested"
+    | "kids_family_message";
   channel: "email" | "sms";
   recipient_name: string | null;
   recipient_email: string | null;

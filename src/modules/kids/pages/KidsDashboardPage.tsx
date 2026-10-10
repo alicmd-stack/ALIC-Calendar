@@ -41,6 +41,7 @@ import { StillHerePanel } from "../components/StillHerePanel";
 import { ClassroomsTab } from "../components/ClassroomsTab";
 import { VolunteersTab } from "../components/VolunteersTab";
 import { KidsReportsTab } from "../components/KidsReportsTab";
+import { FamilyMessagesTab } from "../components/FamilyMessagesTab";
 import { IncidentsTab } from "../components/IncidentsTab";
 import { useLiveBoard, useKidsRealtime } from "../hooks/useKidsLeader";
 import { kidsSessionService } from "../services/kidsSessionService";
@@ -189,6 +190,8 @@ export default function KidsDashboardPage() {
             <TabsTrigger value="volunteers">Volunteers</TabsTrigger>
             <TabsTrigger value="incidents">Incidents</TabsTrigger>
               <TabsTrigger value="reports">Reports</TabsTrigger>
+            {/* Kids admins only: the database refuses anyone else. */}
+            {can("kids.message") && <TabsTrigger value="messages">Messages</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="live" className="space-y-4 pt-4">
@@ -284,6 +287,12 @@ export default function KidsDashboardPage() {
             <TabsContent value="reports" className="pt-4">
             <KidsReportsTab organizationId={orgId} canReview={canManage} />
           </TabsContent>
+
+          {can("kids.message") && (
+            <TabsContent value="messages" className="pt-4">
+              <FamilyMessagesTab organizationId={orgId} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
