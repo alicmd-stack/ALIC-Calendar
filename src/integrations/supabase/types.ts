@@ -2465,6 +2465,48 @@ export type Database = {
         }
         Relationships: []
       }
+      kids_family_messages: {
+        Row: {
+          body: string
+          came_within_days: number | null
+          created_at: string
+          emails: number
+          families: number
+          family: string
+          id: string
+          organization_id: string
+          sent_by: string | null
+          sent_by_name: string | null
+          subject: string
+        }
+        Insert: {
+          body: string
+          came_within_days?: number | null
+          created_at?: string
+          emails?: number
+          families?: number
+          family: string
+          id?: string
+          organization_id: string
+          sent_by?: string | null
+          sent_by_name?: string | null
+          subject: string
+        }
+        Update: {
+          body?: string
+          came_within_days?: number | null
+          created_at?: string
+          emails?: number
+          families?: number
+          family?: string
+          id?: string
+          organization_id?: string
+          sent_by?: string | null
+          sent_by_name?: string | null
+          subject?: string
+        }
+        Relationships: []
+      }
       kids_incident_notes: {
         Row: {
           author_id: string | null
@@ -3502,6 +3544,7 @@ export type Database = {
           consent_signature_id: string | null
           created_at: string
           error: string | null
+          family_message_id: string | null
           id: string
           kids_session_id: string | null
           kind: string
@@ -3533,6 +3576,7 @@ export type Database = {
           consent_signature_id?: string | null
           created_at?: string
           error?: string | null
+          family_message_id?: string | null
           id?: string
           kids_session_id?: string | null
           kind: string
@@ -3564,6 +3608,7 @@ export type Database = {
           consent_signature_id?: string | null
           created_at?: string
           error?: string | null
+          family_message_id?: string | null
           id?: string
           kids_session_id?: string | null
           kind?: string
@@ -3601,6 +3646,13 @@ export type Database = {
             columns: ["consent_signature_id"]
             isOneToOne: false
             referencedRelation: "consent_signatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_family_message_id_fkey"
+            columns: ["family_message_id"]
+            isOneToOne: false
+            referencedRelation: "kids_family_messages"
             referencedColumns: ["id"]
           },
           {
@@ -5142,6 +5194,7 @@ export type Database = {
           consent_signature_id: string | null
           created_at: string
           error: string | null
+          family_message_id: string | null
           id: string
           kids_session_id: string | null
           kind: string
@@ -5477,47 +5530,6 @@ export type Database = {
         Args: { _body: string; _incident_id: string }
         Returns: string
       }
-      kids_family_message_audience: {
-        Args: { _came_within_days: number; _organization_id: string }
-        Returns: {
-          emails: number
-          families: number
-          family: string
-          reachable: number
-        }[]
-      }
-      kids_family_messages_sent: {
-        Args: { _limit?: number; _organization_id: string }
-        Returns: {
-          body: string
-          came_within_days: number
-          created_at: string
-          delivered: number
-          emails: number
-          failed: number
-          families: number
-          family: string
-          id: string
-          pending: number
-          sent_by_name: string
-          subject: string
-        }[]
-      }
-      kids_send_family_message: {
-        Args: {
-          _body: string
-          _came_within_days: number
-          _family: string
-          _organization_id: string
-          _subject: string
-          _test?: boolean
-        }
-        Returns: {
-          emails: number
-          families: number
-          message_id: string
-        }[]
-      }
       kids_attendance_by_family: {
         Args: { _from: string; _organization_id: string; _to: string }
         Returns: {
@@ -5729,6 +5741,32 @@ export type Database = {
           expired_count: number
         }[]
       }
+      kids_family_message_audience: {
+        Args: { _came_within_days: number; _organization_id: string }
+        Returns: {
+          emails: number
+          families: number
+          family: string
+          reachable: number
+        }[]
+      }
+      kids_family_messages_sent: {
+        Args: { _limit?: number; _organization_id: string }
+        Returns: {
+          body: string
+          came_within_days: number
+          created_at: string
+          delivered: number
+          emails: number
+          failed: number
+          families: number
+          family: string
+          id: string
+          pending: number
+          sent_by_name: string
+          subject: string
+        }[]
+      }
       kids_family_notice: {
         Args: { _check_in_ids: string[]; _kind: string; _with_code: boolean }
         Returns: Record<string, unknown>
@@ -5898,6 +5936,27 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      kids_message_children: {
+        Args: { _came_within_days: number; _organization_id: string }
+        Returns: {
+          child_person_id: string
+          family: string
+          household_id: string
+        }[]
+      }
+      kids_message_recipients: {
+        Args: {
+          _came_within_days: number
+          _family: string
+          _organization_id: string
+        }
+        Returns: {
+          email: string
+          household_id: string
+          name: string
+          person_id: string
+        }[]
       }
       kids_my_incidents: {
         Args: never
@@ -6069,6 +6128,21 @@ export type Database = {
       kids_send_consent_reminders: {
         Args: { _household_ids?: string[]; _organization_id: string }
         Returns: Record<string, unknown>
+      }
+      kids_send_family_message: {
+        Args: {
+          _body: string
+          _came_within_days: number
+          _family: string
+          _organization_id: string
+          _subject: string
+          _test?: boolean
+        }
+        Returns: {
+          emails: number
+          families: number
+          message_id: string
+        }[]
       }
       kids_send_incident_to_parent: {
         Args: { _incident_id: string; _source?: string }
